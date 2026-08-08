@@ -65,9 +65,6 @@ create trigger products_set_updated_at
   for each row
   execute function set_updated_at();
 
--- Bucket de Storage para las fotos subidas desde el panel.
--- Público de lectura (las imágenes de producto no son sensibles); la subida
--- solo la hace nuestro servidor con la service_role key.
-insert into storage.buckets (id, name, public)
-values ('product-images', 'product-images', true)
-on conflict (id) do nothing;
+-- Nota: las fotos subidas desde el panel NO viven en Supabase Storage.
+-- Se guardan en Vercel Blob (ver app/api/admin/upload/route.ts) para no
+-- consumir la cuota de almacenamiento de Supabase.

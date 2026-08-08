@@ -19,5 +19,3 @@ if (!url || !serviceRoleKey) {
 export const supabaseAdmin = createClient(url, serviceRoleKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
-
-export const PRODUCT_IMAGES_BUCKET = "product-images";

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { put } from "@vercel/blob";
 import { randomUUID } from "crypto";
-import { PRODUCT_IMAGES_BUCKET, supabaseAdmin } from "@/lib/supabase/server";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -37,23 +37,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const filename = `${randomUUID()}${ext}`;
+  const filename = `products/${randomUUID()}${ext}`;
 
-  const { error } = await supabaseAdmin.storage
-    .from(PRODUCT_IMAGES_BUCKET)
-    .upload(filename, bytes, { contentType: file.type, upsert: false });
-
-  if (error) {
+  try {
+    const blob = await put(filename, file, {
+      access: "public",
+      contentType: file.type,
+      addRandomSuffix: false,
+    });
+    return NextResponse.json({ url: blob.url }, { status: 201 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Error desconocido.";
     return NextResponse.json(
-      { error: `No se pudo subir la imagen: ${error.message}` },
+      { error: `No se pudo subir la imagen: ${message}` },
       { status: 500 },
     );
   }
-
-  const { data } = supabaseAdmin.storage
-    .from(PRODUCT_IMAGES_BUCKET)
-    .getPublicUrl(filename);
-
-  return NextResponse.json({ url: data.publicUrl }, { status: 201 });
 }
