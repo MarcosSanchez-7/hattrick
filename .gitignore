@@ -1,0 +1,21 @@
+# dependencies
+/node_modules
+
+# Next.js
+/.next
+/out
+tsconfig.tsbuildinfo
+next-env.d.ts
+
+# local environment files
+.env
+.env*.local
+
+# debugging
+npm-debug.log*
+
+# editor / OS
+.vscode/*
+!.vscode/extensions.json
+Thumbs.db
+.DS_Store

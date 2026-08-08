@@ -1,0 +1,1140 @@
+[
+  {
+    "id": "p01",
+    "slug": "madrid-local-25-26",
+    "team": "Real Madrid",
+    "name": "Primera Equipación 25/26",
+    "category": "clubes",
+    "league": "LaLiga",
+    "season": "25/26",
+    "price": 94.95,
+    "compareAt": null,
+    "isNew": true,
+    "rating": 4.9,
+    "reviews": 412,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [
+      "XXL"
+    ],
+    "colors": {
+      "primary": "#ffffff",
+      "secondary": "#f2f2f2",
+      "accent": "#d4af37"
+    },
+    "pattern": "solid",
+    "description": "Blanco absoluto con detalles dorados en cuello y puños. Tejido Dri-FIT ADV con ventilación en zonas de alta sudoración.",
+    "tags": [
+      "blanco",
+      "casa",
+      "españa",
+      "liga"
+    ],
+    "images": []
+  },
+  {
+    "id": "p02",
+    "slug": "barcelona-local-25-26",
+    "team": "FC Barcelona",
+    "name": "Primera Equipación 25/26",
+    "category": "clubes",
+    "league": "LaLiga",
+    "season": "25/26",
+    "price": 94.95,
+    "compareAt": null,
+    "isNew": true,
+    "rating": 4.8,
+    "reviews": 358,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#004d98",
+      "secondary": "#a50044",
+      "accent": "#edbb00"
+    },
+    "pattern": "stripes",
+    "description": "Franjas blaugrana verticales recuperando el ancho clásico de los años noventa. Escudo tejido y cuello en pico.",
+    "tags": [
+      "azulgrana",
+      "casa",
+      "españa",
+      "liga"
+    ],
+    "images": []
+  },
+  {
+    "id": "p03",
+    "slug": "city-local-25-26",
+    "team": "Manchester City",
+    "name": "Primera Equipación 25/26",
+    "category": "clubes",
+    "league": "Premier League",
+    "season": "25/26",
+    "price": 89.95,
+    "compareAt": 109.95,
+    "isNew": false,
+    "rating": 4.7,
+    "reviews": 221,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#6cabdd",
+      "secondary": "#ffffff",
+      "accent": "#1c2c5b"
+    },
+    "pattern": "solid",
+    "description": "Celeste sky con ribetes navy. Corte atlético y tecnología de evacuación de humedad en la espalda.",
+    "tags": [
+      "celeste",
+      "inglaterra",
+      "premier"
+    ],
+    "images": []
+  },
+  {
+    "id": "p04",
+    "slug": "liverpool-local-25-26",
+    "team": "Liverpool FC",
+    "name": "Primera Equipación 25/26",
+    "category": "clubes",
+    "league": "Premier League",
+    "season": "25/26",
+    "price": 92,
+    "compareAt": null,
+    "isNew": false,
+    "rating": 4.8,
+    "reviews": 305,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#c8102e",
+      "secondary": "#8d0c22",
+      "accent": "#f6eb61"
+    },
+    "pattern": "solid",
+    "description": "Rojo Anfield con cuello redondo acanalado. Serigrafía del escudo a tono y refuerzo lateral elástico.",
+    "tags": [
+      "rojo",
+      "inglaterra",
+      "premier"
+    ],
+    "images": []
+  },
+  {
+    "id": "p05",
+    "slug": "inter-local-25-26",
+    "team": "Inter de Milán",
+    "name": "Primera Equipación 25/26",
+    "category": "clubes",
+    "league": "Serie A",
+    "season": "25/26",
+    "price": 88,
+    "compareAt": 104,
+    "isNew": false,
+    "rating": 4.6,
+    "reviews": 164,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#0b1560",
+      "secondary": "#111111",
+      "accent": "#c9a227"
+    },
+    "pattern": "stripes",
+    "description": "Nerazzurri en franjas finas alternas con cuello mao. Acabado mate y escudo en relieve.",
+    "tags": [
+      "azul",
+      "negro",
+      "italia",
+      "serie a"
+    ],
+    "images": []
+  },
+  {
+    "id": "p06",
+    "slug": "milan-local-25-26",
+    "team": "AC Milan",
+    "name": "Primera Equipación 25/26",
+    "category": "clubes",
+    "league": "Serie A",
+    "season": "25/26",
+    "price": 88,
+    "compareAt": null,
+    "isNew": false,
+    "rating": 4.7,
+    "reviews": 189,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#a30d21",
+      "secondary": "#111111",
+      "accent": "#ffffff"
+    },
+    "pattern": "stripes",
+    "description": "Rossonere clásicas con cuello en V y tejido reciclado. Franjas de anchura irregular como en el 89.",
+    "tags": [
+      "rojo",
+      "negro",
+      "italia",
+      "serie a"
+    ],
+    "images": []
+  },
+  {
+    "id": "p07",
+    "slug": "bayern-local-25-26",
+    "team": "Bayern de Múnich",
+    "name": "Primera Equipación 25/26",
+    "category": "clubes",
+    "league": "Bundesliga",
+    "season": "25/26",
+    "price": 89.95,
+    "compareAt": null,
+    "isNew": true,
+    "rating": 4.7,
+    "reviews": 143,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#dc052d",
+      "secondary": "#ffffff",
+      "accent": "#0066b2"
+    },
+    "pattern": "solid",
+    "description": "Rojo Bavaria con textura de rombos en jacquard. Cuello polo abierto y bordado del escudo a cuatro hilos.",
+    "tags": [
+      "rojo",
+      "alemania",
+      "bundesliga"
+    ],
+    "images": []
+  },
+  {
+    "id": "p08",
+    "slug": "dortmund-local-25-26",
+    "team": "Borussia Dortmund",
+    "name": "Primera Equipación 25/26",
+    "category": "clubes",
+    "league": "Bundesliga",
+    "season": "25/26",
+    "price": 84,
+    "compareAt": 99,
+    "isNew": false,
+    "rating": 4.6,
+    "reviews": 132,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#fde100",
+      "secondary": "#111111",
+      "accent": "#111111"
+    },
+    "pattern": "solid",
+    "description": "Amarillo Muro Sur con banda negra lateral. Tejido ligero pensado para el Signal Iduna Park.",
+    "tags": [
+      "amarillo",
+      "alemania",
+      "bundesliga"
+    ],
+    "images": []
+  },
+  {
+    "id": "p09",
+    "slug": "psg-local-25-26",
+    "team": "Paris Saint-Germain",
+    "name": "Primera Equipación 25/26",
+    "category": "clubes",
+    "league": "Ligue 1",
+    "season": "25/26",
+    "price": 96,
+    "compareAt": null,
+    "isNew": true,
+    "rating": 4.5,
+    "reviews": 98,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#0a1b3d",
+      "secondary": "#e30613",
+      "accent": "#ffffff"
+    },
+    "pattern": "sash",
+    "description": "Navy con la banda Hechter centrada. Corte slim y acabado satinado en la franja principal.",
+    "tags": [
+      "azul",
+      "francia",
+      "ligue 1"
+    ],
+    "images": []
+  },
+  {
+    "id": "p10",
+    "slug": "atletico-local-25-26",
+    "team": "Atlético de Madrid",
+    "name": "Primera Equipación 25/26",
+    "category": "clubes",
+    "league": "LaLiga",
+    "season": "25/26",
+    "price": 86,
+    "compareAt": null,
+    "isNew": false,
+    "rating": 4.6,
+    "reviews": 176,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#cb3524",
+      "secondary": "#ffffff",
+      "accent": "#1a2b5c"
+    },
+    "pattern": "stripes",
+    "description": "Rojiblanca con pantalón azul de conjunto. Franjas de 7 cm y cuello redondo en contraste.",
+    "tags": [
+      "rojo",
+      "blanco",
+      "españa",
+      "liga"
+    ],
+    "images": []
+  },
+  {
+    "id": "p11",
+    "slug": "juventus-local-25-26",
+    "team": "Juventus",
+    "name": "Primera Equipación 25/26",
+    "category": "clubes",
+    "league": "Serie A",
+    "season": "25/26",
+    "price": 87,
+    "compareAt": null,
+    "isNew": false,
+    "rating": 4.4,
+    "reviews": 112,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#111111",
+      "secondary": "#ffffff",
+      "accent": "#c9a227"
+    },
+    "pattern": "stripes",
+    "description": "Bianconere de franjas anchas y cuello camisero. Tejido de doble capa con acabado premium.",
+    "tags": [
+      "blanco",
+      "negro",
+      "italia",
+      "serie a"
+    ],
+    "images": []
+  },
+  {
+    "id": "p12",
+    "slug": "arsenal-local-25-26",
+    "team": "Arsenal FC",
+    "name": "Primera Equipación 25/26",
+    "category": "clubes",
+    "league": "Premier League",
+    "season": "25/26",
+    "price": 90,
+    "compareAt": 105,
+    "isNew": false,
+    "rating": 4.7,
+    "reviews": 208,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [
+      "S"
+    ],
+    "colors": {
+      "primary": "#d3122b",
+      "secondary": "#ffffff",
+      "accent": "#0a2240"
+    },
+    "pattern": "solid",
+    "description": "Rojo Highbury con mangas blancas. Cuello redondo tricolor y escudo estampado en alta densidad.",
+    "tags": [
+      "rojo",
+      "inglaterra",
+      "premier"
+    ],
+    "images": []
+  },
+  {
+    "id": "p13",
+    "slug": "espana-local-2026",
+    "team": "España",
+    "name": "Camiseta Local Mundial 2026",
+    "category": "selecciones",
+    "league": "Selecciones",
+    "season": "2026",
+    "price": 99.95,
+    "compareAt": null,
+    "isNew": true,
+    "rating": 4.9,
+    "reviews": 521,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#c60b1e",
+      "secondary": "#111111",
+      "accent": "#ffc400"
+    },
+    "pattern": "solid",
+    "description": "La Roja para el Mundial de 2026, con degradado sutil en el pecho y estrella de campeón sobre el escudo.",
+    "tags": [
+      "rojo",
+      "españa",
+      "mundial"
+    ],
+    "images": []
+  },
+  {
+    "id": "p14",
+    "slug": "argentina-local-2026",
+    "team": "Argentina",
+    "name": "Camiseta Local Mundial 2026",
+    "category": "selecciones",
+    "league": "Selecciones",
+    "season": "2026",
+    "price": 99.95,
+    "compareAt": null,
+    "isNew": true,
+    "rating": 4.9,
+    "reviews": 634,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [
+      "M"
+    ],
+    "colors": {
+      "primary": "#75aadb",
+      "secondary": "#ffffff",
+      "accent": "#f6b40e"
+    },
+    "pattern": "stripes",
+    "description": "Albiceleste con tres estrellas sobre el escudo. Franjas celestes clásicas y cuello blanco.",
+    "tags": [
+      "celeste",
+      "argentina",
+      "mundial"
+    ],
+    "images": []
+  },
+  {
+    "id": "p15",
+    "slug": "brasil-local-2026",
+    "team": "Brasil",
+    "name": "Camiseta Local Mundial 2026",
+    "category": "selecciones",
+    "league": "Selecciones",
+    "season": "2026",
+    "price": 97,
+    "compareAt": null,
+    "isNew": false,
+    "rating": 4.8,
+    "reviews": 389,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#f7d117",
+      "secondary": "#009c3b",
+      "accent": "#002776"
+    },
+    "pattern": "solid",
+    "description": "Amarillo canarinho con cuello verde. Tejido ligero pensado para calor extremo.",
+    "tags": [
+      "amarillo",
+      "brasil",
+      "mundial"
+    ],
+    "images": []
+  },
+  {
+    "id": "p16",
+    "slug": "francia-local-2026",
+    "team": "Francia",
+    "name": "Camiseta Local Mundial 2026",
+    "category": "selecciones",
+    "league": "Selecciones",
+    "season": "2026",
+    "price": 97,
+    "compareAt": 112,
+    "isNew": false,
+    "rating": 4.6,
+    "reviews": 173,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#1a2f6b",
+      "secondary": "#ffffff",
+      "accent": "#c8102e"
+    },
+    "pattern": "solid",
+    "description": "Azul Les Bleus con detalle tricolor en las mangas y gallo bordado al pecho.",
+    "tags": [
+      "azul",
+      "francia",
+      "mundial"
+    ],
+    "images": []
+  },
+  {
+    "id": "p17",
+    "slug": "italia-local-2026",
+    "team": "Italia",
+    "name": "Camiseta Local 2026",
+    "category": "selecciones",
+    "league": "Selecciones",
+    "season": "2026",
+    "price": 95,
+    "compareAt": null,
+    "isNew": false,
+    "rating": 4.7,
+    "reviews": 204,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#1b4fa0",
+      "secondary": "#0f3574",
+      "accent": "#ffffff"
+    },
+    "pattern": "solid",
+    "description": "Azzurra con textura de renacimiento en jacquard y cuello mao abotonado.",
+    "tags": [
+      "azul",
+      "italia"
+    ],
+    "images": []
+  },
+  {
+    "id": "p18",
+    "slug": "portugal-local-2026",
+    "team": "Portugal",
+    "name": "Camiseta Local 2026",
+    "category": "selecciones",
+    "league": "Selecciones",
+    "season": "2026",
+    "price": 95,
+    "compareAt": null,
+    "isNew": false,
+    "rating": 4.6,
+    "reviews": 158,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#8a0f2a",
+      "secondary": "#0d5c33",
+      "accent": "#f2c14e"
+    },
+    "pattern": "halves",
+    "description": "Granate con bloque verde lateral inspirado en la bandera. Escudo en dorado envejecido.",
+    "tags": [
+      "granate",
+      "portugal"
+    ],
+    "images": []
+  },
+  {
+    "id": "p19",
+    "slug": "retro-holanda-1988",
+    "team": "Países Bajos",
+    "name": "Retro 1988",
+    "category": "retro",
+    "league": "Retro",
+    "season": "1988",
+    "price": 79,
+    "compareAt": null,
+    "isNew": false,
+    "rating": 4.9,
+    "reviews": 267,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#ff6a13",
+      "secondary": "#e35205",
+      "accent": "#111111"
+    },
+    "pattern": "halves",
+    "description": "El naranja geométrico de la Eurocopa del 88. Corte holgado de época y cuello en V.",
+    "tags": [
+      "naranja",
+      "retro",
+      "holanda"
+    ],
+    "images": []
+  },
+  {
+    "id": "p20",
+    "slug": "retro-madrid-1998",
+    "team": "Real Madrid",
+    "name": "Retro 1998",
+    "category": "retro",
+    "league": "Retro",
+    "season": "1998",
+    "price": 79,
+    "compareAt": 95,
+    "isNew": false,
+    "rating": 4.8,
+    "reviews": 198,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#ffffff",
+      "secondary": "#ededed",
+      "accent": "#5a2d82"
+    },
+    "pattern": "solid",
+    "description": "La Séptima. Blanco roto con detalles morados en cuello y hombros, tal y como salió a Ámsterdam.",
+    "tags": [
+      "blanco",
+      "retro",
+      "champions"
+    ],
+    "images": []
+  },
+  {
+    "id": "p21",
+    "slug": "retro-brasil-1970",
+    "team": "Brasil",
+    "name": "Retro 1970",
+    "category": "retro",
+    "league": "Retro",
+    "season": "1970",
+    "price": 75,
+    "compareAt": null,
+    "isNew": false,
+    "rating": 5,
+    "reviews": 341,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#f2c500",
+      "secondary": "#0a8d48",
+      "accent": "#0a3d91"
+    },
+    "pattern": "solid",
+    "description": "El México 70 en algodón peinado. Escudo bordado a mano y numeración flocada.",
+    "tags": [
+      "amarillo",
+      "retro",
+      "brasil"
+    ],
+    "images": []
+  },
+  {
+    "id": "p22",
+    "slug": "retro-milan-1990",
+    "team": "AC Milan",
+    "name": "Retro 1990",
+    "category": "retro",
+    "league": "Retro",
+    "season": "1990",
+    "price": 78,
+    "compareAt": null,
+    "isNew": false,
+    "rating": 4.8,
+    "reviews": 176,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#8f0c1e",
+      "secondary": "#0d0d0d",
+      "accent": "#ffffff"
+    },
+    "pattern": "stripes",
+    "description": "Los Inmortales de Sacchi. Franjas anchas, cuello camisero y tejido de la época.",
+    "tags": [
+      "rojo",
+      "negro",
+      "retro",
+      "italia"
+    ],
+    "images": []
+  },
+  {
+    "id": "p23",
+    "slug": "retro-argentina-1986",
+    "team": "Argentina",
+    "name": "Retro 1986",
+    "category": "retro",
+    "league": "Retro",
+    "season": "1986",
+    "price": 82,
+    "compareAt": null,
+    "isNew": false,
+    "rating": 5,
+    "reviews": 455,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [
+      "S",
+      "XXL"
+    ],
+    "colors": {
+      "primary": "#7fb6e0",
+      "secondary": "#ffffff",
+      "accent": "#0a3d91"
+    },
+    "pattern": "stripes",
+    "description": "México 86. Reedición fiel del tejido brillante y del cuello con vivos azules.",
+    "tags": [
+      "celeste",
+      "retro",
+      "mundial"
+    ],
+    "images": []
+  },
+  {
+    "id": "p24",
+    "slug": "retro-alemania-1990",
+    "team": "Alemania",
+    "name": "Retro 1990",
+    "category": "retro",
+    "league": "Retro",
+    "season": "1990",
+    "price": 80,
+    "compareAt": 92,
+    "isNew": false,
+    "rating": 4.9,
+    "reviews": 289,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#ffffff",
+      "secondary": "#111111",
+      "accent": "#c8102e"
+    },
+    "pattern": "sash",
+    "description": "La icónica banda tricolor de Italia 90 en zigzag sobre blanco óptico.",
+    "tags": [
+      "blanco",
+      "retro",
+      "alemania"
+    ],
+    "images": []
+  },
+  {
+    "id": "p25",
+    "slug": "prematch-madrid-25-26",
+    "team": "Real Madrid",
+    "name": "Camiseta Pre-Match 25/26",
+    "category": "entrenamiento",
+    "league": "LaLiga",
+    "season": "25/26",
+    "price": 59.95,
+    "compareAt": null,
+    "isNew": true,
+    "rating": 4.5,
+    "reviews": 87,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#1b1b1b",
+      "secondary": "#2f2f2f",
+      "accent": "#d4af37"
+    },
+    "pattern": "solid",
+    "description": "Calentamiento oficial con estampado tonal y tejido perforado en la espalda.",
+    "tags": [
+      "negro",
+      "entrenamiento"
+    ],
+    "images": []
+  },
+  {
+    "id": "p26",
+    "slug": "chaqueta-anthem-barcelona",
+    "team": "FC Barcelona",
+    "name": "Chaqueta Anthem 25/26",
+    "category": "entrenamiento",
+    "league": "LaLiga",
+    "season": "25/26",
+    "price": 89,
+    "compareAt": 110,
+    "isNew": false,
+    "rating": 4.6,
+    "reviews": 64,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#1c2b6b",
+      "secondary": "#8f0b3a",
+      "accent": "#edbb00"
+    },
+    "pattern": "solid",
+    "description": "Chaqueta de himno con cremallera completa, bolsillos laterales y bandas contrastadas.",
+    "tags": [
+      "azul",
+      "chaqueta",
+      "entrenamiento"
+    ],
+    "images": []
+  },
+  {
+    "id": "p27",
+    "slug": "training-liverpool-25-26",
+    "team": "Liverpool FC",
+    "name": "Camiseta de Entrenamiento 25/26",
+    "category": "entrenamiento",
+    "league": "Premier League",
+    "season": "25/26",
+    "price": 54,
+    "compareAt": null,
+    "isNew": false,
+    "rating": 4.4,
+    "reviews": 71,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#1d7a6a",
+      "secondary": "#15584d",
+      "accent": "#f6eb61"
+    },
+    "pattern": "solid",
+    "description": "Tejido dry con paneles de malla bajo los brazos. Colección de preparación de Melwood.",
+    "tags": [
+      "verde",
+      "entrenamiento"
+    ],
+    "images": []
+  },
+  {
+    "id": "p28",
+    "slug": "sudadera-hattrick-essential",
+    "team": "HATTRICK",
+    "name": "Sudadera Essential",
+    "category": "entrenamiento",
+    "league": "HATTRICK",
+    "season": "Atemporal",
+    "price": 69,
+    "compareAt": null,
+    "isNew": false,
+    "rating": 4.7,
+    "reviews": 122,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#2b2b2b",
+      "secondary": "#1b1b1b",
+      "accent": "#ffffff"
+    },
+    "pattern": "solid",
+    "description": "Sudadera de algodón pesado 380 g con logotipo bordado al pecho. Corte recto unisex.",
+    "tags": [
+      "negro",
+      "sudadera",
+      "hattrick"
+    ],
+    "images": []
+  },
+  {
+    "id": "p29",
+    "slug": "kit-nino-madrid-25-26",
+    "team": "Real Madrid",
+    "name": "Kit Infantil Local 25/26",
+    "category": "ninos",
+    "league": "LaLiga",
+    "season": "25/26",
+    "price": 69.95,
+    "compareAt": null,
+    "isNew": true,
+    "rating": 4.8,
+    "reviews": 96,
+    "sizes": [
+      "4A",
+      "6A",
+      "8A",
+      "10A",
+      "12A",
+      "14A"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#ffffff",
+      "secondary": "#f0f0f0",
+      "accent": "#d4af37"
+    },
+    "pattern": "solid",
+    "description": "Camiseta, pantalón y medias. Mismas tecnologías que la equipación adulta en tallaje infantil.",
+    "tags": [
+      "blanco",
+      "niños",
+      "kit"
+    ],
+    "images": []
+  },
+  {
+    "id": "p30",
+    "slug": "kit-nino-barcelona-25-26",
+    "team": "FC Barcelona",
+    "name": "Kit Infantil Local 25/26",
+    "category": "ninos",
+    "league": "LaLiga",
+    "season": "25/26",
+    "price": 69.95,
+    "compareAt": 84.95,
+    "isNew": false,
+    "rating": 4.7,
+    "reviews": 88,
+    "sizes": [
+      "4A",
+      "6A",
+      "8A",
+      "10A",
+      "12A",
+      "14A"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#004d98",
+      "secondary": "#a50044",
+      "accent": "#edbb00"
+    },
+    "pattern": "stripes",
+    "description": "Kit completo blaugrana con cintura elástica ajustable y estampado resistente al lavado.",
+    "tags": [
+      "azulgrana",
+      "niños",
+      "kit"
+    ],
+    "images": []
+  },
+  {
+    "id": "p31",
+    "slug": "kit-nino-espana-2026",
+    "team": "España",
+    "name": "Kit Infantil Mundial 2026",
+    "category": "ninos",
+    "league": "Selecciones",
+    "season": "2026",
+    "price": 74.95,
+    "compareAt": null,
+    "isNew": true,
+    "rating": 4.9,
+    "reviews": 134,
+    "sizes": [
+      "4A",
+      "6A",
+      "8A",
+      "10A",
+      "12A",
+      "14A"
+    ],
+    "soldOut": [],
+    "colors": {
+      "primary": "#c60b1e",
+      "secondary": "#9c0817",
+      "accent": "#ffc400"
+    },
+    "pattern": "solid",
+    "description": "El kit de La Roja para el Mundial en tallas de 4 a 14 años. Incluye dorsal personalizable.",
+    "tags": [
+      "rojo",
+      "niños",
+      "mundial"
+    ],
+    "images": []
+  },
+  {
+    "id": "p32",
+    "slug": "kit-nino-city-25-26",
+    "team": "Manchester City",
+    "name": "Kit Infantil Local 25/26",
+    "category": "ninos",
+    "league": "Premier League",
+    "season": "25/26",
+    "price": 64,
+    "compareAt": 79,
+    "isNew": false,
+    "rating": 4.5,
+    "reviews": 57,
+    "sizes": [
+      "4A",
+      "6A",
+      "8A",
+      "10A",
+      "12A",
+      "14A"
+    ],
+    "soldOut": [
+      "4A"
+    ],
+    "colors": {
+      "primary": "#6cabdd",
+      "secondary": "#ffffff",
+      "accent": "#1c2c5b"
+    },
+    "pattern": "solid",
+    "description": "Celeste con pantalón navy. Tejido suave sin costuras irritantes en cuello y sisas.",
+    "tags": [
+      "celeste",
+      "niños",
+      "kit"
+    ],
+    "images": []
+  }
+]

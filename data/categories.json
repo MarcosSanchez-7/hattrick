@@ -1,0 +1,37 @@
+[
+  {
+    "slug": "clubes",
+    "name": "Clubes",
+    "tagline": "Las equipaciones de las cinco grandes ligas",
+    "description": "Primera, segunda y tercera equipación de los clubes que definen la temporada. Versión hincha y versión jugador.",
+    "image": null
+  },
+  {
+    "slug": "selecciones",
+    "name": "Selecciones",
+    "tagline": "Camisetas nacionales oficiales",
+    "description": "Las camisetas que se visten cada verano. Ediciones de torneo, escudos bordados y tejidos de competición.",
+    "image": null
+  },
+  {
+    "slug": "retro",
+    "name": "Retro",
+    "tagline": "Clásicos que nunca se fueron",
+    "description": "Reediciones fieles de las camisetas que marcaron una época. Corte holgado, cuello de época y detalles originales.",
+    "image": null
+  },
+  {
+    "slug": "entrenamiento",
+    "name": "Entrenamiento",
+    "tagline": "Sudaderas, chándals y calentamiento",
+    "description": "Ropa técnica de preparación: pre-match, chaquetas de calentamiento y equipación de entrenamiento.",
+    "image": null
+  },
+  {
+    "slug": "ninos",
+    "name": "Niños",
+    "tagline": "Kits completos 4–14 años",
+    "description": "Camiseta, pantalón y medias en un solo kit. Tallas infantiles con las mismas tecnologías que la equipación adulta.",
+    "image": null
+  }
+]
