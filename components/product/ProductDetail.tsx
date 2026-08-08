@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { discountPercent, isOnSale, type Product } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
-import { useCart } from "@/components/cart/CartProvider";
+import { FREE_SHIPPING_FROM, useCart } from "@/components/cart/CartProvider";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import {
   IconChevron,
@@ -16,6 +16,8 @@ import {
 
 /** Nº de vistas generadas cuando el producto no tiene fotos reales. */
 const GENERATED_VIEWS = 3;
+const PERSONALIZATION_PRICE = 120000;
+const EXPRESS_SHIPPING_PRICE = 80000;
 
 export function ProductDetail({ product }: { product: Product }) {
   const { add } = useCart();
@@ -157,11 +159,15 @@ export function ProductDetail({ product }: { product: Product }) {
         <div className="stack gap-2">
           <div className="notice">
             <IconTruck className="icon--sm" />
-            <span>Entrega estimada en 48 h · Gratis desde 80 €</span>
+            <span>
+              Entrega estimada en 48 h · Gratis desde {formatPrice(FREE_SHIPPING_FROM)}
+            </span>
           </div>
           <div className="notice">
             <IconPrint className="icon--sm" />
-            <span>Personalización oficial disponible desde 14,95 €</span>
+            <span>
+              Personalización oficial disponible desde {formatPrice(PERSONALIZATION_PRICE)}
+            </span>
           </div>
           <div className="notice">
             <IconReturn className="icon--sm" />
@@ -217,9 +223,11 @@ export function ProductDetail({ product }: { product: Product }) {
             open={open}
             setOpen={setOpen}
           >
-            Envío estándar en 48 h laborables (gratuito a partir de 80 €) y
-            express en 24 h por 9,95 €. Devoluciones y cambios de talla
-            gratuitos durante 30 días, salvo en artículos personalizados.
+            Envío estándar en 48 h laborables (gratuito a partir de{" "}
+            {formatPrice(FREE_SHIPPING_FROM)}) y express en 24 h por{" "}
+            {formatPrice(EXPRESS_SHIPPING_PRICE)}. Devoluciones y cambios de
+            talla gratuitos durante 30 días, salvo en artículos
+            personalizados.
           </Accordion>
         </div>
       </div>

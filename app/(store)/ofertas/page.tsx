@@ -8,7 +8,7 @@ import { Countdown } from "@/components/home/Countdown";
 export const metadata: Metadata = {
   title: "Ofertas",
   description:
-    "Camisetas de fútbol rebajadas hasta un 25 %. Stock limitado y envío gratis desde 80 €.",
+    "Camisetas de fútbol rebajadas hasta un 25 %. Stock limitado y envío gratis desde Gs. 640.000.",
 };
 
 export const dynamic = "force-dynamic";

@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { formatPrice } from "@/lib/format";
 import { JerseyArt } from "@/components/product/JerseyArt";
 import { IconCheck } from "@/components/ui/Icons";
+
+const PERSONALIZATION_PRICE = 120000;
 
 const POINTS = [
   "Tipografía y parches oficiales de LaLiga, Premier, Serie A y UEFA",
@@ -37,7 +40,7 @@ export function CustomBanner() {
                 Personalizar ahora
               </Link>
               <span className="meta" style={{ alignSelf: "center" }}>
-                Desde 14,95 €
+                Desde {formatPrice(PERSONALIZATION_PRICE)}
               </span>
             </div>
           </div>

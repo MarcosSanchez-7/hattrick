@@ -269,11 +269,11 @@ export function ProductForm({
         <p className="admin-fieldset__title">Precio y estado</p>
         <div className="admin-form__grid admin-form__grid--3">
           <div className="admin-field">
-            <label htmlFor="price">Precio (€)</label>
+            <label htmlFor="price">Precio (Gs.)</label>
             <input
               id="price"
               type="number"
-              step="0.01"
+              step="1000"
               min="0"
               required
               value={form.price}
@@ -281,11 +281,11 @@ export function ProductForm({
             />
           </div>
           <div className="admin-field">
-            <label htmlFor="compareAt">Precio anterior (€, oferta)</label>
+            <label htmlFor="compareAt">Precio anterior (Gs., oferta)</label>
             <input
               id="compareAt"
               type="number"
-              step="0.01"
+              step="1000"
               min="0"
               value={form.compareAt}
               onChange={(e) => update("compareAt", e.target.value)}

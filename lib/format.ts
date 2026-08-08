@@ -1,6 +1,7 @@
-const eur = new Intl.NumberFormat("es-ES", {
+const pyg = new Intl.NumberFormat("es-PY", {
   style: "currency",
-  currency: "EUR",
+  currency: "PYG",
+  maximumFractionDigits: 0,
 });
 
-export const formatPrice = (value: number) => eur.format(value);
+export const formatPrice = (value: number) => pyg.format(value);

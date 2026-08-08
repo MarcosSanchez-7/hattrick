@@ -10,8 +10,8 @@ import {
 } from "react";
 import type { Product } from "@/lib/catalog";
 
-export const FREE_SHIPPING_FROM = 80;
-export const SHIPPING_COST = 4.95;
+export const FREE_SHIPPING_FROM = 640000;
+export const SHIPPING_COST = 40000;
 
 type StoredLine = { slug: string; size: string; qty: number };
 
