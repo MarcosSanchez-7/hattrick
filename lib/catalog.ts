@@ -8,6 +8,20 @@
 
 export type Pattern = "solid" | "stripes" | "hoops" | "halves" | "sash";
 
+/**
+ * propio: stock real, con cantidad por talla, gestionado por nosotros.
+ * ajeno/importado: no llevamos cantidad; el cliente ve "Consultar talle".
+ */
+export type StockMode = "propio" | "ajeno" | "importado";
+
+/** Talla usada en el carrito/PDP para productos sin stock por talla. */
+export const CONSULT_SIZE_LABEL = "A consultar";
+
+export type ProductVariant = {
+  size: string;
+  stock: number;
+};
+
 export type Product = {
   id: string;
   slug: string;
@@ -23,6 +37,9 @@ export type Product = {
   isNew?: boolean;
   rating: number;
   reviews: number;
+  stockMode: StockMode;
+  /** Sólo relevante cuando stockMode === "propio"; cantidad real por talla. */
+  variants?: ProductVariant[];
   sizes: string[];
   soldOut?: string[];
   colors: { primary: string; secondary: string; accent: string };
@@ -42,7 +59,7 @@ export type Category = {
   image?: string | null;
 };
 
-export const SIZES_ADULT = ["S", "M", "L", "XL", "XXL"];
+export const SIZES_ADULT = ["P", "M", "G", "XL", "XXL"];
 export const SIZES_KIDS = ["4A", "6A", "8A", "10A", "12A", "14A"];
 
 export const PATTERNS: { value: Pattern; label: string }[] = [
@@ -72,7 +89,12 @@ export const isOnSale = (p: Product) =>
 export const discountPercent = (p: Product) =>
   isOnSale(p) ? Math.round((1 - p.price / p.compareAt!) * 100) : 0;
 
+/** Los productos "ajeno"/"importado" no llevan stock por talla: nunca se marcan agotados. */
+export const needsSizeSelection = (p: Product) => p.stockMode === "propio";
+
 export const isSoldOut = (p: Product) =>
+  needsSizeSelection(p) &&
+  p.sizes.length > 0 &&
   (p.soldOut?.length ?? 0) >= p.sizes.length;
 
 export const getProduct = (products: Product[], slug: string) =>

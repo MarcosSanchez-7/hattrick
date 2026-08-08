@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { discountPercent, isOnSale, type Product } from "@/lib/catalog";
+import {
+  CONSULT_SIZE_LABEL,
+  discountPercent,
+  isOnSale,
+  isSoldOut,
+  needsSizeSelection,
+  type Product,
+} from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { useCart } from "@/components/cart/CartProvider";
 import { ProductVisual } from "@/components/product/ProductVisual";
@@ -10,8 +17,9 @@ import { IconStar } from "@/components/ui/Icons";
 export function ProductCard({ product }: { product: Product }) {
   const { add } = useCart();
   const sale = isOnSale(product);
+  const requiresSize = needsSizeSelection(product);
   const soldOut = product.soldOut ?? [];
-  const allSoldOut = soldOut.length >= product.sizes.length;
+  const allSoldOut = isSoldOut(product);
 
   return (
     <article className="card">
@@ -59,35 +67,53 @@ export function ProductCard({ product }: { product: Product }) {
             >
               Añadir
             </span>
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-              {product.sizes.map((size) => {
-                const out = soldOut.includes(size);
-                return (
-                  <button
-                    key={size}
-                    type="button"
-                    disabled={out}
-                    onClick={() => add(product, size)}
-                    title={
-                      out ? `Talla ${size} agotada` : `Añadir talla ${size}`
-                    }
-                    style={{
-                      minWidth: 30,
-                      height: 26,
-                      padding: "0 6px",
-                      fontSize: 11,
-                      fontWeight: 600,
-                      border: "1px solid var(--line)",
-                      color: out ? "var(--ink-muted)" : "var(--ink)",
-                      textDecoration: out ? "line-through" : "none",
-                      cursor: out ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    {size}
-                  </button>
-                );
-              })}
-            </div>
+            {requiresSize ? (
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                {product.sizes.map((size) => {
+                  const out = soldOut.includes(size);
+                  return (
+                    <button
+                      key={size}
+                      type="button"
+                      disabled={out}
+                      onClick={() => add(product, size)}
+                      title={
+                        out ? `Talla ${size} agotada` : `Añadir talla ${size}`
+                      }
+                      style={{
+                        minWidth: 30,
+                        height: 26,
+                        padding: "0 6px",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        border: "1px solid var(--line)",
+                        color: out ? "var(--ink-muted)" : "var(--ink)",
+                        textDecoration: out ? "line-through" : "none",
+                        cursor: out ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      {size}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => add(product, CONSULT_SIZE_LABEL)}
+                style={{
+                  height: 26,
+                  padding: "0 10px",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  border: "1px solid var(--line)",
+                  color: "var(--ink)",
+                  cursor: "pointer",
+                }}
+              >
+                Añadir
+              </button>
+            )}
           </div>
         </div>
       </div>

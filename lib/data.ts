@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "crypto";
-import type { Category, Product } from "@/lib/catalog";
+import type { Category, Product, ProductVariant, StockMode } from "@/lib/catalog";
 import { slugify, uniqueSlug } from "@/lib/slug";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
@@ -38,8 +38,6 @@ type ProductRow = {
   is_new: boolean;
   rating: number | string;
   reviews: number;
-  sizes: string[] | null;
-  sold_out: string[] | null;
   color_primary: string;
   color_secondary: string;
   color_accent: string;
@@ -47,6 +45,14 @@ type ProductRow = {
   description: string;
   tags: string[] | null;
   images: string[] | null;
+  stock_mode: StockMode;
+};
+
+type VariantRow = {
+  id: string;
+  product_id: string;
+  size: string;
+  stock_on_hand: number;
 };
 
 type CategoryRow = {
@@ -57,7 +63,13 @@ type CategoryRow = {
   image: string | null;
 };
 
-function rowToProduct(row: ProductRow): Product {
+function rowToProduct(row: ProductRow, variantRows: VariantRow[]): Product {
+  const isPropio = row.stock_mode === "propio";
+  const variants: ProductVariant[] = variantRows.map((v) => ({
+    size: v.size,
+    stock: v.stock_on_hand,
+  }));
+
   return {
     id: row.id,
     slug: row.slug,
@@ -71,8 +83,12 @@ function rowToProduct(row: ProductRow): Product {
     isNew: row.is_new,
     rating: Number(row.rating),
     reviews: row.reviews,
-    sizes: row.sizes ?? [],
-    soldOut: row.sold_out ?? [],
+    stockMode: row.stock_mode,
+    variants: isPropio ? variants : undefined,
+    // Derivadas de product_variants: la cantidad real es la única fuente de
+    // verdad para saber qué tallas hay y cuáles están agotadas.
+    sizes: isPropio ? variants.map((v) => v.size) : [],
+    soldOut: isPropio ? variants.filter((v) => v.stock <= 0).map((v) => v.size) : [],
     colors: {
       primary: row.color_primary,
       secondary: row.color_secondary,
@@ -95,6 +111,41 @@ function rowToCategory(row: CategoryRow): Category {
   };
 }
 
+async function fetchVariantsByProduct(
+  productIds: string[],
+): Promise<Map<string, VariantRow[]>> {
+  const map = new Map<string, VariantRow[]>();
+  if (productIds.length === 0) return map;
+
+  const { data, error } = await supabaseAdmin
+    .from("product_variants")
+    .select("*")
+    .in("product_id", productIds);
+  if (error) fail(`No se pudieron cargar las tallas y el stock: ${error.message}`);
+
+  for (const row of data as VariantRow[]) {
+    const list = map.get(row.product_id) ?? [];
+    list.push(row);
+    map.set(row.product_id, list);
+  }
+  return map;
+}
+
+async function fetchProductWithVariants(id: string): Promise<Product> {
+  const { data, error } = await supabaseAdmin
+    .from("products")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error) fail(`No se pudo releer el producto: ${error.message}`);
+
+  const row = data as ProductRow;
+  const variantMap = await fetchVariantsByProduct(
+    row.stock_mode === "propio" ? [row.id] : [],
+  );
+  return rowToProduct(row, variantMap.get(row.id) ?? []);
+}
+
 // ── Lecturas ────────────────────────────────────────────────────────────
 
 export async function getAllProducts(): Promise<Product[]> {
@@ -103,7 +154,12 @@ export async function getAllProducts(): Promise<Product[]> {
     .select("*")
     .order("created_at", { ascending: true });
   if (error) fail(`No se pudieron cargar los productos: ${error.message}`);
-  return (data as ProductRow[]).map(rowToProduct);
+
+  const rows = data as ProductRow[];
+  const propioIds = rows.filter((r) => r.stock_mode === "propio").map((r) => r.id);
+  const variantMap = await fetchVariantsByProduct(propioIds);
+
+  return rows.map((row) => rowToProduct(row, variantMap.get(row.id) ?? []));
 }
 
 export async function getAllCategories(): Promise<Category[]> {
@@ -115,9 +171,96 @@ export async function getAllCategories(): Promise<Category[]> {
   return (data as CategoryRow[]).map(rowToCategory);
 }
 
+// ── Stock (product_variants + inventory_movements) ────────────────────────
+
+async function insertMovement(
+  variantId: string,
+  movementType: "restock" | "correction",
+  quantityDelta: number,
+  note: string,
+) {
+  const { error } = await supabaseAdmin.from("inventory_movements").insert({
+    variant_id: variantId,
+    movement_type: movementType,
+    quantity_delta: quantityDelta,
+    note,
+  });
+  if (error) {
+    if (error.message.includes("stock_on_hand"))  {
+      fail("No hay suficiente stock para aplicar ese cambio.", 400);
+    }
+    fail(`No se pudo registrar el movimiento de stock: ${error.message}`);
+  }
+}
+
+/**
+ * Deja el stock de cada talla en la cantidad indicada (valor absoluto, no un
+ * delta): crea las tallas que falten, ajusta las que cambiaron de cantidad
+ * (vía un movimiento 'correction', nunca escribiendo stock_on_hand a mano) y
+ * lleva a 0 las tallas que ya no están seleccionadas — sin borrar el
+ * histórico de esa talla.
+ */
+async function syncProductVariants(
+  productId: string,
+  quantities: Record<string, number>,
+): Promise<void> {
+  const { data: existing, error } = await supabaseAdmin
+    .from("product_variants")
+    .select("*")
+    .eq("product_id", productId);
+  if (error) fail(`No se pudo leer el stock actual: ${error.message}`);
+
+  const existingBySize = new Map(
+    (existing as VariantRow[]).map((v) => [v.size, v] as const),
+  );
+
+  for (const [size, rawQty] of Object.entries(quantities)) {
+    const qty = Math.max(0, Math.round(rawQty));
+    const current = existingBySize.get(size);
+
+    if (!current) {
+      const variantId = `pv-${randomUUID().slice(0, 8)}`;
+      const { error: insertError } = await supabaseAdmin
+        .from("product_variants")
+        .insert({ id: variantId, product_id: productId, size });
+      if (insertError) {
+        fail(`No se pudo crear la talla "${size}": ${insertError.message}`);
+      }
+      if (qty > 0) {
+        await insertMovement(variantId, "restock", qty, "Alta inicial desde el panel");
+      }
+    } else if (qty !== current.stock_on_hand) {
+      await insertMovement(
+        current.id,
+        "correction",
+        qty - current.stock_on_hand,
+        "Ajuste de cantidad desde el panel de administración",
+      );
+    }
+  }
+
+  for (const [size, variant] of existingBySize) {
+    if (!(size in quantities) && variant.stock_on_hand !== 0) {
+      await insertMovement(
+        variant.id,
+        "correction",
+        -variant.stock_on_hand,
+        "Talla retirada desde el panel de administración",
+      );
+    }
+  }
+}
+
 // ── Productos ────────────────────────────────────────────────────────────
 
-export type ProductInput = Omit<Product, "id" | "slug"> & { slug?: string };
+export type ProductInput = Omit<
+  Product,
+  "id" | "slug" | "variants" | "sizes" | "soldOut"
+> & {
+  slug?: string;
+  /** Cantidad por talla. Sólo se usa (y se exige) cuando stockMode === "propio". */
+  variantQuantities?: Record<string, number>;
+};
 
 function assertValidProduct(input: ProductInput) {
   if (!input.team?.trim()) throw new DataError("El equipo es obligatorio.");
@@ -133,8 +276,14 @@ function assertValidProduct(input: ProductInput) {
       "El precio anterior debe ser mayor que el precio actual.",
     );
   }
-  if (!Array.isArray(input.sizes) || input.sizes.length === 0) {
-    throw new DataError("Selecciona al menos una talla.");
+  if (!["propio", "ajeno", "importado"].includes(input.stockMode)) {
+    throw new DataError("Selecciona un tipo de stock válido.");
+  }
+  if (input.stockMode === "propio") {
+    const quantities = input.variantQuantities ?? {};
+    if (Object.keys(quantities).length === 0) {
+      throw new DataError("Selecciona al menos una talla y su cantidad.");
+    }
   }
   if (!input.description?.trim()) {
     throw new DataError("La descripción es obligatoria.");
@@ -153,8 +302,6 @@ function productToRow(input: ProductInput) {
     is_new: Boolean(input.isNew),
     rating: Number.isFinite(input.rating) ? input.rating : 5,
     reviews: Number.isFinite(input.reviews) ? input.reviews : 0,
-    sizes: input.sizes,
-    sold_out: input.soldOut ?? [],
     color_primary: input.colors.primary,
     color_secondary: input.colors.secondary,
     color_accent: input.colors.accent,
@@ -162,6 +309,7 @@ function productToRow(input: ProductInput) {
     description: input.description,
     tags: input.tags ?? [],
     images: input.images ?? [],
+    stock_mode: input.stockMode,
   };
 }
 
@@ -177,11 +325,10 @@ export async function createProduct(input: ProductInput): Promise<Product> {
     ? uniqueSlug(input.slug, taken)
     : uniqueSlug(`${input.team}-${input.name}`, taken);
 
-  const { data, error } = await supabaseAdmin
+  const id = `p-${randomUUID().slice(0, 8)}`;
+  const { error } = await supabaseAdmin
     .from("products")
-    .insert({ id: `p-${randomUUID().slice(0, 8)}`, slug, ...productToRow(input) })
-    .select()
-    .single();
+    .insert({ id, slug, ...productToRow(input) });
 
   if (error) {
     if (error.code === "23503") {
@@ -189,7 +336,12 @@ export async function createProduct(input: ProductInput): Promise<Product> {
     }
     fail(`No se pudo crear el producto: ${error.message}`);
   }
-  return rowToProduct(data as ProductRow);
+
+  if (input.stockMode === "propio") {
+    await syncProductVariants(id, input.variantQuantities ?? {});
+  }
+
+  return fetchProductWithVariants(id);
 }
 
 export async function updateProduct(
@@ -211,12 +363,10 @@ export async function updateProduct(
     ? uniqueSlug(input.slug, taken)
     : rows.find((p) => p.id === id)!.slug;
 
-  const { data, error } = await supabaseAdmin
+  const { error } = await supabaseAdmin
     .from("products")
     .update({ slug, ...productToRow(input) })
-    .eq("id", id)
-    .select()
-    .single();
+    .eq("id", id);
 
   if (error) {
     if (error.code === "23503") {
@@ -224,7 +374,15 @@ export async function updateProduct(
     }
     fail(`No se pudo actualizar el producto: ${error.message}`);
   }
-  return rowToProduct(data as ProductRow);
+
+  // Siempre se llama (incluso fuera de "propio") para dejar en 0 cualquier
+  // talla que hubiera quedado de un cambio de tipo de stock anterior.
+  await syncProductVariants(
+    id,
+    input.stockMode === "propio" ? input.variantQuantities ?? {} : {},
+  );
+
+  return fetchProductWithVariants(id);
 }
 
 export async function deleteProduct(id: string): Promise<void> {
@@ -233,7 +391,15 @@ export async function deleteProduct(id: string): Promise<void> {
     .delete()
     .eq("id", id)
     .select("id");
-  if (error) fail(`No se pudo eliminar el producto: ${error.message}`);
+  if (error) {
+    if (error.code === "23503") {
+      fail(
+        "No puedes eliminar este producto: tiene ventas o movimientos de stock registrados.",
+        400,
+      );
+    }
+    fail(`No se pudo eliminar el producto: ${error.message}`);
+  }
   if (!data || data.length === 0) {
     throw new DataError("Producto no encontrado.", 404);
   }

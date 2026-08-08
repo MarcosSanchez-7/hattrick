@@ -13,9 +13,9 @@
     "rating": 4.9,
     "reviews": 412,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -51,9 +51,9 @@
     "rating": 4.8,
     "reviews": 358,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -87,9 +87,9 @@
     "rating": 4.7,
     "reviews": 221,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -122,9 +122,9 @@
     "rating": 4.8,
     "reviews": 305,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -157,9 +157,9 @@
     "rating": 4.6,
     "reviews": 164,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -193,9 +193,9 @@
     "rating": 4.7,
     "reviews": 189,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -229,9 +229,9 @@
     "rating": 4.7,
     "reviews": 143,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -264,9 +264,9 @@
     "rating": 4.6,
     "reviews": 132,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -299,9 +299,9 @@
     "rating": 4.5,
     "reviews": 98,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -334,9 +334,9 @@
     "rating": 4.6,
     "reviews": 176,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -370,9 +370,9 @@
     "rating": 4.4,
     "reviews": 112,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -406,14 +406,14 @@
     "rating": 4.7,
     "reviews": 208,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
     "soldOut": [
-      "S"
+      "P"
     ],
     "colors": {
       "primary": "#d3122b",
@@ -443,9 +443,9 @@
     "rating": 4.9,
     "reviews": 521,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -478,9 +478,9 @@
     "rating": 4.9,
     "reviews": 634,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -515,9 +515,9 @@
     "rating": 4.8,
     "reviews": 389,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -550,9 +550,9 @@
     "rating": 4.6,
     "reviews": 173,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -585,9 +585,9 @@
     "rating": 4.7,
     "reviews": 204,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -619,9 +619,9 @@
     "rating": 4.6,
     "reviews": 158,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -653,9 +653,9 @@
     "rating": 4.9,
     "reviews": 267,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -688,9 +688,9 @@
     "rating": 4.8,
     "reviews": 198,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -723,9 +723,9 @@
     "rating": 5,
     "reviews": 341,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -758,9 +758,9 @@
     "rating": 4.8,
     "reviews": 176,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -794,14 +794,14 @@
     "rating": 5,
     "reviews": 455,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
     "soldOut": [
-      "S",
+      "P",
       "XXL"
     ],
     "colors": {
@@ -832,9 +832,9 @@
     "rating": 4.9,
     "reviews": 289,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -867,9 +867,9 @@
     "rating": 4.5,
     "reviews": 87,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -901,9 +901,9 @@
     "rating": 4.6,
     "reviews": 64,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -936,9 +936,9 @@
     "rating": 4.4,
     "reviews": 71,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],
@@ -970,9 +970,9 @@
     "rating": 4.7,
     "reviews": 122,
     "sizes": [
-      "S",
+      "P",
       "M",
-      "L",
+      "G",
       "XL",
       "XXL"
     ],

@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { discountPercent, isOnSale, type Product } from "@/lib/catalog";
+import {
+  CONSULT_SIZE_LABEL,
+  discountPercent,
+  isOnSale,
+  needsSizeSelection,
+  type Product,
+} from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { FREE_SHIPPING_FROM, useCart } from "@/components/cart/CartProvider";
 import { ProductVisual } from "@/components/product/ProductVisual";
@@ -21,9 +27,12 @@ const EXPRESS_SHIPPING_PRICE = 80000;
 
 export function ProductDetail({ product }: { product: Product }) {
   const { add } = useCart();
+  const requiresSize = needsSizeSelection(product);
   const soldOut = product.soldOut ?? [];
   const firstAvailable = product.sizes.find((s) => !soldOut.includes(s));
-  const [size, setSize] = useState<string | undefined>(firstAvailable);
+  const [size, setSize] = useState<string | undefined>(
+    requiresSize ? firstAvailable : CONSULT_SIZE_LABEL,
+  );
   const [view, setView] = useState(0);
   const [open, setOpen] = useState<string | null>("descripcion");
 
@@ -112,33 +121,41 @@ export function ProductDetail({ product }: { product: Product }) {
             style={{ justifyContent: "space-between", marginBottom: 10 }}
           >
             <span className="label">Talla</span>
-            <button type="button" className="meta link-underline">
-              Guía de tallas
-            </button>
+            {requiresSize ? (
+              <button type="button" className="meta link-underline">
+                Guía de tallas
+              </button>
+            ) : null}
           </div>
-          <div className="sizes">
-            {product.sizes.map((s) => {
-              const out = soldOut.includes(s);
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  className="size"
-                  data-selected={size === s ? "true" : "false"}
-                  disabled={out}
-                  onClick={() => setSize(s)}
-                  title={out ? "Agotada" : undefined}
-                >
-                  {s}
-                </button>
-              );
-            })}
-          </div>
-          {soldOut.length > 0 ? (
-            <p className="meta" style={{ marginTop: 8 }}>
-              Tallas agotadas: {soldOut.join(", ")}. Te avisamos si vuelven.
-            </p>
-          ) : null}
+          {requiresSize ? (
+            <>
+              <div className="sizes">
+                {product.sizes.map((s) => {
+                  const out = soldOut.includes(s);
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      className="size"
+                      data-selected={size === s ? "true" : "false"}
+                      disabled={out}
+                      onClick={() => setSize(s)}
+                      title={out ? "Agotada" : undefined}
+                    >
+                      {s}
+                    </button>
+                  );
+                })}
+              </div>
+              {soldOut.length > 0 ? (
+                <p className="meta" style={{ marginTop: 8 }}>
+                  Tallas agotadas: {soldOut.join(", ")}. Te avisamos si vuelven.
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <span className="badge">Consultar talle</span>
+          )}
         </div>
 
         <div className="stack gap-2">

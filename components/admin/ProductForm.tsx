@@ -5,15 +5,31 @@ import { useRouter } from "next/navigation";
 import {
   PATTERNS,
   SIZES_ADULT,
-  SIZES_KIDS,
   type Category,
   type Pattern,
   type Product,
+  type StockMode,
 } from "@/lib/catalog";
 import { slugify } from "@/lib/slug";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 
-const ALL_SIZES = [...SIZES_ADULT, ...SIZES_KIDS];
+const STOCK_MODES: { value: StockMode; label: string; help: string }[] = [
+  {
+    value: "propio",
+    label: "Stock propio",
+    help: "Cargamos cantidad real por talla; la web la descuenta sola.",
+  },
+  {
+    value: "ajeno",
+    label: "Stock ajeno",
+    help: "No llevamos cantidad. La ficha muestra \"Consultar talle\".",
+  },
+  {
+    value: "importado",
+    label: "Importado",
+    help: "No llevamos cantidad. La ficha muestra \"Consultar talle\".",
+  },
+];
 
 type FormState = {
   team: string;
@@ -26,8 +42,9 @@ type FormState = {
   isNew: boolean;
   rating: string;
   reviews: string;
-  sizes: string[];
-  soldOut: string[];
+  stockMode: StockMode;
+  /** Talla -> cantidad (como texto, para no pelear con inputs controlados). */
+  variantQuantities: Record<string, string>;
   colorPrimary: string;
   colorSecondary: string;
   colorAccent: string;
@@ -39,6 +56,11 @@ type FormState = {
 };
 
 function toFormState(product?: Product): FormState {
+  const variantQuantities: Record<string, string> = {};
+  for (const v of product?.variants ?? []) {
+    variantQuantities[v.size] = String(v.stock);
+  }
+
   return {
     team: product?.team ?? "",
     name: product?.name ?? "",
@@ -50,8 +72,8 @@ function toFormState(product?: Product): FormState {
     isNew: product?.isNew ?? false,
     rating: product ? String(product.rating) : "5",
     reviews: product ? String(product.reviews) : "0",
-    sizes: product?.sizes ?? [...SIZES_ADULT],
-    soldOut: product?.soldOut ?? [],
+    stockMode: product?.stockMode ?? "propio",
+    variantQuantities,
     colorPrimary: product?.colors.primary ?? "#111111",
     colorSecondary: product?.colors.secondary ?? "#f2f2f2",
     colorAccent: product?.colors.accent ?? "#d4af37",
@@ -85,15 +107,26 @@ export function ProductForm({
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
-  const toggleInList = (key: "sizes" | "soldOut", value: string) => {
+  const toggleSize = (size: string) => {
     setForm((f) => {
-      const list = f[key];
-      const next = list.includes(value)
-        ? list.filter((v) => v !== value)
-        : [...list, value];
-      return { ...f, [key]: next };
+      const next = { ...f.variantQuantities };
+      if (size in next) {
+        delete next[size];
+      } else {
+        next[size] = "0";
+      }
+      return { ...f, variantQuantities: next };
     });
   };
+
+  const setSizeQuantity = (size: string, value: string) => {
+    setForm((f) => ({
+      ...f,
+      variantQuantities: { ...f.variantQuantities, [size]: value },
+    }));
+  };
+
+  const isPropio = form.stockMode === "propio";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,8 +143,8 @@ export function ProductForm({
       setError("Introduce un precio válido.");
       return;
     }
-    if (form.sizes.length === 0) {
-      setError("Selecciona al menos una talla.");
+    if (isPropio && Object.keys(form.variantQuantities).length === 0) {
+      setError("Selecciona al menos una talla y su cantidad.");
       return;
     }
 
@@ -126,8 +159,15 @@ export function ProductForm({
       isNew: form.isNew,
       rating: Number(form.rating) || 5,
       reviews: Number(form.reviews) || 0,
-      sizes: form.sizes,
-      soldOut: form.soldOut.filter((s) => form.sizes.includes(s)),
+      stockMode: form.stockMode,
+      variantQuantities: isPropio
+        ? Object.fromEntries(
+            Object.entries(form.variantQuantities).map(([size, qty]) => [
+              size,
+              Math.max(0, Math.round(Number(qty) || 0)),
+            ]),
+          )
+        : undefined,
       colors: {
         primary: form.colorPrimary,
         secondary: form.colorSecondary,
@@ -329,51 +369,67 @@ export function ProductForm({
       </div>
 
       <div className="admin-fieldset">
-        <p className="admin-fieldset__title">Tallas y stock</p>
-        <div>
-          <p className="admin-help" style={{ marginBottom: 8 }}>
-            Tallas disponibles en el catálogo
-          </p>
-          <div className="admin-checklist">
-            {ALL_SIZES.map((size) => (
-              <label
-                key={size}
-                className="admin-check"
-                data-checked={form.sizes.includes(size) ? "true" : "false"}
-              >
-                <input
-                  type="checkbox"
-                  checked={form.sizes.includes(size)}
-                  onChange={() => toggleInList("sizes", size)}
-                />
-                {size}
-              </label>
-            ))}
-          </div>
+        <p className="admin-fieldset__title">Tipo de stock</p>
+        <div className="admin-checklist">
+          {STOCK_MODES.map(({ value, label }) => (
+            <label
+              key={value}
+              className="admin-check"
+              data-checked={form.stockMode === value ? "true" : "false"}
+            >
+              <input
+                type="radio"
+                name="stockMode"
+                checked={form.stockMode === value}
+                onChange={() => update("stockMode", value)}
+              />
+              {label}
+            </label>
+          ))}
         </div>
-        {form.sizes.length > 0 ? (
-          <div>
-            <p className="admin-help" style={{ marginBottom: 8 }}>
-              Tallas agotadas (opcional)
-            </p>
-            <div className="admin-checklist">
-              {form.sizes.map((size) => (
-                <label
-                  key={size}
-                  className="admin-check"
-                  data-checked={form.soldOut.includes(size) ? "true" : "false"}
-                >
-                  <input
-                    type="checkbox"
-                    checked={form.soldOut.includes(size)}
-                    onChange={() => toggleInList("soldOut", size)}
-                  />
-                  {size}
-                </label>
-              ))}
-            </div>
+        <p className="admin-help">
+          {STOCK_MODES.find((m) => m.value === form.stockMode)?.help}
+        </p>
+
+        {isPropio ? (
+          <div className="admin-variant-list">
+            {SIZES_ADULT.map((size) => {
+              const included = size in form.variantQuantities;
+              return (
+                <div key={size} className="admin-variant-row">
+                  <label
+                    className="admin-check"
+                    data-checked={included ? "true" : "false"}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={included}
+                      onChange={() => toggleSize(size)}
+                    />
+                    {size}
+                  </label>
+                  {included ? (
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      className="admin-variant-qty"
+                      value={form.variantQuantities[size]}
+                      onChange={(e) => setSizeQuantity(size, e.target.value)}
+                      aria-label={`Cantidad en stock, talla ${size}`}
+                      placeholder="Cantidad"
+                    />
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
-        ) : null}
+        ) : (
+          <p className="admin-notice-ok">
+            Este producto mostrará &quot;Consultar talle&quot; en la tienda en vez
+            de un selector de talla con stock.
+          </p>
+        )}
       </div>
 
       <div className="admin-fieldset">

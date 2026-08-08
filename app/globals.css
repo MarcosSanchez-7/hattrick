@@ -2511,6 +2511,33 @@ textarea {
   font-weight: 600;
 }
 
+.admin-variant-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: var(--sp-4);
+}
+
+.admin-variant-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.admin-variant-qty {
+  width: 110px;
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  background: var(--surface);
+}
+
+.admin-variant-qty:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
 .admin-color-row {
   display: flex;
   gap: var(--sp-4);

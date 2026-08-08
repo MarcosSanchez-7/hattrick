@@ -119,7 +119,9 @@ export function ProductsTable({
                     ) : null}
                   </td>
                   <td>
-                    {isSoldOut(p) ? (
+                    {p.stockMode !== "propio" ? (
+                      <span className="meta">Consultar talle</span>
+                    ) : isSoldOut(p) ? (
                       <span className="badge badge--out">Agotado</span>
                     ) : p.isNew ? (
                       <span className="badge">Nuevo</span>

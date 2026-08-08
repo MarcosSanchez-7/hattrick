@@ -68,3 +68,173 @@ create trigger products_set_updated_at
 -- Nota: las fotos subidas desde el panel NO viven en Supabase Storage.
 -- Se guardan en Vercel Blob (ver app/api/admin/upload/route.ts) para no
 -- consumir la cuota de almacenamiento de Supabase.
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Inventario y ventas — cimientos para las futuras secciones de Stock y
+-- Ventas diarias. Todavía NO están conectadas a la app (products.sizes y
+-- products.sold_out se siguen usando tal cual); esto solo deja la base lista.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- ── Variantes de producto (talla) y stock ────────────────────────────────
+create table if not exists product_variants (
+  id text primary key,
+  product_id text not null references products (id) on delete cascade,
+  size text not null,
+  stock_on_hand integer not null default 0 check (stock_on_hand >= 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (product_id, size)
+);
+
+alter table product_variants enable row level security;
+
+create index if not exists product_variants_product_idx on product_variants (product_id);
+
+drop trigger if exists product_variants_set_updated_at on product_variants;
+create trigger product_variants_set_updated_at
+  before update on product_variants
+  for each row
+  execute function set_updated_at();
+
+-- ── Ventas (encabezado) ───────────────────────────────────────────────────
+create table if not exists sales (
+  id text primary key,
+  channel text not null check (channel in ('store', 'web')),
+  staff_name text,
+  customer_note text,
+  sold_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+
+alter table sales enable row level security;
+
+create index if not exists sales_sold_at_idx on sales (sold_at);
+create index if not exists sales_channel_idx on sales (channel);
+
+-- ── Líneas de venta ("qué se vendió") ─────────────────────────────────────
+create table if not exists sale_items (
+  id bigint generated always as identity primary key,
+  sale_id text not null references sales (id) on delete cascade,
+  variant_id text not null references product_variants (id) on delete restrict,
+  quantity integer not null check (quantity > 0),
+  unit_price numeric(10, 2) not null check (unit_price >= 0),
+  created_at timestamptz not null default now()
+);
+
+alter table sale_items enable row level security;
+
+create index if not exists sale_items_sale_idx on sale_items (sale_id);
+create index if not exists sale_items_variant_idx on sale_items (variant_id);
+
+-- ── Movimientos de inventario ("cómo se movió el stock") ──────────────────
+create table if not exists inventory_movements (
+  id bigint generated always as identity primary key,
+  variant_id text not null references product_variants (id) on delete restrict,
+  movement_type text not null check (
+    movement_type in ('restock', 'sale_in_store', 'sale_online', 'correction', 'return')
+  ),
+  quantity_delta integer not null check (quantity_delta <> 0),
+  sale_item_id bigint references sale_items (id) on delete set null,
+  note text,
+  created_by text,
+  created_at timestamptz not null default now(),
+  check (
+    (movement_type in ('restock', 'return') and quantity_delta > 0)
+    or (movement_type in ('sale_in_store', 'sale_online') and quantity_delta < 0)
+    or (movement_type = 'correction')
+  )
+);
+
+alter table inventory_movements enable row level security;
+
+create index if not exists inventory_movements_variant_idx
+  on inventory_movements (variant_id, created_at desc);
+create index if not exists inventory_movements_created_at_idx
+  on inventory_movements (created_at desc);
+create index if not exists inventory_movements_sale_item_idx
+  on inventory_movements (sale_item_id);
+
+-- Mantiene product_variants.stock_on_hand sincronizado con el ledger.
+create or replace function apply_inventory_movement()
+returns trigger as $$
+begin
+  update product_variants
+  set stock_on_hand = stock_on_hand + new.quantity_delta
+  where id = new.variant_id;
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists inventory_movements_apply on inventory_movements;
+create trigger inventory_movements_apply
+  after insert on inventory_movements
+  for each row
+  execute function apply_inventory_movement();
+
+-- Genera el movimiento de salida de stock al registrar una línea de venta
+-- (física u online — mismo camino, sólo cambia sales.channel).
+create or replace function create_sale_inventory_movement()
+returns trigger as $$
+declare
+  v_channel text;
+begin
+  select channel into v_channel from sales where id = new.sale_id;
+  insert into inventory_movements (variant_id, movement_type, quantity_delta, sale_item_id)
+  values (
+    new.variant_id,
+    case when v_channel = 'web' then 'sale_online' else 'sale_in_store' end,
+    -new.quantity,
+    new.id
+  );
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists sale_items_create_movement on sale_items;
+create trigger sale_items_create_movement
+  after insert on sale_items
+  for each row
+  execute function create_sale_inventory_movement();
+
+-- RPC atómico: registra una venta (encabezado + líneas) en una sola
+-- transacción, para que un fallo a mitad de camino no deje stock a medio
+-- descontar. Uso futuro desde lib/data.ts: supabaseAdmin.rpc('record_sale', {...}).
+-- El mismo camino sirve tanto para una venta física como para un futuro
+-- checkout web (solo cambia p_channel).
+create or replace function record_sale(
+  p_id text,
+  p_channel text,
+  p_staff_name text,
+  p_customer_note text,
+  p_items jsonb -- [{ "variant_id": "...", "quantity": 1, "unit_price": 350000 }, ...]
+)
+returns text
+language plpgsql
+as $$
+declare
+  v_item jsonb;
+begin
+  insert into sales (id, channel, staff_name, customer_note)
+  values (p_id, p_channel, p_staff_name, p_customer_note);
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    insert into sale_items (sale_id, variant_id, quantity, unit_price)
+    values (
+      p_id,
+      v_item->>'variant_id',
+      (v_item->>'quantity')::integer,
+      (v_item->>'unit_price')::numeric
+    );
+  end loop;
+
+  return p_id;
+end;
+$$;
+
+-- ── Tipo de stock por producto ─────────────────────────────────────────────
+-- propio: cantidad real cargada por talla (product_variants). ajeno/importado:
+-- no llevamos cantidad; el storefront muestra "Consultar talle".
+alter table products
+  add column if not exists stock_mode text not null default 'propio'
+  check (stock_mode in ('propio', 'ajeno', 'importado'));
