@@ -12,13 +12,15 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.112.2",
     "@vercel/blob": "^2.7.0",
-    "sharp": "^0.34.5",
+    "heic-convert": "^2.1.0",
     "next": "^16.3.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
+    "@types/heic-convert": "^2.1.1",
     "@types/node": "^26.2.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",

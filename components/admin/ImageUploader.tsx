@@ -120,13 +120,13 @@ export function ImageUploader({ images, onChange, max = 6, label }: Props) {
                 : label ?? "Arrastra una imagen o haz clic para subirla"}
             </span>
             <span className="admin-help">
-              PNG, JPG, WEBP, GIF o SVG · máx. 5 MB
+              PNG, JPG, WEBP, GIF, SVG o HEIC (fotos de iPhone) · máx. 5 MB
               {max > 1 ? ` · hasta ${max} imágenes` : ""}
             </span>
             <input
               ref={inputRef}
               type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+              accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,image/heic,image/heif,.heic,.heif"
               multiple={max > 1}
               onChange={(e) => void handleFiles(e.target.files)}
             />
