@@ -10,6 +10,7 @@ import {
 } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { FREE_SHIPPING_FROM, useCart } from "@/components/cart/CartProvider";
+import { useWishlist } from "@/components/wishlist/WishlistProvider";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import {
   IconChevron,
@@ -27,6 +28,8 @@ const EXPRESS_SHIPPING_PRICE = 80000;
 
 export function ProductDetail({ product }: { product: Product }) {
   const { add } = useCart();
+  const { isSaved, toggle } = useWishlist();
+  const saved = isSaved(product.slug);
   const requiresSize = needsSizeSelection(product);
   const soldOut = product.soldOut ?? [];
   const firstAvailable = product.sizes.find((s) => !soldOut.includes(s));
@@ -167,9 +170,14 @@ export function ProductDetail({ product }: { product: Product }) {
           >
             {size ? `Añadir al carrito · ${formatPrice(product.price)}` : "Selecciona una talla"}
           </button>
-          <button type="button" className="btn btn--ghost btn--block">
-            <IconHeart className="icon--sm" />
-            Guardar en favoritos
+          <button
+            type="button"
+            className="btn btn--ghost btn--block"
+            aria-pressed={saved}
+            onClick={() => toggle(product)}
+          >
+            <IconHeart className="icon--sm wishlist-heart-icon" />
+            {saved ? "Guardado en favoritos" : "Guardar en favoritos"}
           </button>
         </div>
 

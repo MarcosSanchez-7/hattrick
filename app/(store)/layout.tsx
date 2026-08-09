@@ -2,6 +2,8 @@ import { getAllCategories, getAllProducts, getSetting } from "@/lib/data";
 import { DEFAULT_FOOTER, DEFAULT_NAVBAR } from "@/lib/settings";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { WishlistProvider } from "@/components/wishlist/WishlistProvider";
+import { WishlistToast } from "@/components/wishlist/WishlistToast";
 import { AnnouncementBar } from "@/components/layout/AnnouncementBar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -20,15 +22,18 @@ export default async function StoreLayout({
 
   return (
     <CartProvider products={products}>
-      <AnnouncementBar items={navbarSettings.announcements} />
-      <Navbar
-        categories={categories}
-        products={products}
-        extraLinks={navbarSettings.extraLinks}
-      />
-      <main>{children}</main>
-      <Footer categories={categories} settings={footerSettings} />
-      <CartDrawer />
+      <WishlistProvider>
+        <AnnouncementBar items={navbarSettings.announcements} />
+        <Navbar
+          categories={categories}
+          products={products}
+          extraLinks={navbarSettings.extraLinks}
+        />
+        <main>{children}</main>
+        <Footer categories={categories} settings={footerSettings} />
+        <CartDrawer />
+        <WishlistToast />
+      </WishlistProvider>
     </CartProvider>
   );
 }

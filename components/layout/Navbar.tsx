@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { LEAGUES, type Category, type Product } from "@/lib/catalog";
 import type { NavLink } from "@/lib/settings";
 import { useCart } from "@/components/cart/CartProvider";
+import { useWishlist } from "@/components/wishlist/WishlistProvider";
 import { SearchOverlay } from "@/components/search/SearchOverlay";
 import {
   IconBag,
@@ -34,6 +35,7 @@ export function Navbar({
   extraLinks?: NavLink[];
 }) {
   const { count, openCart } = useCart();
+  const { count: wishlistCount } = useWishlist();
   const [megaOpen, setMegaOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -141,9 +143,12 @@ export function Navbar({
             <Link
               href="/favoritos"
               className="nav__icon-btn nav__icon-btn--optional"
-              aria-label="Favoritos"
+              aria-label={`Favoritos (${wishlistCount} artículos)`}
             >
               <IconHeart />
+              {wishlistCount > 0 ? (
+                <span className="nav__count">{wishlistCount}</span>
+              ) : null}
             </Link>
             <button
               type="button"
@@ -280,7 +285,7 @@ export function Navbar({
                 Mi cuenta
               </Link>
               <Link href="/favoritos" className="mobile-menu__link">
-                Favoritos
+                Favoritos ({wishlistCount})
               </Link>
               <Link href="/carrito" className="mobile-menu__link">
                 Carrito ({count})

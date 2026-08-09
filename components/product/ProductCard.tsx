@@ -2,6 +2,7 @@ import Link from "next/link";
 import { discountPercent, isOnSale, isSoldOut, type Product } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { ProductVisual } from "@/components/product/ProductVisual";
+import { WishlistHeartButton } from "@/components/wishlist/WishlistHeartButton";
 
 export function ProductCard({ product }: { product: Product }) {
   const sale = isOnSale(product);
@@ -21,6 +22,8 @@ export function ProductCard({ product }: { product: Product }) {
           ) : null}
           {allSoldOut ? <span className="badge badge--out">Agotado</span> : null}
         </div>
+
+        <WishlistHeartButton product={product} className="wishlist-heart--card" />
 
         <Link
           href={`/producto/${product.slug}`}
