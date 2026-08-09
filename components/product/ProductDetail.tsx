@@ -17,7 +17,6 @@ import {
   IconHeart,
   IconPrint,
   IconReturn,
-  IconStar,
   IconTruck,
 } from "@/components/ui/Icons";
 
@@ -91,12 +90,6 @@ export function ProductDetail({ product }: { product: Product }) {
             {product.name}
           </h1>
           <div className="row gap-3" style={{ marginTop: 10 }}>
-            <span className="rating">
-              <IconStar className="icon--sm" />
-              {product.rating.toFixed(1)}
-              <span style={{ opacity: 0.7 }}>({product.reviews} reseñas)</span>
-            </span>
-            <span className="meta">·</span>
             <span className="meta">
               {product.league} · {product.season}
             </span>
