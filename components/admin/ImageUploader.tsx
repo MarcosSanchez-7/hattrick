@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { upload } from "@vercel/blob/client";
 import { IconClose, IconPlus, IconUpload } from "@/components/ui/Icons";
 
 type Props = {
@@ -11,15 +12,25 @@ type Props = {
   label?: string;
 };
 
+/**
+ * Sube el archivo original directo desde el navegador a Vercel Blob (sin
+ * pasar por nuestro servidor, para no chocar con el límite de tamaño de
+ * las funciones serverless) y luego pide al servidor que lo procese
+ * (convertir HEIC, redimensionar, comprimir) a partir de esa URL.
+ */
 async function uploadFile(file: File): Promise<string> {
-  const formData = new FormData();
-  formData.append("file", file);
-  const res = await fetch("/api/admin/upload", {
+  const rawBlob = await upload(file.name, file, {
+    access: "public",
+    handleUploadUrl: "/api/admin/upload",
+  });
+
+  const res = await fetch("/api/admin/upload/optimize", {
     method: "POST",
-    body: formData,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url: rawBlob.url }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "No se pudo subir la imagen.");
+  if (!res.ok) throw new Error(data.error ?? "No se pudo procesar la imagen.");
   return data.url as string;
 }
 
@@ -120,7 +131,7 @@ export function ImageUploader({ images, onChange, max = 6, label }: Props) {
                 : label ?? "Arrastra una imagen o haz clic para subirla"}
             </span>
             <span className="admin-help">
-              PNG, JPG, WEBP, GIF, SVG o HEIC (fotos de iPhone) · máx. 5 MB
+              PNG, JPG, WEBP, GIF, SVG o HEIC (fotos de iPhone) · máx. 25 MB
               {max > 1 ? ` · hasta ${max} imágenes` : ""}
             </span>
             <input

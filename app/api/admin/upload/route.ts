@@ -1,114 +1,37 @@
-import { NextRequest, NextResponse } from "next/server";
-import { put } from "@vercel/blob";
-import { randomUUID } from "crypto";
-import sharp from "sharp";
-import convertHeic from "heic-convert";
+import { NextResponse } from "next/server";
+import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 
-const MAX_BYTES = 5 * 1024 * 1024;
-
-// Extensión derivada del MIME real, nunca del nombre de fichero del cliente.
-const EXT_BY_MIME: Record<string, string> = {
-  "image/png": ".png",
-  "image/jpeg": ".jpg",
-  "image/webp": ".webp",
-  "image/gif": ".gif",
-  "image/svg+xml": ".svg",
-};
-
-const CONVERTIBLE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-
-// El navegador casi nunca manda el MIME real de un HEIC/HEIF (fotos de
-// iPhone) — sobre todo al subir desde Windows — así que además del tipo
-// miramos la extensión del nombre de fichero original.
-const HEIC_MIME_TYPES = new Set(["image/heic", "image/heif"]);
-function isHeicFile(file: File) {
-  return HEIC_MIME_TYPES.has(file.type) || /\.hei[cf]$/i.test(file.name);
-}
-
-export async function POST(request: NextRequest) {
-  const formData = await request.formData();
-  const file = formData.get("file");
-
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "No se ha recibido ningún fichero." }, {
-      status: 400,
-    });
-  }
-
-  const heic = isHeicFile(file);
-  const ext = heic ? ".heic" : EXT_BY_MIME[file.type];
-  if (!ext) {
-    return NextResponse.json(
-      { error: "Formato no admitido. Usa PNG, JPG, WEBP, GIF, SVG o HEIC (fotos de iPhone)." },
-      { status: 400 },
-    );
-  }
-  if (file.size > MAX_BYTES) {
-    return NextResponse.json(
-      { error: "La imagen supera el tamaño máximo de 5 MB." },
-      { status: 400 },
-    );
-  }
+/**
+ * Genera el token que permite al navegador subir el archivo ORIGINAL
+ * directo a Vercel Blob, sin pasar por esta función — así una foto pesada
+ * (HEIC de iPhone, 15-20 MB) no choca con el límite de tamaño de petición
+ * de las funciones serverless (~4.5 MB). El procesado real (convertir,
+ * redimensionar, comprimir) pasa después en /api/admin/upload/optimize,
+ * a partir de la URL ya subida — eso sí puede manejar archivos grandes.
+ */
+export async function POST(request: Request) {
+  const body = (await request.json()) as HandleUploadBody;
 
   try {
-    const input = Buffer.from(await file.arrayBuffer());
-    let working: Buffer<ArrayBufferLike> = input;
-
-    if (heic) {
-      try {
-        const jpeg = await convertHeic({ buffer: working, format: "JPEG", quality: 0.92 });
-        working = Buffer.from(jpeg);
-      } catch {
-        return NextResponse.json(
-          {
-            error:
-              "No se pudo leer esta foto HEIC (puede estar dañada o ser un formato HEIC no estándar). Probá exportarla como JPG desde el iPhone.",
-          },
-          { status: 400 },
-        );
-      }
-    }
-
-    let payload: Buffer<ArrayBufferLike> = working;
-    let outputExt = ext;
-    let contentType = file.type;
-
-    if (heic || CONVERTIBLE_TYPES.has(file.type)) {
-      payload = await sharp(working)
-        .rotate()
-        .resize({
-          width: 2000,
-          height: 2000,
-          fit: "inside",
-          withoutEnlargement: true,
-        })
-        .webp({ quality: 82, effort: 4 })
-        .toBuffer();
-      outputExt = ".webp";
-      contentType = "image/webp";
-    }
-
-    const filename = `products/${randomUUID()}${outputExt}`;
-    const blob = await put(filename, payload, {
-      access: "public",
-      contentType,
-      addRandomSuffix: false,
+    const jsonResponse = await handleUpload({
+      body,
+      request,
+      onBeforeGenerateToken: async () => ({
+        allowedContentTypes: ["image/*"],
+        addRandomSuffix: true,
+        maximumSizeInBytes: 25 * 1024 * 1024,
+      }),
     });
+    return NextResponse.json(jsonResponse);
+  } catch (error) {
     return NextResponse.json(
       {
-        url: blob.url,
-        format: outputExt.slice(1),
-        optimized: outputExt === ".webp",
-        originalBytes: input.byteLength,
-        storedBytes: payload.byteLength,
+        error:
+          error instanceof Error
+            ? error.message
+            : "No se pudo generar el permiso de subida.",
       },
-      { status: 201 },
-    );
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Error desconocido.";
-    return NextResponse.json(
-      { error: `No se pudo subir la imagen: ${message}` },
-      { status: 500 },
+      { status: 400 },
     );
   }
 }
