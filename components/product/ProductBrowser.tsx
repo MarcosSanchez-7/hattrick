@@ -5,37 +5,21 @@ import Link from "next/link";
 import { isOnSale, type Product } from "@/lib/catalog";
 import { ProductGrid } from "@/components/product/ProductCard";
 
-type Sort = "destacados" | "precio-asc" | "precio-desc" | "novedad" | "valoracion";
+type Sort = "destacados" | "precio-asc" | "precio-desc" | "novedad";
 
 const SORTS: [Sort, string][] = [
   ["destacados", "Destacados"],
   ["novedad", "Novedades primero"],
   ["precio-asc", "Precio: de menor a mayor"],
   ["precio-desc", "Precio: de mayor a menor"],
-  ["valoracion", "Mejor valorados"],
 ];
 
-export function ProductBrowser({
-  products,
-  initialLeague = "Todas",
-}: {
-  products: Product[];
-  initialLeague?: string;
-}) {
-  const leagues = useMemo(
-    () => ["Todas", ...Array.from(new Set(products.map((p) => p.league)))],
-    [products],
-  );
-  const [league, setLeague] = useState(
-    leagues.includes(initialLeague) ? initialLeague : "Todas",
-  );
+export function ProductBrowser({ products }: { products: Product[] }) {
   const [onlySale, setOnlySale] = useState(false);
   const [sort, setSort] = useState<Sort>("destacados");
 
   const visible = useMemo(() => {
-    let list = products.filter(
-      (p) => league === "Todas" || p.league === league,
-    );
+    let list = products;
     if (onlySale) list = list.filter(isOnSale);
 
     const sorted = [...list];
@@ -49,30 +33,16 @@ export function ProductBrowser({
       case "novedad":
         sorted.sort((a, b) => Number(b.isNew ?? false) - Number(a.isNew ?? false));
         break;
-      case "valoracion":
-        sorted.sort((a, b) => b.rating - a.rating || b.reviews - a.reviews);
-        break;
       default:
         sorted.sort((a, b) => b.reviews - a.reviews);
     }
     return sorted;
-  }, [products, league, onlySale, sort]);
+  }, [products, onlySale, sort]);
 
   return (
     <>
       <div className="toolbar">
         <div className="filters">
-          {leagues.map((l) => (
-            <button
-              key={l}
-              type="button"
-              className="filter"
-              data-active={league === l ? "true" : "false"}
-              onClick={() => setLeague(l)}
-            >
-              {l}
-            </button>
-          ))}
           <button
             type="button"
             className="filter"

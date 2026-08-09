@@ -135,13 +135,12 @@ function DrawerLine({ line }: { line: CartLine }) {
           colors={product.colors}
           pattern={product.pattern}
           uid={`d-${product.id}-${line.size}`}
-          alt={`${product.team} — ${product.name}`}
+          alt={product.name}
         />
       </div>
       <div>
         <div className="line-item__top">
           <div>
-            <div className="card__team">{product.team}</div>
             <Link
               href={`/producto/${product.slug}`}
               onClick={closeCart}

@@ -173,9 +173,7 @@ export function Navbar({
                 <ul className="megamenu__list">
                   {LEAGUES.map((l) => (
                     <li key={l}>
-                      <Link href={`/categoria/clubes?liga=${encodeURIComponent(l)}`}>
-                        {l}
-                      </Link>
+                      <Link href={`/buscar?q=${encodeURIComponent(l)}`}>{l}</Link>
                     </li>
                   ))}
                 </ul>

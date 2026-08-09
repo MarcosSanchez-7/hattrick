@@ -27,16 +27,13 @@ export function ProductsTable({
     const q = query.trim().toLowerCase();
     if (!q) return products;
     return products.filter((p) =>
-      [p.team, p.name, p.league, p.season, categoryName(p.category)]
-        .join(" ")
-        .toLowerCase()
-        .includes(q),
+      [p.name, categoryName(p.category)].join(" ").toLowerCase().includes(q),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products, query, categories]);
 
   const handleDelete = async (product: Product) => {
-    if (!window.confirm(`¿Eliminar «${product.team} — ${product.name}»?`)) return;
+    if (!window.confirm(`¿Eliminar «${product.name}»?`)) return;
     setPendingId(product.id);
     try {
       const res = await fetch(`/api/admin/products/${product.id}`, {
@@ -83,7 +80,7 @@ export function ProductsTable({
         <input
           type="search"
           className="admin-search"
-          placeholder="Buscar por equipo, nombre o liga…"
+          placeholder="Buscar por nombre o categoría…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           aria-label="Buscar productos"
@@ -103,7 +100,6 @@ export function ProductsTable({
               <tr>
                 <th>Producto</th>
                 <th>Categoría</th>
-                <th>Liga</th>
                 <th>Precio</th>
                 <th>Estado</th>
                 <th aria-label="Acciones" />
@@ -123,14 +119,10 @@ export function ProductsTable({
                           alt={p.name}
                         />
                       </div>
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{p.team}</div>
-                        <div className="meta">{p.name}</div>
-                      </div>
+                      <div style={{ fontWeight: 600 }}>{p.name}</div>
                     </div>
                   </td>
                   <td>{categoryName(p.category)}</td>
-                  <td>{p.league}</td>
                   <td>
                     {formatPrice(p.price)}
                     {isOnSale(p) ? (

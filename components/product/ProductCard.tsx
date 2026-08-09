@@ -8,7 +8,7 @@ export function ProductCard({ product }: { product: Product }) {
   const sale = isOnSale(product);
   const allSoldOut = isSoldOut(product);
   const hasSecondImage = (product.images?.length ?? 0) > 1;
-  const alt = `${product.team} — ${product.name}`;
+  const alt = product.name;
 
   return (
     <article className="card">
@@ -53,7 +53,6 @@ export function ProductCard({ product }: { product: Product }) {
       </div>
 
       <div className="card__body">
-        <span className="card__team">{product.team}</span>
         <Link href={`/producto/${product.slug}`} className="card__name">
           {product.name}
         </Link>

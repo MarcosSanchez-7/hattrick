@@ -100,10 +100,7 @@ export default async function AdminDashboard() {
                             alt={p.name}
                           />
                         </div>
-                        <div>
-                          <div style={{ fontWeight: 600 }}>{p.team}</div>
-                          <div className="meta">{p.name}</div>
-                        </div>
+                        <div style={{ fontWeight: 600 }}>{p.name}</div>
                       </div>
                     </td>
                     <td>{formatPrice(p.price)}</td>

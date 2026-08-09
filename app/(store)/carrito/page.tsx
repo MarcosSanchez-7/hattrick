@@ -75,22 +75,19 @@ export default function CarritoPage() {
                     colors={line.product.colors}
                     pattern={line.product.pattern}
                     uid={`cart-${line.product.id}-${line.size}`}
-                    alt={`${line.product.team} — ${line.product.name}`}
+                    alt={line.product.name}
                   />
                 </div>
                 <div>
                   <div className="line-item__top">
                     <div>
-                      <div className="card__team">{line.product.team}</div>
                       <Link
                         href={`/producto/${line.product.slug}`}
                         style={{ fontWeight: 600 }}
                       >
                         {line.product.name}
                       </Link>
-                      <div className="meta">
-                        Talla {line.size} · {line.product.league}
-                      </div>
+                      <div className="meta">Talla {line.size}</div>
                     </div>
                     <button
                       type="button"

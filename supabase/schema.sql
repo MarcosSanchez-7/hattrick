@@ -396,3 +396,29 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row
   execute function public.handle_new_customer();
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Simplificación de la ficha de producto: se retiran "equipo/marca", "liga"
+-- y "temporada" como campos aparte — demasiado detalle para la carga real.
+-- "Equipo" se fusiona dentro de "nombre" (antes eran dos líneas separadas en
+-- las tarjetas/ficha; ahora es un solo título) para no perder el dato ya
+-- cargado en los productos existentes. El bloque "if exists" hace que sea
+-- seguro volver a correr este archivo completo aunque las columnas ya se
+-- hayan borrado antes.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_name = 'products' and column_name = 'team'
+  ) then
+    update products
+    set name = team || ' — ' || name
+    where coalesce(team, '') <> '';
+  end if;
+end $$;
+
+alter table products drop column if exists team;
+alter table products drop column if exists league;
+alter table products drop column if exists season;

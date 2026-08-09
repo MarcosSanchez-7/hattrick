@@ -57,10 +57,8 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                     {dateTimeFormatter.format(new Date(sale.soldAt))}
                   </td>
                   <td>
-                    <div style={{ fontWeight: 600 }}>{item.team}</div>
-                    <div className="meta">
-                      {item.name} · Talla {item.size}
-                    </div>
+                    <div style={{ fontWeight: 600 }}>{item.name}</div>
+                    <div className="meta">Talla {item.size}</div>
                   </td>
                   <td>{item.quantity}</td>
                   <td>{formatPrice(item.costPrice)}</td>

@@ -31,11 +31,8 @@ const STOCK_MODES: { value: StockMode; label: string; help: string }[] = [
 ];
 
 type FormState = {
-  team: string;
   name: string;
   category: string;
-  league: string;
-  season: string;
   price: string;
   compareAt: string;
   costPrice: string;
@@ -63,11 +60,8 @@ function toFormState(product?: Product): FormState {
   }
 
   return {
-    team: product?.team ?? "",
     name: product?.name ?? "",
     category: product?.category ?? "",
-    league: product?.league ?? "",
-    season: product?.season ?? "25/26",
     price: product ? String(product.price) : "",
     compareAt: product?.compareAt != null ? String(product.compareAt) : "",
     costPrice: product?.costPrice != null ? String(product.costPrice) : "",
@@ -102,10 +96,7 @@ export function ProductForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const suggestedSlug = useMemo(
-    () => slugify(`${form.team} ${form.name}`),
-    [form.team, form.name],
-  );
+  const suggestedSlug = useMemo(() => slugify(form.name), [form.name]);
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -152,11 +143,8 @@ export function ProductForm({
     }
 
     const payload = {
-      team: form.team.trim(),
       name: form.name.trim(),
       category: form.category,
-      league: form.league.trim(),
-      season: form.season.trim(),
       price,
       compareAt,
       costPrice: form.costPrice.trim() ? Number(form.costPrice) : null,
@@ -217,17 +205,6 @@ export function ProductForm({
         <p className="admin-fieldset__title">Datos principales</p>
         <div className="admin-form__grid">
           <div className="admin-field">
-            <label htmlFor="team">Equipo / marca</label>
-            <input
-              id="team"
-              type="text"
-              required
-              value={form.team}
-              onChange={(e) => update("team", e.target.value)}
-              placeholder="Real Madrid"
-            />
-          </div>
-          <div className="admin-field">
             <label htmlFor="name">Nombre del producto</label>
             <input
               id="name"
@@ -235,7 +212,7 @@ export function ProductForm({
               required
               value={form.name}
               onChange={(e) => update("name", e.target.value)}
-              placeholder="Primera Equipación 25/26"
+              placeholder="Real Madrid — Primera Equipación 25/26"
             />
           </div>
           <div className="admin-field">
@@ -260,38 +237,6 @@ export function ProductForm({
                 Todavía no hay categorías. Crea una primero.
               </p>
             ) : null}
-          </div>
-          <div className="admin-field">
-            <label htmlFor="league">Liga / competición</label>
-            <input
-              id="league"
-              type="text"
-              required
-              list="leagues-list"
-              value={form.league}
-              onChange={(e) => update("league", e.target.value)}
-              placeholder="LaLiga"
-            />
-            <datalist id="leagues-list">
-              <option value="LaLiga" />
-              <option value="Premier League" />
-              <option value="Serie A" />
-              <option value="Bundesliga" />
-              <option value="Ligue 1" />
-              <option value="Selecciones" />
-              <option value="Retro" />
-            </datalist>
-          </div>
-          <div className="admin-field">
-            <label htmlFor="season">Temporada</label>
-            <input
-              id="season"
-              type="text"
-              required
-              value={form.season}
-              onChange={(e) => update("season", e.target.value)}
-              placeholder="25/26"
-            />
           </div>
           <div className="admin-field">
             <label htmlFor="slug">URL (slug)</label>

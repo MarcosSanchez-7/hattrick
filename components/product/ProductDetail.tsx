@@ -41,7 +41,7 @@ export function ProductDetail({ product }: { product: Product }) {
   const sale = isOnSale(product);
   const hasPhotos = (product.images?.length ?? 0) > 0;
   const thumbCount = hasPhotos ? product.images!.length : GENERATED_VIEWS;
-  const alt = `${product.team} — ${product.name}`;
+  const alt = product.name;
 
   return (
     <div className="container pdp">
@@ -85,15 +85,7 @@ export function ProductDetail({ product }: { product: Product }) {
 
       <div className="pdp__info">
         <div>
-          <span className="card__team">{product.team}</span>
-          <h1 className="h1" style={{ marginTop: 6 }}>
-            {product.name}
-          </h1>
-          <div className="row gap-3" style={{ marginTop: 10 }}>
-            <span className="meta">
-              {product.league} · {product.season}
-            </span>
-          </div>
+          <h1 className="h1">{product.name}</h1>
         </div>
 
         <div className="pdp__price-row">
@@ -210,20 +202,8 @@ export function ProductDetail({ product }: { product: Product }) {
           >
             <dl className="specs">
               <div>
-                <dt>Equipo</dt>
-                <dd>{product.team}</dd>
-              </div>
-              <div>
-                <dt>Competición</dt>
-                <dd>{product.league}</dd>
-              </div>
-              <div>
-                <dt>Temporada</dt>
-                <dd>{product.season}</dd>
-              </div>
-              <div>
                 <dt>Referencia</dt>
-                <dd>{product.id.toUpperCase()}-{product.season.replace("/", "")}</dd>
+                <dd>{product.id.toUpperCase()}</dd>
               </div>
               <div>
                 <dt>Material</dt>

@@ -55,14 +55,14 @@ export function Hero({
                 pattern={featured.pattern}
                 uid="hero"
                 number="10"
-                alt={`${featured.team} — ${featured.name}`}
+                alt={featured.name}
               />
               <Link href={`/producto/${featured.slug}`} className="hero__visual-tag">
                 <div className="label" style={{ color: "var(--ink-muted)" }}>
                   Lanzamiento
                 </div>
                 <div style={{ fontWeight: 700, marginTop: 4 }}>
-                  {featured.team} · {featured.name}
+                  {featured.name}
                 </div>
               </Link>
             </>

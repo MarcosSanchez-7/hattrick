@@ -27,9 +27,7 @@ export default async function EditProductPage({
       <nav className="breadcrumbs" aria-label="Migas de pan" style={{ marginBottom: 16 }}>
         <AdminBackLink href="/admin/productos" label="Productos" />
         <span>/</span>
-        <span>
-          {product.team} — {product.name}
-        </span>
+        <span>{product.name}</span>
       </nav>
       <h1 className="h1" style={{ marginBottom: 24 }}>
         Editar producto

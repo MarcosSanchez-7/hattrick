@@ -19,7 +19,7 @@ export async function generateMetadata({
   const product = getProduct(await getAllProducts(), slug);
   if (!product) return { title: "Producto no encontrado" };
   return {
-    title: `${product.team} — ${product.name}`,
+    title: product.name,
     description: product.description,
   };
 }
@@ -48,9 +48,7 @@ export default async function ProductPage({
           <span>/</span>
           <Link href={`/categoria/${product.category}`}>{category?.name}</Link>
           <span>/</span>
-          <span>
-            {product.team} {product.name}
-          </span>
+          <span>{product.name}</span>
         </nav>
       </div>
 

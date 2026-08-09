@@ -26,12 +26,9 @@ export type ProductVariant = {
 export type Product = {
   id: string;
   slug: string;
-  team: string;
   name: string;
   /** Slug de la categoría (ver Category.slug). Las categorías son dinámicas. */
   category: string;
-  league: string;
-  season: string;
   price: number;
   /** Precio anterior tachado. Su presencia marca el producto como oferta. */
   compareAt?: number | null;
@@ -83,7 +80,6 @@ export const SALE_CHANNELS: { value: SaleChannel; label: string }[] = [
 export type SaleLine = {
   id: number;
   productId: string;
-  team: string;
   name: string;
   size: string;
   quantity: number;
@@ -166,21 +162,17 @@ export const bestSellers = (products: Product[]) =>
 
 export const relatedTo = (products: Product[], product: Product, limit = 4) =>
   products
-    .filter(
-      (p) =>
-        p.slug !== product.slug &&
-        (p.category === product.category || p.league === product.league),
-    )
+    .filter((p) => p.slug !== product.slug && p.category === product.category)
     .slice(0, limit);
 
-/** Búsqueda simple sobre nombre, equipo, liga, temporada y etiquetas. */
+/** Búsqueda simple sobre nombre, categoría y etiquetas. */
 export function searchProducts(products: Product[], query: string): Product[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
   const terms = q.split(/\s+/);
   return products
     .map((p) => {
-      const haystack = [p.team, p.name, p.league, p.season, p.category, ...p.tags]
+      const haystack = [p.name, p.category, ...p.tags]
         .join(" ")
         .toLowerCase();
       const score = terms.reduce(

@@ -37,11 +37,8 @@ function fail(message: string, status = 500): never {
 type ProductRow = {
   id: string;
   slug: string;
-  team: string;
   name: string;
   category: string;
-  league: string;
-  season: string;
   price: number | string;
   compare_at: number | string | null;
   cost_price: number | string | null;
@@ -86,11 +83,8 @@ function rowToProduct(row: ProductRow, variantRows: VariantRow[]): Product {
   return {
     id: row.id,
     slug: row.slug,
-    team: row.team,
     name: row.name,
     category: row.category,
-    league: row.league,
-    season: row.season,
     price: Number(row.price),
     compareAt: row.compare_at != null ? Number(row.compare_at) : null,
     costPrice: row.cost_price != null ? Number(row.cost_price) : null,
@@ -339,11 +333,8 @@ export type ProductInput = Omit<
 };
 
 function assertValidProduct(input: ProductInput) {
-  if (!input.team?.trim()) throw new DataError("El equipo es obligatorio.");
   if (!input.name?.trim()) throw new DataError("El nombre es obligatorio.");
   if (!input.category?.trim()) throw new DataError("La categoría es obligatoria.");
-  if (!input.league?.trim()) throw new DataError("La liga es obligatoria.");
-  if (!input.season?.trim()) throw new DataError("La temporada es obligatoria.");
   if (!Number.isFinite(input.price) || input.price <= 0) {
     throw new DataError("El precio debe ser un número mayor que 0.");
   }
@@ -368,11 +359,8 @@ function assertValidProduct(input: ProductInput) {
 
 function productToRow(input: ProductInput) {
   return {
-    team: input.team,
     name: input.name,
     category: input.category,
-    league: input.league,
-    season: input.season,
     price: input.price,
     compare_at: input.compareAt ?? null,
     cost_price: input.costPrice ?? null,
@@ -401,7 +389,7 @@ export async function createProduct(input: ProductInput): Promise<Product> {
   const taken = new Set((existing as { slug: string }[]).map((p) => p.slug));
   const slug = input.slug?.trim()
     ? uniqueSlug(input.slug, taken)
-    : uniqueSlug(`${input.team}-${input.name}`, taken);
+    : uniqueSlug(input.name, taken);
 
   const id = `p-${randomUUID().slice(0, 8)}`;
   const { error } = await supabaseAdmin
@@ -584,7 +572,7 @@ type SaleItemRow = {
   product_variants: {
     size: string;
     product_id: string;
-    products: { team: string; name: string } | null;
+    products: { name: string } | null;
   } | null;
 };
 
@@ -598,13 +586,12 @@ type SaleRow = {
 };
 
 const SALE_SELECT =
-  "id, channel, staff_name, customer_note, sold_at, sale_items(id, quantity, unit_price, cost_price, product_variants(size, product_id, products(team, name)))";
+  "id, channel, staff_name, customer_note, sold_at, sale_items(id, quantity, unit_price, cost_price, product_variants(size, product_id, products(name)))";
 
 function rowToSale(row: SaleRow): Sale {
   const items: SaleLine[] = (row.sale_items ?? []).map((si) => ({
     id: si.id,
     productId: si.product_variants?.product_id ?? "",
-    team: si.product_variants?.products?.team ?? "—",
     name: si.product_variants?.products?.name ?? "—",
     size: si.product_variants?.size ?? "—",
     quantity: si.quantity,

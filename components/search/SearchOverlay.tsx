@@ -122,15 +122,11 @@ export function SearchOverlay({
                           colors={p.colors}
                           pattern={p.pattern}
                           uid={`s-${p.id}`}
-                          alt={`${p.team} — ${p.name}`}
+                          alt={p.name}
                         />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="card__team">{p.team}</div>
                         <div style={{ fontWeight: 600 }}>{p.name}</div>
-                        <div className="meta">
-                          {p.league} · {p.season}
-                        </div>
                       </div>
                       <div className="price">{formatPrice(p.price)}</div>
                     </Link>

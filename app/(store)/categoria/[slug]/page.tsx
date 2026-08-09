@@ -6,7 +6,6 @@ import { getAllCategories, getAllProducts } from "@/lib/data";
 import { ProductBrowser } from "@/components/product/ProductBrowser";
 
 type Params = { slug: string };
-type Search = { liga?: string };
 
 export const dynamic = "force-dynamic";
 
@@ -26,13 +25,10 @@ export async function generateMetadata({
 
 export default async function CategoryPage({
   params,
-  searchParams,
 }: {
   params: Promise<Params>;
-  searchParams: Promise<Search>;
 }) {
   const { slug } = await params;
-  const { liga } = await searchParams;
   const [categories, allProducts] = await Promise.all([
     getAllCategories(),
     getAllProducts(),
@@ -60,7 +56,7 @@ export default async function CategoryPage({
 
       <section className="section section--tight">
         <div className="container">
-          <ProductBrowser products={products} initialLeague={liga ?? "Todas"} />
+          <ProductBrowser products={products} />
         </div>
       </section>
     </>

@@ -6,7 +6,6 @@ import { Hero } from "@/components/home/Hero";
 import { ValueProps } from "@/components/home/ValueProps";
 import { CategoryGrid } from "@/components/home/CategoryGrid";
 import { OffersSection } from "@/components/home/OffersSection";
-import { LeagueStrip } from "@/components/home/LeagueStrip";
 import { CustomBanner } from "@/components/home/CustomBanner";
 import { Newsletter } from "@/components/home/Newsletter";
 import { ProductGrid } from "@/components/product/ProductCard";
@@ -70,7 +69,6 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      <LeagueStrip products={products} />
       <CustomBanner />
       <Newsletter />
     </>

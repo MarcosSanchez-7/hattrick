@@ -9,7 +9,6 @@ import { IconClose, IconSearch } from "@/components/ui/Icons";
 type TicketLine = {
   variantId: string;
   productId: string;
-  team: string;
   name: string;
   size: string;
   maxStock: number;
@@ -21,9 +20,7 @@ type TicketLine = {
 function matches(product: Product, query: string) {
   const q = query.trim().toLowerCase();
   if (!q) return false;
-  return `${product.team} ${product.name} ${product.league}`
-    .toLowerCase()
-    .includes(q);
+  return product.name.toLowerCase().includes(q);
 }
 
 export function SaleForm({ products }: { products: Product[] }) {
@@ -57,7 +54,6 @@ export function SaleForm({ products }: { products: Product[] }) {
         {
           variantId: variant.id,
           productId: product.id,
-          team: product.team,
           name: product.name,
           size: variant.size,
           maxStock: variant.stock,
@@ -139,7 +135,7 @@ export function SaleForm({ products }: { products: Product[] }) {
         <p className="admin-fieldset__title">Buscar producto</p>
         <div className="admin-field">
           <label htmlFor="sale-search" className="sr-only">
-            Buscar por equipo o nombre
+            Buscar por nombre
           </label>
           <div className="row gap-2">
             <span style={{ flex: "none", display: "flex" }}>
@@ -166,10 +162,8 @@ export function SaleForm({ products }: { products: Product[] }) {
             {results.map((product) => (
               <div key={product.id} className="admin-sale-result">
                 <div>
-                  <div style={{ fontWeight: 600 }}>{product.team}</div>
-                  <div className="meta">
-                    {product.name} · {formatPrice(product.price)}
-                  </div>
+                  <div style={{ fontWeight: 600 }}>{product.name}</div>
+                  <div className="meta">{formatPrice(product.price)}</div>
                 </div>
                 <div className="admin-checklist">
                   {(product.variants ?? []).map((variant) => (
@@ -226,10 +220,8 @@ export function SaleForm({ products }: { products: Product[] }) {
                   return (
                     <tr key={l.variantId}>
                       <td>
-                        <div style={{ fontWeight: 600 }}>{l.team}</div>
-                        <div className="meta">
-                          {l.name} · Talla {l.size}
-                        </div>
+                        <div style={{ fontWeight: 600 }}>{l.name}</div>
+                        <div className="meta">Talla {l.size}</div>
                       </td>
                       <td>
                         <input

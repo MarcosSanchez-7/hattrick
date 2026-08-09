@@ -62,11 +62,10 @@ export function WishlistToast() {
             colors={product.colors}
             pattern={product.pattern}
             uid={`wtoast-${product.id}`}
-            alt={`${product.team} — ${product.name}`}
+            alt={product.name}
           />
         </div>
         <div style={{ minWidth: 0 }}>
-          <div className="card__team">{product.team}</div>
           <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{product.name}</div>
           <div className="price" style={{ fontSize: "0.875rem" }}>
             {formatPrice(product.price)}
