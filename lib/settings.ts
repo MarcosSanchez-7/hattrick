@@ -6,35 +6,43 @@ import { formatPrice } from "@/lib/format";
  * seguir añadiendo ajustes sin migraciones nuevas cada vez.
  */
 
-export type HeroSettings = {
+/**
+ * Un "flyer" a pantalla completa del hero. Sin autoplay a propósito (los
+ * carruseles automáticos pierden casi todo el clic en el segundo slide en
+ * adelante) — el cliente navega con flechas/puntos si hay más de uno.
+ */
+export type HeroSlide = {
+  id: string;
+  /** URL de la imagen (subida o pegada) que ocupa todo el ancho del hero. */
+  image: string;
   eyebrow: string;
-  headlineLine1: string;
-  headlineLine2: string;
-  lead: string;
-  primaryCtaLabel: string;
-  primaryCtaHref: string;
-  secondaryCtaLabel: string;
-  secondaryCtaHref: string;
+  headline: string;
+  ctaLabel: string;
+  ctaHref: string;
+};
+
+export type HeroSettings = {
+  slides: HeroSlide[];
+  /** Franja chica de datos de confianza debajo del flyer. */
   stats: { value: string; label: string }[];
-  /** Slug del producto a destacar. Vacío = se elige uno automáticamente. */
-  featuredProductSlug: string;
 };
 
 export const DEFAULT_HERO: HeroSettings = {
-  eyebrow: "Temporada 25/26 · Mundial 2026",
-  headlineLine1: "La camiseta",
-  headlineLine2: "hace al equipo",
-  lead: "Equipaciones oficiales de clubes y selecciones, reediciones retro y personalización profesional con el tipo de letra de cada liga. Sin réplicas, sin sorpresas.",
-  primaryCtaLabel: "Comprar novedades",
-  primaryCtaHref: "/novedades",
-  secondaryCtaLabel: "Ver ofertas",
-  secondaryCtaHref: "/ofertas",
+  slides: [
+    {
+      id: "default",
+      image: "",
+      eyebrow: "Temporada 25/26 · Mundial 2026",
+      headline: "La camiseta hace al equipo",
+      ctaLabel: "Comprar novedades",
+      ctaHref: "/novedades",
+    },
+  ],
   stats: [
     { value: "120+", label: "Equipaciones en stock" },
     { value: "48 h", label: "Entrega en 48 horas" },
     { value: "4,9/5", label: "1.240 valoraciones" },
   ],
-  featuredProductSlug: "",
 };
 
 export type FooterSettings = {

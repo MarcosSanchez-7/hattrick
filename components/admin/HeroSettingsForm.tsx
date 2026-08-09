@@ -2,7 +2,20 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { HeroSettings } from "@/lib/settings";
+import type { HeroSettings, HeroSlide } from "@/lib/settings";
+import { ImageUploader } from "@/components/admin/ImageUploader";
+import { IconTrash } from "@/components/ui/Icons";
+
+function emptySlide(): HeroSlide {
+  return {
+    id: crypto.randomUUID(),
+    image: "",
+    eyebrow: "",
+    headline: "",
+    ctaLabel: "",
+    ctaHref: "",
+  };
+}
 
 export function HeroSettingsForm({ initial }: { initial: HeroSettings }) {
   const router = useRouter();
@@ -11,9 +24,26 @@ export function HeroSettingsForm({ initial }: { initial: HeroSettings }) {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const update = <K extends keyof HeroSettings>(key: K, value: HeroSettings[K]) => {
+  const updateSlide = <K extends keyof HeroSlide>(
+    id: string,
+    key: K,
+    value: HeroSlide[K],
+  ) => {
     setSaved(false);
-    setForm((f) => ({ ...f, [key]: value }));
+    setForm((f) => ({
+      ...f,
+      slides: f.slides.map((s) => (s.id === id ? { ...s, [key]: value } : s)),
+    }));
+  };
+
+  const addSlide = () => {
+    setSaved(false);
+    setForm((f) => ({ ...f, slides: [...f.slides, emptySlide()] }));
+  };
+
+  const removeSlide = (id: string) => {
+    setSaved(false);
+    setForm((f) => ({ ...f, slides: f.slides.filter((s) => s.id !== id) }));
   };
 
   const updateStat = (idx: number, key: "value" | "label", value: string) => {
@@ -27,6 +57,10 @@ export function HeroSettingsForm({ initial }: { initial: HeroSettings }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (form.slides.length === 0) {
+      setError("Agrega al menos un flyer.");
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch("/api/admin/settings/hero", {
@@ -50,105 +84,89 @@ export function HeroSettingsForm({ initial }: { initial: HeroSettings }) {
       {error ? <p className="admin-error">{error}</p> : null}
       {saved ? <p className="admin-notice-ok">Cambios guardados.</p> : null}
 
-      <div className="admin-fieldset">
-        <p className="admin-fieldset__title">Texto principal</p>
-        <div className="admin-field">
-          <label htmlFor="eyebrow">Texto pequeño superior</label>
-          <input
-            id="eyebrow"
-            type="text"
-            value={form.eyebrow}
-            onChange={(e) => update("eyebrow", e.target.value)}
-          />
-        </div>
-        <div className="admin-form__grid">
-          <div className="admin-field">
-            <label htmlFor="headlineLine1">Titular, línea 1</label>
-            <input
-              id="headlineLine1"
-              type="text"
-              value={form.headlineLine1}
-              onChange={(e) => update("headlineLine1", e.target.value)}
-            />
+      <p className="admin-help">
+        Cada flyer ocupa toda la pantalla en la home. Si cargás más de uno, el
+        cliente los recorre con flechas o puntos — no rotan solos.
+      </p>
+
+      {form.slides.map((slide, idx) => (
+        <div key={slide.id} className="admin-fieldset">
+          <div
+            className="row"
+            style={{ justifyContent: "space-between", marginBottom: 4 }}
+          >
+            <p className="admin-fieldset__title">Flyer {idx + 1}</p>
+            <button
+              type="button"
+              className="admin-icon-btn admin-icon-btn--danger"
+              aria-label="Quitar flyer"
+              title="Quitar flyer"
+              onClick={() => removeSlide(slide.id)}
+            >
+              <IconTrash className="icon--sm" />
+            </button>
           </div>
-          <div className="admin-field">
-            <label htmlFor="headlineLine2">Titular, línea 2</label>
-            <input
-              id="headlineLine2"
-              type="text"
-              value={form.headlineLine2}
-              onChange={(e) => update("headlineLine2", e.target.value)}
-            />
+
+          <ImageUploader
+            images={slide.image ? [slide.image] : []}
+            onChange={(images) => updateSlide(slide.id, "image", images[0] ?? "")}
+            max={1}
+            label="Imagen del flyer (a pantalla completa)"
+          />
+
+          <div className="admin-form__grid" style={{ marginTop: 16 }}>
+            <div className="admin-field">
+              <label htmlFor={`eyebrow-${slide.id}`}>Texto pequeño superior</label>
+              <input
+                id={`eyebrow-${slide.id}`}
+                type="text"
+                value={slide.eyebrow}
+                onChange={(e) => updateSlide(slide.id, "eyebrow", e.target.value)}
+                placeholder="Temporada 25/26 · Mundial 2026"
+              />
+            </div>
+            <div className="admin-field">
+              <label htmlFor={`headline-${slide.id}`}>Titular</label>
+              <input
+                id={`headline-${slide.id}`}
+                type="text"
+                value={slide.headline}
+                onChange={(e) => updateSlide(slide.id, "headline", e.target.value)}
+                placeholder="La camiseta hace al equipo"
+              />
+            </div>
+            <div className="admin-field">
+              <label htmlFor={`ctaLabel-${slide.id}`}>Botón — texto</label>
+              <input
+                id={`ctaLabel-${slide.id}`}
+                type="text"
+                value={slide.ctaLabel}
+                onChange={(e) => updateSlide(slide.id, "ctaLabel", e.target.value)}
+                placeholder="Vacío = sin botón"
+              />
+            </div>
+            <div className="admin-field">
+              <label htmlFor={`ctaHref-${slide.id}`}>Botón — enlace</label>
+              <input
+                id={`ctaHref-${slide.id}`}
+                type="text"
+                value={slide.ctaHref}
+                onChange={(e) => updateSlide(slide.id, "ctaHref", e.target.value)}
+                placeholder="/novedades"
+              />
+            </div>
           </div>
         </div>
-        <div className="admin-field">
-          <label htmlFor="lead">Texto descriptivo</label>
-          <textarea
-            id="lead"
-            value={form.lead}
-            onChange={(e) => update("lead", e.target.value)}
-          />
-        </div>
-        <div className="admin-field">
-          <label htmlFor="featuredProductSlug">
-            Slug del producto destacado (opcional)
-          </label>
-          <input
-            id="featuredProductSlug"
-            type="text"
-            value={form.featuredProductSlug}
-            onChange={(e) => update("featuredProductSlug", e.target.value)}
-            placeholder="Vacío = se elige uno automáticamente"
-          />
-        </div>
+      ))}
+
+      <div>
+        <button type="button" className="btn btn--ghost btn--sm" onClick={addSlide}>
+          Añadir flyer
+        </button>
       </div>
 
       <div className="admin-fieldset">
-        <p className="admin-fieldset__title">Botones</p>
-        <div className="admin-form__grid">
-          <div className="admin-field">
-            <label htmlFor="primaryCtaLabel">Botón principal — texto</label>
-            <input
-              id="primaryCtaLabel"
-              type="text"
-              value={form.primaryCtaLabel}
-              onChange={(e) => update("primaryCtaLabel", e.target.value)}
-            />
-          </div>
-          <div className="admin-field">
-            <label htmlFor="primaryCtaHref">Botón principal — enlace</label>
-            <input
-              id="primaryCtaHref"
-              type="text"
-              value={form.primaryCtaHref}
-              onChange={(e) => update("primaryCtaHref", e.target.value)}
-              placeholder="/novedades"
-            />
-          </div>
-          <div className="admin-field">
-            <label htmlFor="secondaryCtaLabel">Botón secundario — texto</label>
-            <input
-              id="secondaryCtaLabel"
-              type="text"
-              value={form.secondaryCtaLabel}
-              onChange={(e) => update("secondaryCtaLabel", e.target.value)}
-            />
-          </div>
-          <div className="admin-field">
-            <label htmlFor="secondaryCtaHref">Botón secundario — enlace</label>
-            <input
-              id="secondaryCtaHref"
-              type="text"
-              value={form.secondaryCtaHref}
-              onChange={(e) => update("secondaryCtaHref", e.target.value)}
-              placeholder="/ofertas"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="admin-fieldset">
-        <p className="admin-fieldset__title">Estadísticas (3 datos bajo los botones)</p>
+        <p className="admin-fieldset__title">Franja de datos (debajo del flyer)</p>
         <div className="admin-form__grid admin-form__grid--3">
           {form.stats.map((stat, idx) => (
             <div key={idx} className="admin-field">

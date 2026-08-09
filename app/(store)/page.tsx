@@ -24,7 +24,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero products={products} settings={heroSettings} />
+      <Hero settings={heroSettings} />
       <ValueProps />
 
       {/* Nuevos ingresos */}
