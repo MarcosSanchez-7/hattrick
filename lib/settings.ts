@@ -95,6 +95,8 @@ export type CustomBannerSettings = {
   ctaLabel: string;
   ctaHref: string;
   priceLabel: string;
+  /** Fotos de ejemplos de personalización. Vacío = se usa la ilustración genérica. */
+  images: string[];
 };
 
 export const DEFAULT_CUSTOM_BANNER: CustomBannerSettings = {
@@ -107,6 +109,7 @@ export const DEFAULT_CUSTOM_BANNER: CustomBannerSettings = {
     "Vista previa antes de confirmar el pedido",
     "Listo para enviar en 24 h laborables",
   ],
+  images: [],
   ctaLabel: "Personalizar ahora",
   ctaHref: "/personalizacion",
   priceLabel: "Desde Gs. 120.000",

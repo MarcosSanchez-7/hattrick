@@ -1,9 +1,28 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { CustomBannerSettings } from "@/lib/settings";
 import { JerseyArt } from "@/components/product/JerseyArt";
-import { IconCheck } from "@/components/ui/Icons";
+import { IconCheck, IconChevron } from "@/components/ui/Icons";
+
+const AUTOPLAY_MS = 5000;
 
 export function CustomBanner({ settings }: { settings: CustomBannerSettings }) {
+  const images = settings.images;
+  const count = images.length;
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (count <= 1) return;
+    const timer = setInterval(() => {
+      setIndex((i) => (i + 1) % count);
+    }, AUTOPLAY_MS);
+    return () => clearInterval(timer);
+  }, [count]);
+
+  const goTo = (i: number) => setIndex((i + count) % count);
+
   return (
     <section className="section">
       <div className="container">
@@ -32,16 +51,59 @@ export function CustomBanner({ settings }: { settings: CustomBannerSettings }) {
             </div>
           </div>
           <div className="custom__visual">
-            <JerseyArt
-              colors={{
-                primary: "#111111",
-                secondary: "#1f1f1f",
-                accent: "#ffffff",
-              }}
-              pattern="solid"
-              uid="custom"
-              number="7"
-            />
+            {count > 0 ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={images[index]}
+                  alt={`Ejemplo de personalización ${index + 1}`}
+                  className="custom__visual-img"
+                />
+                {count > 1 ? (
+                  <>
+                    <button
+                      type="button"
+                      className="pdp__nav pdp__nav--prev"
+                      onClick={() => goTo(index - 1)}
+                      aria-label="Foto anterior"
+                    >
+                      <IconChevron className="icon--sm" />
+                    </button>
+                    <button
+                      type="button"
+                      className="pdp__nav pdp__nav--next"
+                      onClick={() => goTo(index + 1)}
+                      aria-label="Foto siguiente"
+                    >
+                      <IconChevron className="icon--sm" />
+                    </button>
+                    <div className="hero__dots" style={{ bottom: "var(--sp-3)", right: "var(--sp-3)" }}>
+                      {images.map((_, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          className="hero__dot hero__dot--dark"
+                          data-active={i === index ? "true" : "false"}
+                          onClick={() => setIndex(i)}
+                          aria-label={`Ver foto ${i + 1}`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+              </>
+            ) : (
+              <JerseyArt
+                colors={{
+                  primary: "#111111",
+                  secondary: "#1f1f1f",
+                  accent: "#ffffff",
+                }}
+                pattern="solid"
+                uid="custom"
+                number="7"
+              />
+            )}
           </div>
         </div>
       </div>

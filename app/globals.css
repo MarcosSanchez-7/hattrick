@@ -1459,16 +1459,32 @@ textarea {
 }
 
 .custom__visual {
+  position: relative;
   background: var(--surface-soft);
   border-left: 1px solid var(--line);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--sp-7);
+  overflow: hidden;
 }
 
 .custom__visual svg {
   width: min(100%, 340px);
+}
+
+.custom__visual-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.hero__dot--dark {
+  background: rgba(17, 17, 17, 0.25);
+}
+
+.hero__dot--dark[data-active='true'] {
+  background: var(--ink);
 }
 
 @media (max-width: 900px) {

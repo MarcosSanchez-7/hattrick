@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CustomBannerSettings } from "@/lib/settings";
+import { ImageUploader } from "@/components/admin/ImageUploader";
 
 export function CustomBannerSettingsForm({
   initial,
@@ -97,6 +98,20 @@ export function CustomBannerSettingsForm({
             rows={5}
           />
         </div>
+      </div>
+
+      <div className="admin-fieldset">
+        <p className="admin-fieldset__title">Fotos de ejemplo</p>
+        <p className="admin-help">
+          Se muestran del lado derecho del banner. Con más de una, el
+          cliente las ve deslizarse solas cada 5 segundos o con las flechas.
+          Vacío = se usa la ilustración genérica.
+        </p>
+        <ImageUploader
+          images={form.images}
+          onChange={(images) => update("images", images)}
+          max={8}
+        />
       </div>
 
       <div className="admin-fieldset">
