@@ -312,3 +312,16 @@ create trigger site_settings_set_updated_at
   before update on site_settings
   for each row
   execute function set_updated_at();
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Ocultar productos/categorías sin borrarlos — alternativa a eliminar cuando
+-- un producto ya tiene ventas o movimientos de stock (por eso no se puede
+-- borrar: perdería el historial). Al ocultar una categoría, sus productos
+-- también dejan de verse en toda la tienda, no solo en el menú.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+alter table products add column if not exists is_visible boolean not null default true;
+alter table categories add column if not exists is_visible boolean not null default true;
+
+create index if not exists products_is_visible_idx on products (is_visible);
+create index if not exists categories_is_visible_idx on categories (is_visible);

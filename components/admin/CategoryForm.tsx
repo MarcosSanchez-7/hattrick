@@ -16,6 +16,7 @@ export function CategoryForm({ category }: { category?: Category }) {
   const [image, setImage] = useState<string[]>(
     category?.image ? [category.image] : [],
   );
+  const [isVisible, setIsVisible] = useState(category?.isVisible ?? true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +36,7 @@ export function CategoryForm({ category }: { category?: Category }) {
       tagline: tagline.trim(),
       description: description.trim(),
       image: image[0] ?? null,
+      isVisible,
     };
 
     setSubmitting(true);
@@ -109,6 +111,23 @@ export function CategoryForm({ category }: { category?: Category }) {
             placeholder="Qué encontrará el cliente en esta sección…"
           />
         </div>
+        <div className="admin-field admin-field--checkbox">
+          <input
+            id="isVisible"
+            type="checkbox"
+            checked={isVisible}
+            onChange={(e) => setIsVisible(e.target.checked)}
+          />
+          <label htmlFor="isVisible" style={{ marginBottom: 0 }}>
+            Visible en la tienda
+          </label>
+        </div>
+        {!isVisible ? (
+          <p className="admin-help">
+            Al ocultar la categoría, sus productos también dejan de verse en
+            toda la tienda, no solo en el menú.
+          </p>
+        ) : null}
       </div>
 
       <div className="admin-fieldset">

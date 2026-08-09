@@ -7,8 +7,8 @@ export const metadata = { title: "Productos" };
 
 export default async function AdminProductsPage() {
   const [products, categories] = await Promise.all([
-    getAllProducts(),
-    getAllCategories(),
+    getAllProducts({ includeHidden: true }),
+    getAllCategories({ includeHidden: true }),
   ]);
 
   return (

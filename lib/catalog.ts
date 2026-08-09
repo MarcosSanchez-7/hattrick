@@ -37,6 +37,8 @@ export type Product = {
   compareAt?: number | null;
   /** Costo del producto, para calcular ganancia en Ventas. Opcional. */
   costPrice?: number | null;
+  /** false = oculto: no aparece en ningún listado ni ficha pública. */
+  isVisible: boolean;
   isNew?: boolean;
   rating: number;
   reviews: number;
@@ -60,6 +62,8 @@ export type Category = {
   description: string;
   /** Ruta a /uploads/... subida desde el panel. Null = sin portada personalizada. */
   image?: string | null;
+  /** false = oculta: desaparece del menú y sus productos dejan de verse en la tienda. */
+  isVisible: boolean;
 };
 
 export const SIZES_ADULT = ["P", "M", "G", "XL", "XXL"];

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createProduct, DataError, getAllProducts } from "@/lib/data";
 
 export async function GET() {
-  const products = await getAllProducts();
+  const products = await getAllProducts({ includeHidden: true });
   return NextResponse.json(products);
 }
 

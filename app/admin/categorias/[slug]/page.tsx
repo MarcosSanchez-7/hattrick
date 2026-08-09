@@ -15,7 +15,10 @@ export default async function EditCategoryPage({
   params: Promise<Params>;
 }) {
   const { slug } = await params;
-  const category = getCategory(await getAllCategories(), slug);
+  const category = getCategory(
+    await getAllCategories({ includeHidden: true }),
+    slug,
+  );
   if (!category) notFound();
 
   return (

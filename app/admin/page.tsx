@@ -9,8 +9,8 @@ export const metadata = { title: "Panel" };
 
 export default async function AdminDashboard() {
   const [products, categories] = await Promise.all([
-    getAllProducts(),
-    getAllCategories(),
+    getAllProducts({ includeHidden: true }),
+    getAllCategories({ includeHidden: true }),
   ]);
 
   const onSale = products.filter(isOnSale).length;

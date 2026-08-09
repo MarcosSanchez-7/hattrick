@@ -188,6 +188,21 @@ export const IconSettings = ({ className }: IconProps) => (
   </svg>
 );
 
+export const IconEye = ({ className }: IconProps) => (
+  <svg className={base(className)} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+export const IconEyeOff = ({ className }: IconProps) => (
+  <svg className={base(className)} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M3 3l18 18" />
+    <path d="M10.6 5.6A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a15.7 15.7 0 0 1-3.4 4.2M6.7 6.7C4 8.5 2.5 12 2.5 12S6 18.5 12 18.5a9.4 9.4 0 0 0 3.3-.6" />
+    <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+  </svg>
+);
+
 export const IconReceipt = ({ className }: IconProps) => (
   <svg className={base(className)} viewBox="0 0 24 24" aria-hidden="true">
     <path d="M6 3h12v18l-2.5-1.5L13 21l-1-1.5L11 21l-2.5-1.5L6 21Z" />

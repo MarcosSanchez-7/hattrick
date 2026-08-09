@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Registrar venta" };
 
 export default async function NuevaVentaPage() {
-  const products = await getAllProducts();
+  const products = await getAllProducts({ includeHidden: true });
   const sellable = products.filter((p) => p.stockMode === "propio");
 
   return (

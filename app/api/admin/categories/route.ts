@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createCategory, DataError, getAllCategories } from "@/lib/data";
 
 export async function GET() {
-  const categories = await getAllCategories();
+  const categories = await getAllCategories({ includeHidden: true });
   return NextResponse.json(categories);
 }
 

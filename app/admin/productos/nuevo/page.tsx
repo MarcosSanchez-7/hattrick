@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Nuevo producto" };
 
 export default async function NewProductPage() {
-  const categories = await getAllCategories();
+  const categories = await getAllCategories({ includeHidden: true });
 
   return (
     <>

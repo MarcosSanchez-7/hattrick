@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { discountPercent, isOnSale, isSoldOut, type Category, type Product } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { ProductVisual } from "@/components/product/ProductVisual";
-import { IconExternal, IconTrash } from "@/components/ui/Icons";
+import { IconExternal, IconEye, IconEyeOff, IconTrash } from "@/components/ui/Icons";
 
 export function ProductsTable({
   products,
@@ -18,6 +18,7 @@ export function ProductsTable({
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const categoryName = (slug: string) =>
     categories.find((c) => c.slug === slug)?.name ?? slug;
@@ -50,6 +51,26 @@ export function ProductsTable({
       window.alert(err instanceof Error ? err.message : "Error inesperado.");
     } finally {
       setPendingId(null);
+    }
+  };
+
+  const handleToggleVisibility = async (product: Product) => {
+    setTogglingId(product.id);
+    try {
+      const res = await fetch(`/api/admin/products/${product.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isVisible: !product.isVisible }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "No se pudo cambiar la visibilidad.");
+      }
+      router.refresh();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Error inesperado.");
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -119,7 +140,9 @@ export function ProductsTable({
                     ) : null}
                   </td>
                   <td>
-                    {p.stockMode !== "propio" ? (
+                    {!p.isVisible ? (
+                      <span className="badge badge--out">Oculto</span>
+                    ) : p.stockMode !== "propio" ? (
                       <span className="meta">Consultar talle</span>
                     ) : isSoldOut(p) ? (
                       <span className="badge badge--out">Agotado</span>
@@ -140,6 +163,20 @@ export function ProductsTable({
                       >
                         <IconExternal className="icon--sm" />
                       </Link>
+                      <button
+                        type="button"
+                        className="admin-icon-btn"
+                        aria-label={p.isVisible ? "Ocultar producto" : "Mostrar producto"}
+                        title={p.isVisible ? "Ocultar producto" : "Mostrar producto"}
+                        disabled={togglingId === p.id}
+                        onClick={() => handleToggleVisibility(p)}
+                      >
+                        {p.isVisible ? (
+                          <IconEye className="icon--sm" />
+                        ) : (
+                          <IconEyeOff className="icon--sm" />
+                        )}
+                      </button>
                       <Link
                         href={`/admin/productos/${p.id}`}
                         className="btn btn--ghost btn--sm"

@@ -40,6 +40,7 @@ type FormState = {
   compareAt: string;
   costPrice: string;
   isNew: boolean;
+  isVisible: boolean;
   rating: string;
   reviews: string;
   stockMode: StockMode;
@@ -71,6 +72,7 @@ function toFormState(product?: Product): FormState {
     compareAt: product?.compareAt != null ? String(product.compareAt) : "",
     costPrice: product?.costPrice != null ? String(product.costPrice) : "",
     isNew: product?.isNew ?? false,
+    isVisible: product?.isVisible ?? true,
     rating: product ? String(product.rating) : "5",
     reviews: product ? String(product.reviews) : "0",
     stockMode: product?.stockMode ?? "propio",
@@ -159,6 +161,7 @@ export function ProductForm({
       compareAt,
       costPrice: form.costPrice.trim() ? Number(form.costPrice) : null,
       isNew: form.isNew,
+      isVisible: form.isVisible,
       rating: Number(form.rating) || 5,
       reviews: Number(form.reviews) || 0,
       stockMode: form.stockMode,
@@ -355,6 +358,17 @@ export function ProductForm({
             />
             <label htmlFor="isNew" style={{ marginBottom: 0 }}>
               Marcar como novedad
+            </label>
+          </div>
+          <div className="admin-field admin-field--checkbox">
+            <input
+              id="isVisible"
+              type="checkbox"
+              checked={form.isVisible}
+              onChange={(e) => update("isVisible", e.target.checked)}
+            />
+            <label htmlFor="isVisible" style={{ marginBottom: 0 }}>
+              Visible en la tienda
             </label>
           </div>
           <div className="admin-field">

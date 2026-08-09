@@ -56,6 +56,7 @@ type ProductRow = {
   tags: string[] | null;
   images: string[] | null;
   stock_mode: StockMode;
+  is_visible: boolean;
 };
 
 type VariantRow = {
@@ -71,6 +72,7 @@ type CategoryRow = {
   tagline: string;
   description: string;
   image: string | null;
+  is_visible: boolean;
 };
 
 function rowToProduct(row: ProductRow, variantRows: VariantRow[]): Product {
@@ -92,6 +94,7 @@ function rowToProduct(row: ProductRow, variantRows: VariantRow[]): Product {
     price: Number(row.price),
     compareAt: row.compare_at != null ? Number(row.compare_at) : null,
     costPrice: row.cost_price != null ? Number(row.cost_price) : null,
+    isVisible: row.is_visible,
     isNew: row.is_new,
     rating: Number(row.rating),
     reviews: row.reviews,
@@ -120,6 +123,7 @@ function rowToCategory(row: CategoryRow): Category {
     tagline: row.tagline,
     description: row.description,
     image: row.image ?? null,
+    isVisible: row.is_visible,
   };
 }
 
@@ -160,27 +164,87 @@ async function fetchProductWithVariants(id: string): Promise<Product> {
 
 // ── Lecturas ────────────────────────────────────────────────────────────
 
-export async function getAllProducts(): Promise<Product[]> {
-  const { data, error } = await supabaseAdmin
-    .from("products")
-    .select("*")
-    .order("created_at", { ascending: true });
+/**
+ * Por defecto solo trae lo visible al público: excluye productos ocultos y,
+ * en cascada, los productos cuya categoría está oculta (aunque el producto
+ * en sí no lo esté) — así ocultar una categoría "apaga" toda la tienda para
+ * esos productos, no solo el menú. El panel de admin pide includeHidden:true
+ * para poder seguir viendo y editando todo.
+ */
+export async function getAllProducts(
+  opts: { includeHidden?: boolean } = {},
+): Promise<Product[]> {
+  let query = supabaseAdmin.from("products").select("*").order("created_at", {
+    ascending: true,
+  });
+  if (!opts.includeHidden) query = query.eq("is_visible", true);
+
+  const { data, error } = await query;
   if (error) fail(`No se pudieron cargar los productos: ${error.message}`);
 
-  const rows = data as ProductRow[];
+  let rows = data as ProductRow[];
+
+  if (!opts.includeHidden) {
+    const { data: hiddenCats, error: catError } = await supabaseAdmin
+      .from("categories")
+      .select("slug")
+      .eq("is_visible", false);
+    if (catError) {
+      fail(`No se pudieron comprobar las categorías ocultas: ${catError.message}`);
+    }
+    const hiddenSlugs = new Set(
+      (hiddenCats as { slug: string }[]).map((c) => c.slug),
+    );
+    rows = rows.filter((r) => !hiddenSlugs.has(r.category));
+  }
+
   const propioIds = rows.filter((r) => r.stock_mode === "propio").map((r) => r.id);
   const variantMap = await fetchVariantsByProduct(propioIds);
 
   return rows.map((row) => rowToProduct(row, variantMap.get(row.id) ?? []));
 }
 
-export async function getAllCategories(): Promise<Category[]> {
-  const { data, error } = await supabaseAdmin
-    .from("categories")
-    .select("*")
-    .order("created_at", { ascending: true });
+export async function getAllCategories(
+  opts: { includeHidden?: boolean } = {},
+): Promise<Category[]> {
+  let query = supabaseAdmin.from("categories").select("*").order("created_at", {
+    ascending: true,
+  });
+  if (!opts.includeHidden) query = query.eq("is_visible", true);
+
+  const { data, error } = await query;
   if (error) fail(`No se pudieron cargar las categorías: ${error.message}`);
   return (data as CategoryRow[]).map(rowToCategory);
+}
+
+export async function setProductVisibility(
+  id: string,
+  isVisible: boolean,
+): Promise<void> {
+  const { data, error } = await supabaseAdmin
+    .from("products")
+    .update({ is_visible: isVisible })
+    .eq("id", id)
+    .select("id");
+  if (error) fail(`No se pudo cambiar la visibilidad del producto: ${error.message}`);
+  if (!data || data.length === 0) throw new DataError("Producto no encontrado.", 404);
+}
+
+export async function setCategoryVisibility(
+  slug: string,
+  isVisible: boolean,
+): Promise<void> {
+  const { data, error } = await supabaseAdmin
+    .from("categories")
+    .update({ is_visible: isVisible })
+    .eq("slug", slug)
+    .select("slug");
+  if (error) {
+    fail(`No se pudo cambiar la visibilidad de la categoría: ${error.message}`);
+  }
+  if (!data || data.length === 0) {
+    throw new DataError("Categoría no encontrada.", 404);
+  }
 }
 
 // ── Stock (product_variants + inventory_movements) ────────────────────────
@@ -312,6 +376,7 @@ function productToRow(input: ProductInput) {
     price: input.price,
     compare_at: input.compareAt ?? null,
     cost_price: input.costPrice ?? null,
+    is_visible: input.isVisible ?? true,
     is_new: Boolean(input.isNew),
     rating: Number.isFinite(input.rating) ? input.rating : 5,
     reviews: Number.isFinite(input.reviews) ? input.reviews : 0,
@@ -407,7 +472,7 @@ export async function deleteProduct(id: string): Promise<void> {
   if (error) {
     if (error.code === "23503") {
       fail(
-        "No puedes eliminar este producto: tiene ventas o movimientos de stock registrados.",
+        "No puedes eliminar este producto: tiene ventas o movimientos de stock registrados. Podés ocultarlo en vez de eliminarlo.",
         400,
       );
     }
@@ -452,6 +517,7 @@ export async function createCategory(
       tagline: input.tagline,
       description: input.description,
       image: input.image ?? null,
+      is_visible: input.isVisible ?? true,
     })
     .select()
     .single();
@@ -474,6 +540,7 @@ export async function updateCategory(
       tagline: input.tagline,
       description: input.description,
       image: input.image ?? null,
+      is_visible: input.isVisible ?? true,
     })
     .eq("slug", slug)
     .select()

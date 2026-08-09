@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Category } from "@/lib/catalog";
-import { IconExternal, IconTrash } from "@/components/ui/Icons";
+import { IconExternal, IconEye, IconEyeOff, IconTrash } from "@/components/ui/Icons";
 
 export function CategoriesTable({
   categories,
@@ -15,6 +15,7 @@ export function CategoriesTable({
 }) {
   const router = useRouter();
   const [pendingSlug, setPendingSlug] = useState<string | null>(null);
+  const [togglingSlug, setTogglingSlug] = useState<string | null>(null);
 
   const handleDelete = async (category: Category) => {
     if (!window.confirm(`¿Eliminar la categoría «${category.name}»?`)) return;
@@ -32,6 +33,26 @@ export function CategoriesTable({
       window.alert(err instanceof Error ? err.message : "Error inesperado.");
     } finally {
       setPendingSlug(null);
+    }
+  };
+
+  const handleToggleVisibility = async (category: Category) => {
+    setTogglingSlug(category.slug);
+    try {
+      const res = await fetch(`/api/admin/categories/${category.slug}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isVisible: !category.isVisible }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "No se pudo cambiar la visibilidad.");
+      }
+      router.refresh();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Error inesperado.");
+    } finally {
+      setTogglingSlug(null);
     }
   };
 
@@ -53,6 +74,7 @@ export function CategoriesTable({
                 <th>Categoría</th>
                 <th>Eslogan</th>
                 <th>Productos</th>
+                <th>Estado</th>
                 <th aria-label="Acciones" />
               </tr>
             </thead>
@@ -79,6 +101,13 @@ export function CategoriesTable({
                     <td className="meta">{c.tagline}</td>
                     <td>{count}</td>
                     <td>
+                      {c.isVisible ? (
+                        <span className="meta">Visible</span>
+                      ) : (
+                        <span className="badge badge--out">Oculta</span>
+                      )}
+                    </td>
+                    <td>
                       <div className="admin-row-actions">
                         <Link
                           href={`/categoria/${c.slug}`}
@@ -89,6 +118,20 @@ export function CategoriesTable({
                         >
                           <IconExternal className="icon--sm" />
                         </Link>
+                        <button
+                          type="button"
+                          className="admin-icon-btn"
+                          aria-label={c.isVisible ? "Ocultar categoría" : "Mostrar categoría"}
+                          title={c.isVisible ? "Ocultar categoría" : "Mostrar categoría"}
+                          disabled={togglingSlug === c.slug}
+                          onClick={() => handleToggleVisibility(c)}
+                        >
+                          {c.isVisible ? (
+                            <IconEye className="icon--sm" />
+                          ) : (
+                            <IconEyeOff className="icon--sm" />
+                          )}
+                        </button>
                         <Link
                           href={`/admin/categorias/${c.slug}`}
                           className="btn btn--ghost btn--sm"

@@ -7,8 +7,8 @@ export const metadata = { title: "Categorías" };
 
 export default async function AdminCategoriesPage() {
   const [categories, products] = await Promise.all([
-    getAllCategories(),
-    getAllProducts(),
+    getAllCategories({ includeHidden: true }),
+    getAllProducts({ includeHidden: true }),
   ]);
 
   const productCounts = products.reduce<Record<string, number>>((acc, p) => {
