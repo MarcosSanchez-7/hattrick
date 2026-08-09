@@ -29,10 +29,12 @@ export function Navbar({
   categories,
   products,
   extraLinks = [],
+  customerName = null,
 }: {
   categories: Category[];
   products: Product[];
   extraLinks?: NavLink[];
+  customerName?: string | null;
 }) {
   const { count, openCart } = useCart();
   const { count: wishlistCount } = useWishlist();
@@ -136,7 +138,8 @@ export function Navbar({
             <Link
               href="/cuenta"
               className="nav__icon-btn nav__icon-btn--optional"
-              aria-label="Mi cuenta"
+              aria-label={customerName ? `Hola, ${customerName}` : "Iniciar sesión"}
+              title={customerName ? `Hola, ${customerName}` : "Iniciar sesión"}
             >
               <IconUser />
             </Link>
@@ -282,7 +285,7 @@ export function Navbar({
             <div className="mobile-menu__group">
               <p className="label mobile-menu__title">Cuenta</p>
               <Link href="/cuenta" className="mobile-menu__link">
-                Mi cuenta
+                {customerName ? `Hola, ${customerName}` : "Iniciar sesión"}
               </Link>
               <Link href="/favoritos" className="mobile-menu__link">
                 Favoritos ({wishlistCount})

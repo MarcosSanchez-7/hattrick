@@ -325,3 +325,74 @@ alter table categories add column if not exists is_visible boolean not null defa
 
 create index if not exists products_is_visible_idx on products (is_visible);
 create index if not exists categories_is_visible_idx on categories (is_visible);
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Cuentas de clientes (login de la tienda) — separado por completo de
+-- /admin, que sigue sin autenticación. Se apoya en Supabase Auth (auth.users,
+-- que Supabase gestiona internamente y no tocamos directo) y añade un perfil
+-- 1:1 en public.customers.
+--
+-- A diferencia de las demás tablas de este archivo, aquí SÍ hay políticas de
+-- RLS reales: el navegador puede leer/actualizar esta tabla directamente (a
+-- través de la sesión de Supabase Auth del propio cliente), pero cada
+-- usuario autenticado solo puede ver y modificar SU PROPIA fila. El panel
+-- /admin sigue usando exclusivamente supabaseAdmin (service_role), que
+-- ignora RLS siempre, así que esta tabla no le afecta en nada.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists customers (
+  id uuid primary key references auth.users (id) on delete cascade,
+  email text not null,
+  full_name text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table customers enable row level security;
+
+drop policy if exists "customers_select_own" on customers;
+create policy "customers_select_own"
+  on customers for select
+  to authenticated
+  using (auth.uid() = id);
+
+drop policy if exists "customers_update_own" on customers;
+create policy "customers_update_own"
+  on customers for update
+  to authenticated
+  using (auth.uid() = id)
+  with check (auth.uid() = id);
+
+-- Sin políticas de insert/delete para "authenticated": la fila la crea
+-- únicamente el trigger de abajo (con SECURITY DEFINER, que salta RLS).
+
+drop trigger if exists customers_set_updated_at on customers;
+create trigger customers_set_updated_at
+  before update on customers
+  for each row
+  execute function set_updated_at(); -- ya definida arriba en este archivo
+
+-- Crea automáticamente la fila de perfil cuando Supabase Auth registra un
+-- usuario nuevo (en el signUp, incluso antes de confirmar el email).
+create or replace function public.handle_new_customer()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.customers (id, email, full_name)
+  values (
+    new.id,
+    new.email,
+    new.raw_user_meta_data ->> 'full_name'
+  );
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row
+  execute function public.handle_new_customer();
