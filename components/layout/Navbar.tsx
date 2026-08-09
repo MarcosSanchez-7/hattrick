@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LEAGUES, type Category, type Product } from "@/lib/catalog";
+import type { NavLink } from "@/lib/settings";
 import { useCart } from "@/components/cart/CartProvider";
 import { SearchOverlay } from "@/components/search/SearchOverlay";
 import {
@@ -26,9 +27,11 @@ const CLUBS_BY_LEAGUE: Record<string, string[]> = {
 export function Navbar({
   categories,
   products,
+  extraLinks = [],
 }: {
   categories: Category[];
   products: Product[];
+  extraLinks?: NavLink[];
 }) {
   const { count, openCart } = useCart();
   const [megaOpen, setMegaOpen] = useState(false);
@@ -90,6 +93,21 @@ export function Navbar({
                 >
                   {item.label}
                   {item.mega ? <IconChevron className="icon--sm" /> : null}
+                </Link>
+              </div>
+            ))}
+            {extraLinks.map((link) => (
+              <div
+                key={link.href}
+                className="nav__item"
+                onMouseEnter={() => setMegaOpen(false)}
+              >
+                <Link
+                  href={link.href}
+                  className="nav__link"
+                  data-active={pathname === link.href ? "true" : "false"}
+                >
+                  {link.label}
                 </Link>
               </div>
             ))}
@@ -232,6 +250,15 @@ export function Navbar({
                   className="mobile-menu__link"
                 >
                   {c.name}
+                </Link>
+              ))}
+              {extraLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="mobile-menu__link"
+                >
+                  {link.label}
                 </Link>
               ))}
             </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { randomUUID } from "crypto";
+import sharp from "sharp";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -12,6 +13,8 @@ const EXT_BY_MIME: Record<string, string> = {
   "image/gif": ".gif",
   "image/svg+xml": ".svg",
 };
+
+const CONVERTIBLE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
@@ -37,15 +40,43 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const filename = `products/${randomUUID()}${ext}`;
-
   try {
-    const blob = await put(filename, file, {
+    const input = Buffer.from(await file.arrayBuffer());
+    let payload: Buffer<ArrayBufferLike> = input;
+    let outputExt = ext;
+    let contentType = file.type;
+
+    if (CONVERTIBLE_TYPES.has(file.type)) {
+      payload = await sharp(input)
+        .rotate()
+        .resize({
+          width: 2000,
+          height: 2000,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .webp({ quality: 82, effort: 4 })
+        .toBuffer();
+      outputExt = ".webp";
+      contentType = "image/webp";
+    }
+
+    const filename = `products/${randomUUID()}${outputExt}`;
+    const blob = await put(filename, payload, {
       access: "public",
-      contentType: file.type,
+      contentType,
       addRandomSuffix: false,
     });
-    return NextResponse.json({ url: blob.url }, { status: 201 });
+    return NextResponse.json(
+      {
+        url: blob.url,
+        format: outputExt.slice(1),
+        optimized: outputExt === ".webp",
+        originalBytes: input.byteLength,
+        storedBytes: payload.byteLength,
+      },
+      { status: 201 },
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Error desconocido.";
     return NextResponse.json(

@@ -1,7 +1,16 @@
 import "server-only";
 import { randomUUID } from "crypto";
-import type { Category, Product, ProductVariant, StockMode } from "@/lib/catalog";
+import type {
+  Category,
+  Product,
+  ProductVariant,
+  Sale,
+  SaleChannel,
+  SaleLine,
+  StockMode,
+} from "@/lib/catalog";
 import { slugify, uniqueSlug } from "@/lib/slug";
+import type { SiteSettingsKey } from "@/lib/settings";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 /**
@@ -35,6 +44,7 @@ type ProductRow = {
   season: string;
   price: number | string;
   compare_at: number | string | null;
+  cost_price: number | string | null;
   is_new: boolean;
   rating: number | string;
   reviews: number;
@@ -66,6 +76,7 @@ type CategoryRow = {
 function rowToProduct(row: ProductRow, variantRows: VariantRow[]): Product {
   const isPropio = row.stock_mode === "propio";
   const variants: ProductVariant[] = variantRows.map((v) => ({
+    id: v.id,
     size: v.size,
     stock: v.stock_on_hand,
   }));
@@ -80,6 +91,7 @@ function rowToProduct(row: ProductRow, variantRows: VariantRow[]): Product {
     season: row.season,
     price: Number(row.price),
     compareAt: row.compare_at != null ? Number(row.compare_at) : null,
+    costPrice: row.cost_price != null ? Number(row.cost_price) : null,
     isNew: row.is_new,
     rating: Number(row.rating),
     reviews: row.reviews,
@@ -299,6 +311,7 @@ function productToRow(input: ProductInput) {
     season: input.season,
     price: input.price,
     compare_at: input.compareAt ?? null,
+    cost_price: input.costPrice ?? null,
     is_new: Boolean(input.isNew),
     rating: Number.isFinite(input.rating) ? input.rating : 5,
     reviews: Number.isFinite(input.reviews) ? input.reviews : 0,
@@ -492,6 +505,164 @@ export async function deleteCategory(slug: string): Promise<void> {
   if (!data || data.length === 0) {
     throw new DataError("Categoría no encontrada.", 404);
   }
+}
+
+// ── Ventas ───────────────────────────────────────────────────────────────
+
+type SaleItemRow = {
+  id: number;
+  quantity: number;
+  unit_price: number | string;
+  cost_price: number | string;
+  product_variants: {
+    size: string;
+    product_id: string;
+    products: { team: string; name: string } | null;
+  } | null;
+};
+
+type SaleRow = {
+  id: string;
+  channel: SaleChannel;
+  staff_name: string | null;
+  customer_note: string | null;
+  sold_at: string;
+  sale_items: SaleItemRow[];
+};
+
+const SALE_SELECT =
+  "id, channel, staff_name, customer_note, sold_at, sale_items(id, quantity, unit_price, cost_price, product_variants(size, product_id, products(team, name)))";
+
+function rowToSale(row: SaleRow): Sale {
+  const items: SaleLine[] = (row.sale_items ?? []).map((si) => ({
+    id: si.id,
+    productId: si.product_variants?.product_id ?? "",
+    team: si.product_variants?.products?.team ?? "—",
+    name: si.product_variants?.products?.name ?? "—",
+    size: si.product_variants?.size ?? "—",
+    quantity: si.quantity,
+    unitPrice: Number(si.unit_price),
+    costPrice: Number(si.cost_price),
+  }));
+
+  return {
+    id: row.id,
+    channel: row.channel,
+    staffName: row.staff_name,
+    customerNote: row.customer_note,
+    soldAt: row.sold_at,
+    items,
+  };
+}
+
+export async function getSales(range?: {
+  from?: string;
+  to?: string;
+}): Promise<Sale[]> {
+  let query = supabaseAdmin
+    .from("sales")
+    .select(SALE_SELECT)
+    .order("sold_at", { ascending: false });
+
+  if (range?.from) query = query.gte("sold_at", range.from);
+  if (range?.to) query = query.lte("sold_at", range.to);
+
+  const { data, error } = await query;
+  if (error) fail(`No se pudieron cargar las ventas: ${error.message}`);
+  return (data as unknown as SaleRow[]).map(rowToSale);
+}
+
+export type SaleItemInput = {
+  variantId: string;
+  quantity: number;
+  unitPrice: number;
+  costPrice: number;
+};
+
+export type SaleInput = {
+  channel: SaleChannel;
+  staffName?: string | null;
+  customerNote?: string | null;
+  items: SaleItemInput[];
+};
+
+function assertValidSale(input: SaleInput) {
+  if (!input.items || input.items.length === 0) {
+    throw new DataError("Agrega al menos un artículo a la venta.");
+  }
+  for (const item of input.items) {
+    if (!item.variantId) throw new DataError("Falta seleccionar una talla.");
+    if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
+      throw new DataError("La cantidad debe ser mayor que 0.");
+    }
+    if (!Number.isFinite(item.unitPrice) || item.unitPrice < 0) {
+      throw new DataError("El precio de venta no es válido.");
+    }
+    if (!Number.isFinite(item.costPrice) || item.costPrice < 0) {
+      throw new DataError("El precio de costo no es válido.");
+    }
+  }
+}
+
+export async function recordSale(input: SaleInput): Promise<string> {
+  assertValidSale(input);
+
+  const id = `s-${randomUUID().slice(0, 8)}`;
+  const { error } = await supabaseAdmin.rpc("record_sale", {
+    p_id: id,
+    p_channel: input.channel,
+    p_staff_name: input.staffName ?? null,
+    p_customer_note: input.customerNote ?? null,
+    p_items: input.items.map((i) => ({
+      variant_id: i.variantId,
+      quantity: i.quantity,
+      unit_price: i.unitPrice,
+      cost_price: i.costPrice,
+    })),
+  });
+
+  if (error) {
+    if (error.message.includes("stock_on_hand")) {
+      fail(
+        "No hay stock suficiente para completar la venta con esas cantidades.",
+        400,
+      );
+    }
+    fail(`No se pudo registrar la venta: ${error.message}`);
+  }
+  return id;
+}
+
+// ── Configuración general del sitio ────────────────────────────────────────
+
+/**
+ * Nunca debe tumbar la tienda: si la tabla no existe todavía (antes de correr
+ * la migración) o hay cualquier error, se usa el valor por defecto en
+ * silencio en vez de romper la página.
+ */
+export async function getSetting<T>(key: SiteSettingsKey, fallback: T): Promise<T> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("site_settings")
+      .select("value")
+      .eq("key", key)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? ({ ...fallback, ...(data.value as object) } as T) : fallback;
+  } catch (err) {
+    console.error(`No se pudo cargar la configuración "${key}", usando valores por defecto:`, err);
+    return fallback;
+  }
+}
+
+export async function updateSetting(
+  key: SiteSettingsKey,
+  value: unknown,
+): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key, value }, { onConflict: "key" });
+  if (error) fail(`No se pudo guardar la configuración "${key}": ${error.message}`);
 }
 
 export { slugify };

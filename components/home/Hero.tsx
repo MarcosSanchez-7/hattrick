@@ -1,46 +1,46 @@
 import Link from "next/link";
 import { getProduct, type Product } from "@/lib/catalog";
+import type { HeroSettings } from "@/lib/settings";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import { IconArrow } from "@/components/ui/Icons";
 
-const STATS = [
-  ["120+", "Equipaciones en stock"],
-  ["48 h", "Entrega península"],
-  ["4,9/5", "1.240 valoraciones"],
-];
-
-export function Hero({ products }: { products: Product[] }) {
-  const featured = getProduct(products, "espana-local-2026") ?? products[0];
+export function Hero({
+  products,
+  settings,
+}: {
+  products: Product[];
+  settings: HeroSettings;
+}) {
+  const featured =
+    (settings.featuredProductSlug
+      ? getProduct(products, settings.featuredProductSlug)
+      : undefined) ?? products[0];
 
   return (
     <section className="hero">
       <div className="container hero__grid">
         <div className="hero__copy">
-          <span className="label hero__eyebrow">Temporada 25/26 · Mundial 2026</span>
+          <span className="label hero__eyebrow">{settings.eyebrow}</span>
           <h1 className="display">
-            La camiseta
+            {settings.headlineLine1}
             <br />
-            hace al equipo
+            {settings.headlineLine2}
           </h1>
-          <p className="lead">
-            Equipaciones oficiales de clubes y selecciones, reediciones retro y
-            personalización profesional con el tipo de letra de cada liga. Sin
-            réplicas, sin sorpresas.
-          </p>
+          <p className="lead">{settings.lead}</p>
           <div className="hero__actions">
-            <Link href="/novedades" className="btn">
-              Comprar novedades
+            <Link href={settings.primaryCtaHref} className="btn">
+              {settings.primaryCtaLabel}
               <IconArrow className="icon--sm" />
             </Link>
-            <Link href="/ofertas" className="btn btn--ghost">
-              Ver ofertas
+            <Link href={settings.secondaryCtaHref} className="btn btn--ghost">
+              {settings.secondaryCtaLabel}
             </Link>
           </div>
           <div className="hero__stats">
-            {STATS.map(([value, label]) => (
-              <div key={label}>
-                <div className="hero__stat-value">{value}</div>
-                <div className="meta">{label}</div>
+            {settings.stats.map((stat) => (
+              <div key={stat.label}>
+                <div className="hero__stat-value">{stat.value}</div>
+                <div className="meta">{stat.label}</div>
               </div>
             ))}
           </div>

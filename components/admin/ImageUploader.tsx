@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { IconClose, IconUpload } from "@/components/ui/Icons";
+import { IconClose, IconPlus, IconUpload } from "@/components/ui/Icons";
 
 type Props = {
   images: string[];
@@ -23,13 +23,24 @@ async function uploadFile(file: File): Promise<string> {
   return data.url as string;
 }
 
+function isValidHttpUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export function ImageUploader({ images, onChange, max = 6, label }: Props) {
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [urlValue, setUrlValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const remainingSlots = max - images.length;
+  const hasRoom = remainingSlots > 0;
 
   const handleFiles = async (fileList: FileList | null) => {
     if (!fileList || fileList.length === 0) return;
@@ -53,6 +64,22 @@ export function ImageUploader({ images, onChange, max = 6, label }: Props) {
     }
   };
 
+  const addFromUrl = () => {
+    const trimmed = urlValue.trim();
+    if (!trimmed) return;
+    setError(null);
+    if (!isValidHttpUrl(trimmed)) {
+      setError("Introduce una URL válida (debe empezar por http:// o https://).");
+      return;
+    }
+    if (!hasRoom) {
+      setError(`Ya tienes el máximo de ${max} imagen${max > 1 ? "es" : ""}.`);
+      return;
+    }
+    onChange([...images, trimmed]);
+    setUrlValue("");
+  };
+
   const removeAt = (idx: number) => {
     onChange(images.filter((_, i) => i !== idx));
   };
@@ -67,42 +94,71 @@ export function ImageUploader({ images, onChange, max = 6, label }: Props) {
 
   return (
     <div>
-      {images.length < max ? (
-        <div
-          className="admin-dropzone"
-          data-dragging={dragging ? "true" : "false"}
-          onClick={() => inputRef.current?.click()}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragging(false);
-            void handleFiles(e.dataTransfer.files);
-          }}
-          role="button"
-          tabIndex={0}
-        >
-          <IconUpload />
-          <span style={{ fontSize: "0.8125rem", fontWeight: 600 }}>
-            {busy
-              ? "Subiendo…"
-              : label ?? "Arrastra una imagen o haz clic para subirla"}
-          </span>
-          <span className="admin-help">
-            PNG, JPG, WEBP, GIF o SVG · máx. 5 MB
-            {max > 1 ? ` · hasta ${max} imágenes` : ""}
-          </span>
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
-            multiple={max > 1}
-            onChange={(e) => void handleFiles(e.target.files)}
-          />
-        </div>
+      {hasRoom ? (
+        <>
+          <div
+            className="admin-dropzone"
+            data-dragging={dragging ? "true" : "false"}
+            onClick={() => inputRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              void handleFiles(e.dataTransfer.files);
+            }}
+            role="button"
+            tabIndex={0}
+          >
+            <IconUpload />
+            <span style={{ fontSize: "0.8125rem", fontWeight: 600 }}>
+              {busy
+                ? "Subiendo…"
+                : label ?? "Arrastra una imagen o haz clic para subirla"}
+            </span>
+            <span className="admin-help">
+              PNG, JPG, WEBP, GIF o SVG · máx. 5 MB
+              {max > 1 ? ` · hasta ${max} imágenes` : ""}
+            </span>
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+              multiple={max > 1}
+              onChange={(e) => void handleFiles(e.target.files)}
+            />
+          </div>
+
+          <div className="admin-url-row">
+            <span className="admin-help" style={{ flex: "none" }}>
+              o pega una URL:
+            </span>
+            <input
+              type="url"
+              value={urlValue}
+              onChange={(e) => setUrlValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addFromUrl();
+                }
+              }}
+              placeholder="https://ejemplo.com/imagen.jpg"
+            />
+            <button
+              type="button"
+              className="admin-icon-btn"
+              onClick={addFromUrl}
+              aria-label="Añadir imagen desde URL"
+              title="Añadir imagen desde URL"
+            >
+              <IconPlus className="icon--sm" />
+            </button>
+          </div>
+        </>
       ) : null}
 
       {error ? (

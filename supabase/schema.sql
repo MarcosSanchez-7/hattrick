@@ -238,3 +238,77 @@ $$;
 alter table products
   add column if not exists stock_mode text not null default 'propio'
   check (stock_mode in ('propio', 'ajeno', 'importado'));
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Pantalla de Ventas diarias — precio de costo (para calcular ganancia) y
+-- más canales de venta además de tienda física / web.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- Costo del producto (opcional): se precarga al registrar una venta para no
+-- tener que escribirlo a mano cada vez. Un solo costo por producto, no por talla.
+alter table products add column if not exists cost_price numeric(10, 2);
+
+-- Costo real aplicado en esa línea de venta (copiado del producto al momento
+-- de vender, editable; así la ganancia histórica no cambia si el costo
+-- del producto se actualiza después).
+alter table sale_items
+  add column if not exists cost_price numeric(10, 2) not null default 0;
+
+-- Amplía los canales permitidos.
+alter table sales drop constraint if exists sales_channel_check;
+alter table sales
+  add constraint sales_channel_check
+  check (channel in ('store', 'whatsapp', 'instagram', 'web'));
+
+-- record_sale ahora también guarda el costo de cada línea.
+create or replace function record_sale(
+  p_id text,
+  p_channel text,
+  p_staff_name text,
+  p_customer_note text,
+  p_items jsonb -- [{ "variant_id": "...", "quantity": 1, "unit_price": 350000, "cost_price": 200000 }, ...]
+)
+returns text
+language plpgsql
+as $$
+declare
+  v_item jsonb;
+begin
+  insert into sales (id, channel, staff_name, customer_note)
+  values (p_id, p_channel, p_staff_name, p_customer_note);
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    insert into sale_items (sale_id, variant_id, quantity, unit_price, cost_price)
+    values (
+      p_id,
+      v_item->>'variant_id',
+      (v_item->>'quantity')::integer,
+      (v_item->>'unit_price')::numeric,
+      coalesce((v_item->>'cost_price')::numeric, 0)
+    );
+  end loop;
+
+  return p_id;
+end;
+$$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Configuración general del sitio (Hero, Footer, Navbar) — /admin/generales.
+-- Clave -> jsonb en vez de columnas fijas: así se pueden añadir más ajustes
+-- (más secciones "Generales") sin migraciones nuevas cada vez.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists site_settings (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table site_settings enable row level security;
+
+drop trigger if exists site_settings_set_updated_at on site_settings;
+create trigger site_settings_set_updated_at
+  before update on site_settings
+  for each row
+  execute function set_updated_at();

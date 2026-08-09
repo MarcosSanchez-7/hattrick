@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProductById } from "@/lib/catalog";
 import { getAllCategories, getAllProducts } from "@/lib/data";
 import { ProductForm } from "@/components/admin/ProductForm";
+import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
 type Params = { id: string };
 
@@ -25,7 +25,7 @@ export default async function EditProductPage({
   return (
     <>
       <nav className="breadcrumbs" aria-label="Migas de pan" style={{ marginBottom: 16 }}>
-        <Link href="/admin/productos">Productos</Link>
+        <AdminBackLink href="/admin/productos" label="Productos" />
         <span>/</span>
         <span>
           {product.team} — {product.name}

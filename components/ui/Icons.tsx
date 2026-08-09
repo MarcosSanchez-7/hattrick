@@ -180,3 +180,17 @@ export const IconExternal = ({ className }: IconProps) => (
     <path d="M14 4h6v6M20 4 10 14" />
   </svg>
 );
+
+export const IconSettings = ({ className }: IconProps) => (
+  <svg className={base(className)} viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="12" cy="12" r="3" />
+    <path d="M12 3v2.5M12 18.5V21M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M3 12h2.5M18.5 12H21M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" />
+  </svg>
+);
+
+export const IconReceipt = ({ className }: IconProps) => (
+  <svg className={base(className)} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M6 3h12v18l-2.5-1.5L13 21l-1-1.5L11 21l-2.5-1.5L6 21Z" />
+    <path d="M9 8h6M9 12h6M9 16h3" />
+  </svg>
+);

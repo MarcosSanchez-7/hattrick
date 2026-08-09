@@ -18,6 +18,7 @@ export type StockMode = "propio" | "ajeno" | "importado";
 export const CONSULT_SIZE_LABEL = "A consultar";
 
 export type ProductVariant = {
+  id: string;
   size: string;
   stock: number;
 };
@@ -34,6 +35,8 @@ export type Product = {
   price: number;
   /** Precio anterior tachado. Su presencia marca el producto como oferta. */
   compareAt?: number | null;
+  /** Costo del producto, para calcular ganancia en Ventas. Opcional. */
+  costPrice?: number | null;
   isNew?: boolean;
   rating: number;
   reviews: number;
@@ -61,6 +64,45 @@ export type Category = {
 
 export const SIZES_ADULT = ["P", "M", "G", "XL", "XXL"];
 export const SIZES_KIDS = ["4A", "6A", "8A", "10A", "12A", "14A"];
+
+// ── Ventas ───────────────────────────────────────────────────────────────
+
+export type SaleChannel = "store" | "whatsapp" | "instagram" | "web";
+
+export const SALE_CHANNELS: { value: SaleChannel; label: string }[] = [
+  { value: "store", label: "Tienda física" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "instagram", label: "Instagram" },
+  { value: "web", label: "Web" },
+];
+
+export type SaleLine = {
+  id: number;
+  productId: string;
+  team: string;
+  name: string;
+  size: string;
+  quantity: number;
+  unitPrice: number;
+  costPrice: number;
+};
+
+export type Sale = {
+  id: string;
+  channel: SaleChannel;
+  staffName?: string | null;
+  customerNote?: string | null;
+  soldAt: string;
+  items: SaleLine[];
+};
+
+export const lineTotal = (line: SaleLine) => line.unitPrice * line.quantity;
+export const lineProfit = (line: SaleLine) =>
+  (line.unitPrice - line.costPrice) * line.quantity;
+export const saleTotal = (sale: Sale) =>
+  sale.items.reduce((acc, l) => acc + lineTotal(l), 0);
+export const saleProfit = (sale: Sale) =>
+  sale.items.reduce((acc, l) => acc + lineProfit(l), 0);
 
 export const PATTERNS: { value: Pattern; label: string }[] = [
   { value: "solid", label: "Liso" },

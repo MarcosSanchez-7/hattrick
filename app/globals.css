@@ -1109,6 +1109,15 @@ textarea {
   transform: scale(1.05) translateY(-4px);
 }
 
+.card__media-hover {
+  opacity: 0;
+  transition: opacity 0.35s var(--ease), transform 0.45s var(--ease);
+}
+
+.card:hover .card__media-hover {
+  opacity: 1;
+}
+
 .card__badges {
   position: absolute;
   top: var(--sp-3);
@@ -1141,25 +1150,6 @@ textarea {
   background: var(--surface);
   color: var(--ink-soft);
   border: 1px solid var(--line);
-}
-
-.card__quick {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 2;
-  transform: translateY(100%);
-  opacity: 0;
-  transition:
-    transform 0.28s var(--ease),
-    opacity 0.28s var(--ease);
-}
-
-.card:hover .card__quick,
-.card:focus-within .card__quick {
-  transform: none;
-  opacity: 1;
 }
 
 .card__body {
@@ -1209,19 +1199,6 @@ textarea {
   font-weight: 400;
   color: var(--ink-muted);
   text-decoration: line-through;
-}
-
-.card__swatches {
-  display: flex;
-  gap: 5px;
-  margin-top: var(--sp-1);
-}
-
-.swatch {
-  width: 12px;
-  height: 12px;
-  border: 1px solid var(--line);
-  border-radius: 50%;
 }
 
 .rating {
@@ -1819,6 +1796,17 @@ textarea {
   color: var(--ink);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.admin-back-link {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.admin-back-link__icon {
+  transform: rotate(180deg);
 }
 
 .toolbar {
@@ -2419,6 +2407,16 @@ textarea {
   gap: var(--sp-4);
 }
 
+.admin-generales-card {
+  text-decoration: none;
+  transition: border-color 0.18s var(--ease), background-color 0.18s var(--ease);
+}
+
+.admin-generales-card:hover {
+  border-color: var(--ink);
+  background: var(--surface-soft);
+}
+
 .admin-fieldset__title {
   font-size: 0.9375rem;
   font-weight: 700;
@@ -2450,6 +2448,7 @@ textarea {
 .admin-field input[type='text'],
 .admin-field input[type='number'],
 .admin-field input[type='search'],
+.admin-field input[type='date'],
 .admin-field select,
 .admin-field textarea {
   border: 1px solid var(--line);
@@ -2538,6 +2537,25 @@ textarea {
   border-color: var(--ink);
 }
 
+.admin-sale-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+  border: 1px solid var(--line);
+}
+
+.admin-sale-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+}
+
+.admin-sale-result + .admin-sale-result {
+  border-top: 1px solid var(--line);
+}
+
 .admin-color-row {
   display: flex;
   gap: var(--sp-4);
@@ -2605,6 +2623,28 @@ textarea {
 
 .admin-dropzone input {
   display: none;
+}
+
+.admin-url-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+
+.admin-url-row input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  background: var(--surface);
+}
+
+.admin-url-row input:focus {
+  outline: none;
+  border-color: var(--ink);
 }
 
 .admin-uploads {

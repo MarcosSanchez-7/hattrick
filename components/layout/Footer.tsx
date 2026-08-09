@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LEAGUES, type Category } from "@/lib/catalog";
+import type { FooterSettings } from "@/lib/settings";
 import {
   IconInstagram,
   IconTikTok,
@@ -24,31 +25,44 @@ const EMPRESA = [
   ["Trabaja con nosotros", "/empleo"],
 ];
 
-export function Footer({ categories }: { categories: Category[] }) {
+const SOCIALS: { key: keyof FooterSettings; icon: typeof IconInstagram; label: string }[] = [
+  { key: "instagramUrl", icon: IconInstagram, label: "Instagram" },
+  { key: "tiktokUrl", icon: IconTikTok, label: "TikTok" },
+  { key: "xUrl", icon: IconX, label: "X" },
+  { key: "youtubeUrl", icon: IconYoutube, label: "YouTube" },
+];
+
+export function Footer({
+  categories,
+  settings,
+}: {
+  categories: Category[];
+  settings: FooterSettings;
+}) {
   return (
     <footer className="footer">
       <div className="container">
         <div className="footer__top">
           <div className="footer__brand">
             <div className="footer__brand-logo">Hattrick</div>
-            <p>
-              Camisetas de fútbol oficiales, ediciones retro y personalización
-              profesional. Enviamos a toda Europa desde nuestro almacén de
-              Madrid.
-            </p>
+            <p>{settings.brandDescription}</p>
             <div className="footer__socials">
-              <a href="#" className="footer__social" aria-label="Instagram">
-                <IconInstagram />
-              </a>
-              <a href="#" className="footer__social" aria-label="TikTok">
-                <IconTikTok />
-              </a>
-              <a href="#" className="footer__social" aria-label="X">
-                <IconX />
-              </a>
-              <a href="#" className="footer__social" aria-label="YouTube">
-                <IconYoutube />
-              </a>
+              {SOCIALS.map(({ key, icon: Icon, label }) => {
+                const href = settings[key] as string;
+                if (!href) return null;
+                return (
+                  <a
+                    key={key}
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="footer__social"
+                    aria-label={label}
+                  >
+                    <Icon />
+                  </a>
+                );
+              })}
             </div>
           </div>
 
@@ -105,17 +119,17 @@ export function Footer({ categories }: { categories: Category[] }) {
 
         <div className="footer__bottom">
           <div className="footer__legal">
-            <span>© {new Date().getFullYear()} HATTRICK Elite Athletics S.L.</span>
+            <span>
+              © {new Date().getFullYear()} {settings.legalName}
+            </span>
             <Link href="/legal/privacidad">Privacidad</Link>
             <Link href="/legal/cookies">Cookies</Link>
             <Link href="/legal/terminos">Términos</Link>
           </div>
           <div className="footer__pay">
-            <span>VISA</span>
-            <span>MASTERCARD</span>
-            <span>PAYPAL</span>
-            <span>APPLE PAY</span>
-            <span>BIZUM</span>
+            {settings.paymentMethods.map((method) => (
+              <span key={method}>{method}</span>
+            ))}
           </div>
         </div>
       </div>

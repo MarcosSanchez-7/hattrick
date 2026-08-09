@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCategory } from "@/lib/catalog";
 import { getAllCategories } from "@/lib/data";
 import { CategoryForm } from "@/components/admin/CategoryForm";
+import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
 type Params = { slug: string };
 
@@ -21,7 +21,7 @@ export default async function EditCategoryPage({
   return (
     <>
       <nav className="breadcrumbs" aria-label="Migas de pan" style={{ marginBottom: 16 }}>
-        <Link href="/admin/categorias">Categorías</Link>
+        <AdminBackLink href="/admin/categorias" label="Categorías" />
         <span>/</span>
         <span>{category.name}</span>
       </nav>

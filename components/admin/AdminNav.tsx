@@ -2,12 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconGrid, IconLayout, IconTag } from "@/components/ui/Icons";
+import {
+  IconGrid,
+  IconLayout,
+  IconReceipt,
+  IconSettings,
+  IconTag,
+} from "@/components/ui/Icons";
 
 const ITEMS = [
   { href: "/admin", label: "Panel", icon: IconLayout, exact: true },
   { href: "/admin/productos", label: "Productos", icon: IconGrid },
   { href: "/admin/categorias", label: "Categorías", icon: IconTag },
+  { href: "/admin/ventas", label: "Ventas", icon: IconReceipt },
+  { href: "/admin/generales", label: "Generales", icon: IconSettings },
 ];
 
 export function AdminNav() {

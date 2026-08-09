@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  PATTERNS,
   SIZES_ADULT,
   type Category,
   type Pattern,
@@ -39,6 +38,7 @@ type FormState = {
   season: string;
   price: string;
   compareAt: string;
+  costPrice: string;
   isNew: boolean;
   rating: string;
   reviews: string;
@@ -69,6 +69,7 @@ function toFormState(product?: Product): FormState {
     season: product?.season ?? "25/26",
     price: product ? String(product.price) : "",
     compareAt: product?.compareAt != null ? String(product.compareAt) : "",
+    costPrice: product?.costPrice != null ? String(product.costPrice) : "",
     isNew: product?.isNew ?? false,
     rating: product ? String(product.rating) : "5",
     reviews: product ? String(product.reviews) : "0",
@@ -156,6 +157,7 @@ export function ProductForm({
       season: form.season.trim(),
       price,
       compareAt,
+      costPrice: form.costPrice.trim() ? Number(form.costPrice) : null,
       isNew: form.isNew,
       rating: Number(form.rating) || 5,
       reviews: Number(form.reviews) || 0,
@@ -332,6 +334,18 @@ export function ProductForm({
               placeholder="Vacío = sin oferta"
             />
           </div>
+          <div className="admin-field">
+            <label htmlFor="costPrice">Precio de costo (Gs., opcional)</label>
+            <input
+              id="costPrice"
+              type="number"
+              step="1000"
+              min="0"
+              value={form.costPrice}
+              onChange={(e) => update("costPrice", e.target.value)}
+              placeholder="Para calcular ganancia en Ventas"
+            />
+          </div>
           <div className="admin-field admin-field--checkbox">
             <input
               id="isNew"
@@ -430,56 +444,6 @@ export function ProductForm({
             de un selector de talla con stock.
           </p>
         )}
-      </div>
-
-      <div className="admin-fieldset">
-        <p className="admin-fieldset__title">Diseño</p>
-        <div className="admin-field">
-          <label htmlFor="pattern">Patrón de la ilustración generada</label>
-          <select
-            id="pattern"
-            value={form.pattern}
-            onChange={(e) => update("pattern", e.target.value as Pattern)}
-          >
-            {PATTERNS.map((p) => (
-              <option key={p.value} value={p.value}>
-                {p.label}
-              </option>
-            ))}
-          </select>
-          <p className="admin-help">
-            Se usa cuando el producto no tiene fotos reales subidas abajo.
-          </p>
-        </div>
-        <div className="admin-color-row">
-          <div className="admin-color">
-            <input
-              type="color"
-              value={form.colorPrimary}
-              onChange={(e) => update("colorPrimary", e.target.value)}
-              aria-label="Color primario"
-            />
-            Primario
-          </div>
-          <div className="admin-color">
-            <input
-              type="color"
-              value={form.colorSecondary}
-              onChange={(e) => update("colorSecondary", e.target.value)}
-              aria-label="Color secundario"
-            />
-            Secundario
-          </div>
-          <div className="admin-color">
-            <input
-              type="color"
-              value={form.colorAccent}
-              onChange={(e) => update("colorAccent", e.target.value)}
-              aria-label="Color de acento"
-            />
-            Acento
-          </div>
-        </div>
       </div>
 
       <div className="admin-fieldset">

@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { CategoryForm } from "@/components/admin/CategoryForm";
+import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
 export const metadata = { title: "Nueva categoría" };
 
@@ -7,7 +7,7 @@ export default function NewCategoryPage() {
   return (
     <>
       <nav className="breadcrumbs" aria-label="Migas de pan" style={{ marginBottom: 16 }}>
-        <Link href="/admin/categorias">Categorías</Link>
+        <AdminBackLink href="/admin/categorias" label="Categorías" />
         <span>/</span>
         <span>Nueva</span>
       </nav>
