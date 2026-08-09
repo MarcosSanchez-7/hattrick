@@ -1104,6 +1104,13 @@ textarea {
   transition: transform 0.45s var(--ease);
 }
 
+/* Las fotos reales (a diferencia de la ilustración generada) varían mucho de
+   encuadre entre sí; "cover" las normaliza a la misma escala dentro de la
+   tarjeta en vez de heredar el zoom con el que se sacó cada foto. */
+.card__media img {
+  object-fit: cover;
+}
+
 .card:hover .card__media svg,
 .card:hover .card__media img {
   transform: scale(1.05) translateY(-4px);
@@ -1150,6 +1157,11 @@ textarea {
   background: var(--surface);
   color: var(--ink-soft);
   border: 1px solid var(--line);
+}
+
+.badge--tag {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
 }
 
 .card__body {
@@ -1879,12 +1891,48 @@ textarea {
 }
 
 .pdp__main {
+  position: relative;
   background: var(--surface-soft);
   aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--sp-7);
+}
+
+.pdp__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--ink);
+  transition: background-color 0.2s var(--ease);
+}
+
+.pdp__nav:hover {
+  background: var(--surface);
+}
+
+.pdp__nav--prev {
+  left: var(--sp-4);
+}
+
+.pdp__nav--prev .icon {
+  transform: rotate(90deg);
+}
+
+.pdp__nav--next {
+  right: var(--sp-4);
+}
+
+.pdp__nav--next .icon {
+  transform: rotate(-90deg);
 }
 
 .pdp__thumbs {
@@ -2775,37 +2823,48 @@ textarea {
    Favoritos (wishlist)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-.wishlist-heart {
+.wishlist-heart,
+.quick-add {
   position: absolute;
-  top: var(--sp-3);
-  right: var(--sp-3);
   z-index: 3;
   width: 34px;
   height: 34px;
+  border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface);
+  background: rgba(255, 255, 255, 0.9);
   color: var(--ink);
-  border: 1px solid var(--line);
   transition:
     background-color 0.2s var(--ease),
     color 0.2s var(--ease),
-    border-color 0.2s var(--ease);
+    transform 0.2s var(--ease);
 }
 
-.wishlist-heart:hover {
-  border-color: var(--ink);
+.wishlist-heart:hover,
+.quick-add:hover {
+  background: var(--ink);
+  color: var(--on-inverse);
+  transform: scale(1.06);
+}
+
+.wishlist-heart {
+  top: var(--sp-3);
+  right: var(--sp-3);
 }
 
 .wishlist-heart[data-saved='true'] {
   background: var(--ink);
   color: var(--on-inverse);
-  border-color: var(--ink);
 }
 
 .wishlist-heart[data-saved='true'] .icon {
   fill: currentColor;
+}
+
+.quick-add {
+  right: var(--sp-3);
+  bottom: var(--sp-3);
 }
 
 button[aria-pressed='true'] .wishlist-heart-icon {

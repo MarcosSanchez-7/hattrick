@@ -3,6 +3,7 @@ import { discountPercent, isOnSale, isSoldOut, type Product } from "@/lib/catalo
 import { formatPrice } from "@/lib/format";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import { WishlistHeartButton } from "@/components/wishlist/WishlistHeartButton";
+import { QuickAddButton } from "@/components/cart/QuickAddButton";
 
 export function ProductCard({ product }: { product: Product }) {
   const sale = isOnSale(product);
@@ -21,9 +22,15 @@ export function ProductCard({ product }: { product: Product }) {
             </span>
           ) : null}
           {allSoldOut ? <span className="badge badge--out">Agotado</span> : null}
+          {product.tags.map((tag) => (
+            <span key={tag} className="badge badge--tag">
+              {tag}
+            </span>
+          ))}
         </div>
 
         <WishlistHeartButton product={product} className="wishlist-heart--card" />
+        <QuickAddButton product={product} className="quick-add--card" />
 
         <Link
           href={`/producto/${product.slug}`}

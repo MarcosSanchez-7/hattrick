@@ -43,6 +43,8 @@ export function ProductDetail({ product }: { product: Product }) {
   const thumbCount = hasPhotos ? product.images!.length : GENERATED_VIEWS;
   const alt = product.name;
 
+  const goTo = (i: number) => setView((i + thumbCount) % thumbCount);
+
   return (
     <div className="container pdp">
       <div className="pdp__gallery">
@@ -56,6 +58,26 @@ export function ProductDetail({ product }: { product: Product }) {
             number={!hasPhotos && view === 1 ? "10" : undefined}
             alt={alt}
           />
+          {thumbCount > 1 ? (
+            <>
+              <button
+                type="button"
+                className="pdp__nav pdp__nav--prev"
+                onClick={() => goTo(view - 1)}
+                aria-label="Imagen anterior"
+              >
+                <IconChevron className="icon--sm" />
+              </button>
+              <button
+                type="button"
+                className="pdp__nav pdp__nav--next"
+                onClick={() => goTo(view + 1)}
+                aria-label="Imagen siguiente"
+              >
+                <IconChevron className="icon--sm" />
+              </button>
+            </>
+          ) : null}
         </div>
         {thumbCount > 1 ? (
           <div className="pdp__thumbs">
