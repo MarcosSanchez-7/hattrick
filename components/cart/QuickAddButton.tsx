@@ -6,11 +6,37 @@ import { useCart } from "@/components/cart/CartProvider";
 import { IconBag } from "@/components/ui/Icons";
 
 /**
- * Atajo para añadir al carrito directo desde la tarjeta, sin entrar a la
- * ficha. Si el producto necesita elegir talla (stock propio), no hay forma
- * de saber cuál desde la grilla — en ese caso lleva a la ficha en vez de
- * adivinar una talla.
+ * Anima una copia de la imagen del producto "volando" hacia el ícono del
+ * carrito del navbar, sin navegar ni abrir el drawer — el cliente se queda
+ * en la misma página para seguir comprando.
  */
+function flyToCart(source: HTMLElement) {
+  const target = document.getElementById("site-cart-button");
+  const media = source.closest(".card__media")?.querySelector("img, svg");
+  if (!target || !media) return;
+
+  const startRect = media.getBoundingClientRect();
+  const endRect = target.getBoundingClientRect();
+
+  const clone = media.cloneNode(true) as HTMLElement;
+  clone.classList.add("fly-to-cart");
+  clone.style.width = `${startRect.width}px`;
+  clone.style.height = `${startRect.height}px`;
+  clone.style.left = `${startRect.left}px`;
+  clone.style.top = `${startRect.top}px`;
+  document.body.appendChild(clone);
+
+  const dx = endRect.left + endRect.width / 2 - (startRect.left + startRect.width / 2);
+  const dy = endRect.top + endRect.height / 2 - (startRect.top + startRect.height / 2);
+
+  requestAnimationFrame(() => {
+    clone.style.transform = `translate(${dx}px, ${dy}px) scale(0.1)`;
+    clone.style.opacity = "0.3";
+  });
+
+  setTimeout(() => clone.remove(), 550);
+}
+
 export function QuickAddButton({
   product,
   className,
@@ -32,9 +58,10 @@ export function QuickAddButton({
         e.stopPropagation();
         if (needsSizeSelection(product)) {
           router.push(`/producto/${product.slug}`);
-        } else {
-          add(product, CONSULT_SIZE_LABEL);
+          return;
         }
+        flyToCart(e.currentTarget);
+        add(product, CONSULT_SIZE_LABEL, 1, { silent: true });
       }}
     >
       <IconBag className="icon--sm" />

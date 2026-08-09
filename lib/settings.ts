@@ -76,4 +76,29 @@ export const DEFAULT_NAVBAR: NavbarSettings = {
   extraLinks: [],
 };
 
-export type SiteSettingsKey = "hero" | "footer" | "navbar";
+export type CustomBannerSettings = {
+  eyebrow: string;
+  title: string;
+  lead: string;
+  points: string[];
+  ctaLabel: string;
+  ctaHref: string;
+  priceLabel: string;
+};
+
+export const DEFAULT_CUSTOM_BANNER: CustomBannerSettings = {
+  eyebrow: "Servicio HATTRICK",
+  title: "Ponle tu nombre",
+  lead: "Personaliza cualquier camiseta del catálogo con el nombre y el dorsal que quieras. Mismo acabado que el que se usa en el vestuario, aplicado en nuestro taller.",
+  points: [
+    "Tipografía y parches oficiales de LaLiga, Premier, Serie A y UEFA",
+    "Nombre y dorsal termosellados, resistentes a más de 50 lavados",
+    "Vista previa antes de confirmar el pedido",
+    "Listo para enviar en 24 h laborables",
+  ],
+  ctaLabel: "Personalizar ahora",
+  ctaHref: "/personalizacion",
+  priceLabel: "Desde Gs. 120.000",
+};
+
+export type SiteSettingsKey = "hero" | "footer" | "navbar" | "customBanner";

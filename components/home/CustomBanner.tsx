@@ -1,34 +1,21 @@
 import Link from "next/link";
-import { formatPrice } from "@/lib/format";
+import type { CustomBannerSettings } from "@/lib/settings";
 import { JerseyArt } from "@/components/product/JerseyArt";
 import { IconCheck } from "@/components/ui/Icons";
 
-const PERSONALIZATION_PRICE = 120000;
-
-const POINTS = [
-  "Tipografía y parches oficiales de LaLiga, Premier, Serie A y UEFA",
-  "Nombre y dorsal termosellados, resistentes a más de 50 lavados",
-  "Vista previa antes de confirmar el pedido",
-  "Listo para enviar en 24 h laborables",
-];
-
-export function CustomBanner() {
+export function CustomBanner({ settings }: { settings: CustomBannerSettings }) {
   return (
     <section className="section">
       <div className="container">
         <div className="custom">
           <div className="custom__copy">
             <span className="label" style={{ color: "var(--ink-muted)" }}>
-              Servicio HATTRICK
+              {settings.eyebrow}
             </span>
-            <h2 className="h1">Ponle tu nombre</h2>
-            <p className="lead">
-              Personaliza cualquier camiseta del catálogo con el nombre y el
-              dorsal que quieras. Mismo acabado que el que se usa en el
-              vestuario, aplicado en nuestro taller.
-            </p>
+            <h2 className="h1">{settings.title}</h2>
+            <p className="lead">{settings.lead}</p>
             <ul className="custom__list">
-              {POINTS.map((p) => (
+              {settings.points.map((p) => (
                 <li key={p}>
                   <IconCheck className="icon--sm" />
                   <span>{p}</span>
@@ -36,11 +23,11 @@ export function CustomBanner() {
               ))}
             </ul>
             <div className="hero__actions">
-              <Link href="/personalizacion" className="btn">
-                Personalizar ahora
+              <Link href={settings.ctaHref} className="btn">
+                {settings.ctaLabel}
               </Link>
               <span className="meta" style={{ alignSelf: "center" }}>
-                Desde {formatPrice(PERSONALIZATION_PRICE)}
+                {settings.priceLabel}
               </span>
             </div>
           </div>

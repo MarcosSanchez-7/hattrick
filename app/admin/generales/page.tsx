@@ -20,6 +20,11 @@ const SECTIONS = [
     description: "Descripción de la marca, redes sociales y datos legales.",
   },
   {
+    href: "/admin/generales/personalizacion",
+    title: "Banner de personalización",
+    description: "El bloque \"Ponle tu nombre\" de la home.",
+  },
+  {
     href: "/admin/categorias",
     title: "Categorías",
     description: "Crear, editar y eliminar categorías del catálogo.",

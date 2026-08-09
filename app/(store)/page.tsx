@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { bestSellers, newArrivals } from "@/lib/catalog";
 import { getAllCategories, getAllProducts, getSetting } from "@/lib/data";
-import { DEFAULT_HERO } from "@/lib/settings";
+import { DEFAULT_CUSTOM_BANNER, DEFAULT_HERO } from "@/lib/settings";
 import { Hero } from "@/components/home/Hero";
 import { ValueProps } from "@/components/home/ValueProps";
 import { CategoryGrid } from "@/components/home/CategoryGrid";
@@ -13,10 +13,11 @@ import { ProductGrid } from "@/components/product/ProductCard";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [products, categories, heroSettings] = await Promise.all([
+  const [products, categories, heroSettings, customBannerSettings] = await Promise.all([
     getAllProducts(),
     getAllCategories(),
     getSetting("hero", DEFAULT_HERO),
+    getSetting("customBanner", DEFAULT_CUSTOM_BANNER),
   ]);
   const nuevos = newArrivals(products).slice(0, 8);
   const populares = bestSellers(products).slice(0, 4);
@@ -69,7 +70,7 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      <CustomBanner />
+      <CustomBanner settings={customBannerSettings} />
       <Newsletter />
     </>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LEAGUES, type Category, type Product } from "@/lib/catalog";
@@ -41,7 +41,19 @@ export function Navbar({
   const [megaOpen, setMegaOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [cartBump, setCartBump] = useState(false);
+  const prevCount = useRef(count);
   const pathname = usePathname();
+
+  useEffect(() => {
+    if (count > prevCount.current) {
+      setCartBump(true);
+      const t = setTimeout(() => setCartBump(false), 400);
+      prevCount.current = count;
+      return () => clearTimeout(t);
+    }
+    prevCount.current = count;
+  }, [count]);
 
   const menu: { label: string; href: string; mega: boolean }[] = [
     { label: "Novedades", href: "/novedades", mega: false },
@@ -155,7 +167,9 @@ export function Navbar({
             </Link>
             <button
               type="button"
+              id="site-cart-button"
               className="nav__icon-btn"
+              data-bump={cartBump ? "true" : "false"}
               onClick={openCart}
               aria-label={`Carrito (${count} artículos)`}
             >

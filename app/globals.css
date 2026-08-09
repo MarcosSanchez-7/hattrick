@@ -425,7 +425,8 @@ textarea {
 }
 
 .nav__bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: var(--sp-5);
   height: var(--nav-h);
@@ -453,9 +454,9 @@ textarea {
 .nav__links {
   display: flex;
   align-items: center;
+  justify-self: center;
   gap: var(--sp-5);
   height: 100%;
-  margin-left: var(--sp-4);
 }
 
 .nav__item {
@@ -504,7 +505,7 @@ textarea {
 }
 
 .nav__actions {
-  margin-left: auto;
+  justify-self: end;
   display: flex;
   align-items: center;
   gap: var(--sp-1);
@@ -523,6 +524,22 @@ textarea {
 
 .nav__icon-btn:hover {
   background: var(--surface-muted);
+}
+
+.nav__icon-btn[data-bump='true'] {
+  animation: nav-cart-bump 0.4s var(--ease);
+}
+
+@keyframes nav-cart-bump {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .nav__count {
@@ -2865,6 +2882,16 @@ textarea {
 .quick-add {
   right: var(--sp-3);
   bottom: var(--sp-3);
+}
+
+.fly-to-cart {
+  position: fixed;
+  z-index: 300;
+  pointer-events: none;
+  object-fit: cover;
+  border-radius: 999px;
+  transition: transform 0.5s var(--ease), opacity 0.5s var(--ease);
+  will-change: transform, opacity;
 }
 
 button[aria-pressed='true'] .wishlist-heart-icon {

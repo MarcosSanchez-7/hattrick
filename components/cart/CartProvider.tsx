@@ -31,7 +31,12 @@ type CartContextValue = {
   isOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
-  add: (product: Product, size: string, qty?: number) => void;
+  add: (
+    product: Product,
+    size: string,
+    qty?: number,
+    opts?: { silent?: boolean },
+  ) => void;
   setQty: (key: string, qty: number) => void;
   remove: (key: string) => void;
   clear: () => void;
@@ -89,18 +94,21 @@ export function CartProvider({
     };
   }, [isOpen]);
 
-  const add = useCallback((product: Product, size: string, qty = 1) => {
-    setStored((prev) => {
-      const idx = prev.findIndex(
-        (l) => l.slug === product.slug && l.size === size,
-      );
-      if (idx === -1) return [...prev, { slug: product.slug, size, qty }];
-      const next = [...prev];
-      next[idx] = { ...next[idx], qty: Math.min(next[idx].qty + qty, 10) };
-      return next;
-    });
-    setIsOpen(true);
-  }, []);
+  const add = useCallback(
+    (product: Product, size: string, qty = 1, opts?: { silent?: boolean }) => {
+      setStored((prev) => {
+        const idx = prev.findIndex(
+          (l) => l.slug === product.slug && l.size === size,
+        );
+        if (idx === -1) return [...prev, { slug: product.slug, size, qty }];
+        const next = [...prev];
+        next[idx] = { ...next[idx], qty: Math.min(next[idx].qty + qty, 10) };
+        return next;
+      });
+      if (!opts?.silent) setIsOpen(true);
+    },
+    [],
+  );
 
   const setQty = useCallback((key: string, qty: number) => {
     setStored((prev) =>
