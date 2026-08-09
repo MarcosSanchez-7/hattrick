@@ -1,24 +1,29 @@
 import Link from "next/link";
 import { bestSellers, newArrivals } from "@/lib/catalog";
 import { getAllCategories, getAllProducts, getSetting } from "@/lib/data";
-import { DEFAULT_CUSTOM_BANNER, DEFAULT_HERO } from "@/lib/settings";
+import {
+  DEFAULT_CUSTOM_BANNER,
+  DEFAULT_HERO,
+  DEFAULT_HOME,
+} from "@/lib/settings";
 import { Hero } from "@/components/home/Hero";
 import { ValueProps } from "@/components/home/ValueProps";
 import { CategoryGrid } from "@/components/home/CategoryGrid";
 import { OffersSection } from "@/components/home/OffersSection";
 import { CustomBanner } from "@/components/home/CustomBanner";
-import { Newsletter } from "@/components/home/Newsletter";
 import { ProductGrid } from "@/components/product/ProductCard";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [products, categories, heroSettings, customBannerSettings] = await Promise.all([
-    getAllProducts(),
-    getAllCategories(),
-    getSetting("hero", DEFAULT_HERO),
-    getSetting("customBanner", DEFAULT_CUSTOM_BANNER),
-  ]);
+  const [products, categories, heroSettings, customBannerSettings, homeSettings] =
+    await Promise.all([
+      getAllProducts(),
+      getAllCategories(),
+      getSetting("hero", DEFAULT_HERO),
+      getSetting("customBanner", DEFAULT_CUSTOM_BANNER),
+      getSetting("home", DEFAULT_HOME),
+    ]);
   const nuevos = newArrivals(products).slice(0, 8);
   const populares = bestSellers(products).slice(0, 4);
 
@@ -27,8 +32,8 @@ export default async function HomePage() {
       <Hero settings={heroSettings} />
       <ValueProps />
 
-      {/* Nuevos ingresos */}
-      {nuevos.length > 0 ? (
+      {/* Nuevos ingresos: solo cuando el admin la activa (mucho stock nuevo cargado) */}
+      {homeSettings.showNewArrivals && nuevos.length > 0 ? (
         <section className="section" id="novedades">
           <div className="container">
             <div className="section-head">
@@ -47,8 +52,8 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      <CategoryGrid categories={categories} products={products} />
       <OffersSection products={products} />
+      <CategoryGrid categories={categories} products={products} />
 
       {/* Más vendidos */}
       {populares.length > 0 ? (
@@ -71,7 +76,6 @@ export default async function HomePage() {
       ) : null}
 
       <CustomBanner settings={customBannerSettings} />
-      <Newsletter />
     </>
   );
 }

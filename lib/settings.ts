@@ -53,6 +53,8 @@ export type FooterSettings = {
   youtubeUrl: string;
   legalName: string;
   paymentMethods: string[];
+  /** Sólo números, con código de país (ej. 595981234567). Vacío = sin botón flotante. */
+  whatsappNumber: string;
 };
 
 export const DEFAULT_FOOTER: FooterSettings = {
@@ -64,6 +66,7 @@ export const DEFAULT_FOOTER: FooterSettings = {
   youtubeUrl: "",
   legalName: "HATTRICK",
   paymentMethods: ["VISA", "MASTERCARD", "TRANSFERENCIA", "EFECTIVO"],
+  whatsappNumber: "",
 };
 
 export type NavLink = { label: string; href: string };
@@ -109,4 +112,18 @@ export const DEFAULT_CUSTOM_BANNER: CustomBannerSettings = {
   priceLabel: "Desde Gs. 120.000",
 };
 
-export type SiteSettingsKey = "hero" | "footer" | "navbar" | "customBanner";
+export type HomeSettings = {
+  /** Se activa solo cuando hay mucho stock nuevo cargado; si no, no vale la pena la sección. */
+  showNewArrivals: boolean;
+};
+
+export const DEFAULT_HOME: HomeSettings = {
+  showNewArrivals: false,
+};
+
+export type SiteSettingsKey =
+  | "hero"
+  | "footer"
+  | "navbar"
+  | "customBanner"
+  | "home";

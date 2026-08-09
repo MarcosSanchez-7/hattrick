@@ -124,6 +124,18 @@ export const IconInstagram = ({ className }: IconProps) => (
   </svg>
 );
 
+export const IconWhatsapp = ({ className }: IconProps) => (
+  <svg
+    className={base(className)}
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+    style={{ fill: "currentColor", stroke: "none" }}
+  >
+    <path d="M12 2.5a9.5 9.5 0 0 0-8.2 14.3L2.5 21.5l4.8-1.3A9.5 9.5 0 1 0 12 2.5Zm0 1.7a7.8 7.8 0 0 1 6.6 12 7.8 7.8 0 0 1-11.8 2.3l-.3-.2-2.8.8.8-2.7-.2-.3A7.8 7.8 0 0 1 12 4.2Z" />
+    <path d="M9.1 7.6c-.2-.5-.4-.5-.6-.5h-.5c-.2 0-.5.1-.7.4-.2.3-.9.9-.9 2.1s.9 2.4 1.1 2.6c.1.2 1.8 2.9 4.5 4 2.2.9 2.7.7 3.1.7.5-.1 1.6-.6 1.8-1.3.2-.6.2-1.1.2-1.2-.1-.1-.2-.2-.5-.3-.2-.1-1.6-.8-1.8-.9-.2-.1-.4-.1-.6.1-.2.3-.6.9-.8 1-.1.2-.3.2-.5.1-.3-.1-1.1-.4-2.1-1.3-.8-.7-1.3-1.6-1.5-1.8-.1-.3 0-.4.1-.5l.4-.5c.1-.1.2-.2.2-.4.1-.1 0-.3 0-.4 0-.1-.6-1.5-.8-2Z" />
+  </svg>
+);
+
 export const IconX = ({ className }: IconProps) => (
   <svg className={base(className)} viewBox="0 0 24 24" aria-hidden="true">
     <path d="M4 4l16 16M20 4 4 20" />

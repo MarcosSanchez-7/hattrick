@@ -127,6 +127,27 @@ export function FooterSettingsForm({ initial }: { initial: FooterSettings }) {
       </div>
 
       <div className="admin-fieldset">
+        <p className="admin-fieldset__title">WhatsApp</p>
+        <div className="admin-field">
+          <label htmlFor="whatsappNumber">
+            Número corporativo (con código de país, solo dígitos)
+          </label>
+          <input
+            id="whatsappNumber"
+            type="text"
+            value={form.whatsappNumber}
+            onChange={(e) =>
+              update("whatsappNumber", e.target.value.replace(/[^\d]/g, ""))
+            }
+            placeholder="595981234567"
+          />
+          <p className="admin-help">
+            Vacío = no se muestra el botón flotante de WhatsApp en la tienda.
+          </p>
+        </div>
+      </div>
+
+      <div className="admin-fieldset">
         <p className="admin-fieldset__title">Métodos de pago mostrados</p>
         <div className="admin-field">
           <label htmlFor="paymentMethods">Separados por comas</label>

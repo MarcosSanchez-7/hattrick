@@ -5,6 +5,11 @@ export const metadata = { title: "Generales" };
 
 const SECTIONS = [
   {
+    href: "/admin/generales/home",
+    title: "Secciones de la home",
+    description: "Mostrar u ocultar bloques como \"Nuevos ingresos\".",
+  },
+  {
     href: "/admin/generales/hero",
     title: "Portada (Hero)",
     description: "Titular, texto, botones y estadísticas de la home.",
