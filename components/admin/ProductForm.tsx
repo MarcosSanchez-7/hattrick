@@ -371,28 +371,6 @@ export function ProductForm({
               Visible en la tienda
             </label>
           </div>
-          <div className="admin-field">
-            <label htmlFor="rating">Valoración (0–5)</label>
-            <input
-              id="rating"
-              type="number"
-              step="0.1"
-              min="0"
-              max="5"
-              value={form.rating}
-              onChange={(e) => update("rating", e.target.value)}
-            />
-          </div>
-          <div className="admin-field">
-            <label htmlFor="reviews">Nº de reseñas</label>
-            <input
-              id="reviews"
-              type="number"
-              min="0"
-              value={form.reviews}
-              onChange={(e) => update("reviews", e.target.value)}
-            />
-          </div>
         </div>
       </div>
 
