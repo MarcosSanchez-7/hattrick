@@ -1,12 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import type { Product } from "@/lib/catalog";
+import type { Product, Tag } from "@/lib/catalog";
 import { useWishlist } from "@/components/wishlist/WishlistProvider";
 import { ProductGrid } from "@/components/product/ProductCard";
 import { IconHeart } from "@/components/ui/Icons";
 
-export function FavoritosView({ products }: { products: Product[] }) {
+export function FavoritosView({
+  products,
+  tags = [],
+}: {
+  products: Product[];
+  tags?: Tag[];
+}) {
   const { slugs, hydrated } = useWishlist();
   const saved = products.filter((p) => slugs.includes(p.slug));
 
@@ -37,7 +43,7 @@ export function FavoritosView({ products }: { products: Product[] }) {
 
   return (
     <div className="container">
-      <ProductGrid products={saved} />
+      <ProductGrid products={saved} tags={tags} />
     </div>
   );
 }

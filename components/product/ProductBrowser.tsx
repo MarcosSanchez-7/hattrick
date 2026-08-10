@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { isOnSale, type Product } from "@/lib/catalog";
+import { isOnSale, type Product, type Tag } from "@/lib/catalog";
 import { ProductGrid } from "@/components/product/ProductCard";
 
 type Sort = "destacados" | "precio-asc" | "precio-desc" | "novedad";
@@ -14,7 +14,13 @@ const SORTS: [Sort, string][] = [
   ["precio-desc", "Precio: de mayor a menor"],
 ];
 
-export function ProductBrowser({ products }: { products: Product[] }) {
+export function ProductBrowser({
+  products,
+  tags = [],
+}: {
+  products: Product[];
+  tags?: Tag[];
+}) {
   const [onlySale, setOnlySale] = useState(false);
   const [sort, setSort] = useState<Sort>("destacados");
 
@@ -82,7 +88,7 @@ export function ProductBrowser({ products }: { products: Product[] }) {
           </Link>
         </div>
       ) : (
-        <ProductGrid products={visible} />
+        <ProductGrid products={visible} tags={tags} />
       )}
     </>
   );

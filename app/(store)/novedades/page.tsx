@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { newArrivals } from "@/lib/catalog";
-import { getAllProducts } from "@/lib/data";
+import { getAllProducts, getAllTags } from "@/lib/data";
 import { ProductBrowser } from "@/components/product/ProductBrowser";
 
 export const metadata: Metadata = {
@@ -13,7 +13,8 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function NovedadesPage() {
-  const products = newArrivals(await getAllProducts());
+  const [allProducts, tags] = await Promise.all([getAllProducts(), getAllTags()]);
+  const products = newArrivals(allProducts);
 
   return (
     <>
@@ -39,7 +40,7 @@ export default async function NovedadesPage() {
 
       <section className="section section--tight">
         <div className="container">
-          <ProductBrowser products={products} />
+          <ProductBrowser products={products} tags={tags} />
         </div>
       </section>
     </>

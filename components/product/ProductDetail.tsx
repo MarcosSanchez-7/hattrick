@@ -6,7 +6,9 @@ import {
   discountPercent,
   isOnSale,
   needsSizeSelection,
+  type NoticeIcon,
   type Product,
+  type ProductNotice,
 } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { FREE_SHIPPING_FROM, useCart } from "@/components/cart/CartProvider";
@@ -17,15 +19,28 @@ import {
   IconHeart,
   IconPrint,
   IconReturn,
+  IconShield,
   IconTruck,
 } from "@/components/ui/Icons";
 
 /** Nº de vistas generadas cuando el producto no tiene fotos reales. */
 const GENERATED_VIEWS = 3;
-const PERSONALIZATION_PRICE = 120000;
 const EXPRESS_SHIPPING_PRICE = 80000;
 
-export function ProductDetail({ product }: { product: Product }) {
+const NOTICE_ICONS: Record<NoticeIcon, typeof IconTruck> = {
+  truck: IconTruck,
+  print: IconPrint,
+  return: IconReturn,
+  shield: IconShield,
+};
+
+export function ProductDetail({
+  product,
+  notices,
+}: {
+  product: Product;
+  notices: ProductNotice[];
+}) {
   const { add } = useCart();
   const { isSaved, toggle } = useWishlist();
   const saved = isSaved(product.slug);
@@ -123,19 +138,10 @@ export function ProductDetail({ product }: { product: Product }) {
             </>
           ) : null}
         </div>
-        <p className="meta">IVA incluido. Envío a coordinar por WhatsApp.</p>
 
         <div>
-          <div
-            className="row"
-            style={{ justifyContent: "space-between", marginBottom: 10 }}
-          >
+          <div className="row" style={{ marginBottom: 10 }}>
             <span className="label">Talla</span>
-            {requiresSize ? (
-              <button type="button" className="meta link-underline">
-                Guía de tallas
-              </button>
-            ) : null}
           </div>
           {requiresSize ? (
             <>
@@ -188,24 +194,19 @@ export function ProductDetail({ product }: { product: Product }) {
           </button>
         </div>
 
-        <div className="stack gap-2">
-          <div className="notice">
-            <IconTruck className="icon--sm" />
-            <span>
-              Entrega estimada en 48 h · Gratis desde {formatPrice(FREE_SHIPPING_FROM)}
-            </span>
+        {notices.length > 0 ? (
+          <div className="stack gap-2">
+            {notices.map((notice, i) => {
+              const Icon = NOTICE_ICONS[notice.icon];
+              return (
+                <div className="notice" key={i}>
+                  <Icon className="icon--sm" />
+                  <span>{notice.text}</span>
+                </div>
+              );
+            })}
           </div>
-          <div className="notice">
-            <IconPrint className="icon--sm" />
-            <span>
-              Personalización oficial disponible desde {formatPrice(PERSONALIZATION_PRICE)}
-            </span>
-          </div>
-          <div className="notice">
-            <IconReturn className="icon--sm" />
-            <span>30 días para cambiar la talla sin coste</span>
-          </div>
-        </div>
+        ) : null}
 
         <div className="accordion">
           <Accordion

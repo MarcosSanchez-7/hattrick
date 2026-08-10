@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { bestSellers, newArrivals } from "@/lib/catalog";
-import { getAllCategories, getAllProducts, getSetting } from "@/lib/data";
+import { getAllCategories, getAllProducts, getAllTags, getSetting } from "@/lib/data";
 import {
   DEFAULT_CUSTOM_BANNER,
   DEFAULT_HERO,
@@ -16,10 +16,11 @@ import { ProductGrid } from "@/components/product/ProductCard";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [products, categories, heroSettings, customBannerSettings, homeSettings] =
+  const [products, categories, tags, heroSettings, customBannerSettings, homeSettings] =
     await Promise.all([
       getAllProducts(),
       getAllCategories(),
+      getAllTags(),
       getSetting("hero", DEFAULT_HERO),
       getSetting("customBanner", DEFAULT_CUSTOM_BANNER),
       getSetting("home", DEFAULT_HOME),
@@ -47,12 +48,12 @@ export default async function HomePage() {
                 Ver los {newArrivals(products).length} artículos nuevos
               </Link>
             </div>
-            <ProductGrid products={nuevos} />
+            <ProductGrid products={nuevos} tags={tags} />
           </div>
         </section>
       ) : null}
 
-      <OffersSection products={products} />
+      <OffersSection products={products} tags={tags} />
       <CategoryGrid categories={categories} products={products} />
 
       {/* Más vendidos */}
@@ -70,7 +71,7 @@ export default async function HomePage() {
                 Ver todo el catálogo
               </Link>
             </div>
-            <ProductGrid products={populares} />
+            <ProductGrid products={populares} tags={tags} />
           </div>
         </section>
       ) : null}

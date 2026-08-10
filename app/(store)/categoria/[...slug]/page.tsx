@@ -10,7 +10,7 @@ import {
   getCategory,
   isCategoryVisible,
 } from "@/lib/catalog";
-import { getAllCategories, getAllProducts } from "@/lib/data";
+import { getAllCategories, getAllProducts, getAllTags } from "@/lib/data";
 import { ProductBrowser } from "@/components/product/ProductBrowser";
 
 type Params = { slug: string[] };
@@ -45,9 +45,10 @@ export default async function CategoryPage({
   // oculto desaparecería del árbol y rompería el cálculo de la ruta
   // canónica para sus subcategorías. La visibilidad real para el cliente se
   // decide aparte, con isCategoryVisible.
-  const [categories, allProducts] = await Promise.all([
+  const [categories, allProducts, tags] = await Promise.all([
     getAllCategories({ includeHidden: true }),
     getAllProducts(),
+    getAllTags(),
   ]);
   const category = getCategory(categories, slugParts[slugParts.length - 1]);
   if (!category || !isCategoryVisible(categories, category.slug)) notFound();
@@ -106,7 +107,7 @@ export default async function CategoryPage({
 
       <section className="section section--tight">
         <div className="container">
-          <ProductBrowser products={products} />
+          <ProductBrowser products={products} tags={tags} />
         </div>
       </section>
     </>

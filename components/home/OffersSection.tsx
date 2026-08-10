@@ -1,9 +1,15 @@
 import Link from "next/link";
-import { onSaleProducts, type Product } from "@/lib/catalog";
+import { onSaleProducts, type Product, type Tag } from "@/lib/catalog";
 import { ProductGrid } from "@/components/product/ProductCard";
 import { Countdown } from "@/components/home/Countdown";
 
-export function OffersSection({ products }: { products: Product[] }) {
+export function OffersSection({
+  products,
+  tags = [],
+}: {
+  products: Product[];
+  tags?: Tag[];
+}) {
   const onSale = onSaleProducts(products).slice(0, 4);
   if (onSale.length === 0) return null;
 
@@ -20,7 +26,7 @@ export function OffersSection({ products }: { products: Product[] }) {
           <Countdown />
         </div>
 
-        <ProductGrid products={onSale} />
+        <ProductGrid products={onSale} tags={tags} />
 
         <div style={{ marginTop: 48, display: "flex", justifyContent: "center" }}>
           <Link href="/ofertas" className="btn btn--light">

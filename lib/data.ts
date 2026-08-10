@@ -1,13 +1,16 @@
 import "server-only";
+import { cache } from "react";
 import { randomUUID } from "crypto";
 import type {
   Category,
   Product,
+  ProductNotice,
   ProductVariant,
   Sale,
   SaleChannel,
   SaleLine,
   StockMode,
+  Tag,
 } from "@/lib/catalog";
 import { descendantSlugs, wouldCreateCycle } from "@/lib/catalog";
 import { slugify, uniqueSlug } from "@/lib/slug";
@@ -72,6 +75,7 @@ type CategoryRow = {
   image: string | null;
   is_visible: boolean;
   parent_slug: string | null;
+  notices: ProductNotice[] | null;
 };
 
 function rowToProduct(row: ProductRow, variantRows: VariantRow[]): Product {
@@ -121,7 +125,14 @@ function rowToCategory(row: CategoryRow): Category {
     image: row.image ?? null,
     isVisible: row.is_visible,
     parentSlug: row.parent_slug ?? null,
+    notices: row.notices ?? null,
   };
+}
+
+type TagRow = { name: string; color: string };
+
+function rowToTag(row: TagRow): Tag {
+  return { name: row.name, color: row.color };
 }
 
 async function fetchVariantsByProduct(
@@ -510,6 +521,7 @@ export async function createCategory(
       image: input.image ?? null,
       is_visible: input.isVisible ?? true,
       parent_slug: parentSlug,
+      notices: input.notices?.length ? input.notices : null,
     })
     .select()
     .single();
@@ -549,6 +561,7 @@ export async function updateCategory(
       image: input.image ?? null,
       is_visible: input.isVisible ?? true,
       parent_slug: parentSlug,
+      notices: input.notices?.length ? input.notices : null,
     })
     .eq("slug", slug)
     .select()
@@ -592,6 +605,78 @@ export async function deleteCategory(slug: string): Promise<void> {
   if (error) fail(`No se pudo eliminar la categoría: ${error.message}`);
   if (!data || data.length === 0) {
     throw new DataError("Categoría no encontrada.", 404);
+  }
+}
+
+// ── Etiquetas ────────────────────────────────────────────────────────────
+// Catálogo de etiquetas estandarizadas con color. products.tags sigue siendo
+// texto libre: acá solo se guarda qué color le corresponde a cada nombre.
+
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+
+function assertValidTag(name: string, color: string) {
+  if (!name?.trim()) throw new DataError("El nombre de la etiqueta es obligatorio.");
+  if (!HEX_COLOR.test(color)) {
+    throw new DataError("El color debe ser un hexadecimal válido (ej. #2f2f2f).");
+  }
+}
+
+// cache(): ProductCard (Server Component) llama esto directamente para
+// pintar el color de cada etiqueta sin tener que pasarlo como prop desde
+// cada página que renderiza tarjetas — React lo memoiza por request, así
+// que solo pega a Supabase una vez aunque se rendericen muchas tarjetas.
+export const getAllTags = cache(async (): Promise<Tag[]> => {
+  const { data, error } = await supabaseAdmin
+    .from("tags")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (error) fail(`No se pudieron cargar las etiquetas: ${error.message}`);
+  return (data as TagRow[]).map(rowToTag);
+});
+
+export async function createTag(name: string, color: string): Promise<Tag> {
+  const trimmed = name.trim();
+  assertValidTag(trimmed, color);
+
+  const { data, error } = await supabaseAdmin
+    .from("tags")
+    .insert({ name: trimmed, color })
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      throw new DataError("Ya existe una etiqueta con ese nombre.");
+    }
+    fail(`No se pudo crear la etiqueta: ${error.message}`);
+  }
+  return rowToTag(data as TagRow);
+}
+
+export async function updateTagColor(name: string, color: string): Promise<Tag> {
+  assertValidTag(name, color);
+
+  const { data, error } = await supabaseAdmin
+    .from("tags")
+    .update({ color })
+    .eq("name", name)
+    .select()
+    .single();
+
+  if (error) fail(`No se pudo actualizar la etiqueta: ${error.message}`);
+  if (!data) throw new DataError("Etiqueta no encontrada.", 404);
+  return rowToTag(data as TagRow);
+}
+
+export async function deleteTag(name: string): Promise<void> {
+  const { data, error } = await supabaseAdmin
+    .from("tags")
+    .delete()
+    .eq("name", name)
+    .select("name");
+  if (error) fail(`No se pudo eliminar la etiqueta: ${error.message}`);
+  if (!data || data.length === 0) {
+    throw new DataError("Etiqueta no encontrada.", 404);
   }
 }
 

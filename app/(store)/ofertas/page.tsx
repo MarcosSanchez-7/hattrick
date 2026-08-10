@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { discountPercent, onSaleProducts } from "@/lib/catalog";
-import { getAllProducts } from "@/lib/data";
+import { getAllProducts, getAllTags } from "@/lib/data";
 import { ProductBrowser } from "@/components/product/ProductBrowser";
 import { Countdown } from "@/components/home/Countdown";
 
@@ -14,7 +14,8 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function OfertasPage() {
-  const products = onSaleProducts(await getAllProducts());
+  const [allProducts, tags] = await Promise.all([getAllProducts(), getAllTags()]);
+  const products = onSaleProducts(allProducts);
   const max = products.length
     ? Math.max(...products.map(discountPercent))
     : 0;
@@ -63,7 +64,7 @@ export default async function OfertasPage() {
 
       <section className="section section--tight">
         <div className="container">
-          <ProductBrowser products={products} />
+          <ProductBrowser products={products} tags={tags} />
         </div>
       </section>
     </>

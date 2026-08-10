@@ -6,9 +6,11 @@ import {
   descendantSlugs,
   orderCategoriesTree,
   type Category,
+  type ProductNotice,
 } from "@/lib/catalog";
 import { slugify } from "@/lib/slug";
 import { ImageUploader } from "@/components/admin/ImageUploader";
+import { NoticesEditor } from "@/components/admin/NoticesEditor";
 
 export function CategoryForm({
   category,
@@ -33,6 +35,7 @@ export function CategoryForm({
   const [parentSlug, setParentSlug] = useState(
     category?.parentSlug ?? defaultParentSlug ?? "",
   );
+  const [notices, setNotices] = useState<ProductNotice[]>(category?.notices ?? []);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,6 +72,7 @@ export function CategoryForm({
       image: image[0] ?? null,
       isVisible,
       parentSlug: parentSlug || null,
+      notices: notices.filter((n) => n.text.trim()),
     };
 
     setSubmitting(true);
@@ -186,6 +190,16 @@ export function CategoryForm({
       <div className="admin-fieldset">
         <p className="admin-fieldset__title">Imagen de portada</p>
         <ImageUploader images={image} onChange={setImage} max={1} />
+      </div>
+
+      <div className="admin-fieldset">
+        <p className="admin-fieldset__title">Avisos de esta categoría</p>
+        <p className="admin-help">
+          Se muestran en la ficha de los productos de esta categoría (y de
+          sus subcategorías, si ellas no definen los suyos). Dejalo vacío
+          para usar los avisos por defecto del sitio.
+        </p>
+        <NoticesEditor notices={notices} onChange={setNotices} />
       </div>
 
       <div className="admin-actions">

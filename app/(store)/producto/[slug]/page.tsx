@@ -2,8 +2,15 @@ import type { Metadata } from "next";
 import { Fragment } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { categoryPath, categorySlugPath, getProduct, relatedTo } from "@/lib/catalog";
-import { getAllCategories, getAllProducts } from "@/lib/data";
+import {
+  categoryPath,
+  categorySlugPath,
+  getProduct,
+  relatedTo,
+  resolveCategoryNotices,
+} from "@/lib/catalog";
+import { getAllCategories, getAllProducts, getAllTags, getSetting } from "@/lib/data";
+import { DEFAULT_PRODUCT_NOTICES } from "@/lib/settings";
 import { ProductDetail } from "@/components/product/ProductDetail";
 import { ProductGrid } from "@/components/product/ProductCard";
 
@@ -31,9 +38,11 @@ export default async function ProductPage({
   params: Promise<Params>;
 }) {
   const { slug } = await params;
-  const [products, categories] = await Promise.all([
+  const [products, categories, tags, productNotices] = await Promise.all([
     getAllProducts(),
     getAllCategories(),
+    getAllTags(),
+    getSetting("productNotices", DEFAULT_PRODUCT_NOTICES),
   ]);
   const product = getProduct(products, slug);
   if (!product) notFound();
@@ -42,6 +51,11 @@ export default async function ProductPage({
   const category = path[path.length - 1];
   const categoryHref = `/categoria/${categorySlugPath(categories, product.category).join("/")}`;
   const related = relatedTo(products, product);
+  const notices = resolveCategoryNotices(
+    categories,
+    product.category,
+    productNotices.defaultNotices,
+  );
 
   return (
     <>
@@ -61,7 +75,7 @@ export default async function ProductPage({
         </nav>
       </div>
 
-      <ProductDetail product={product} />
+      <ProductDetail product={product} notices={notices} />
 
       {related.length > 0 ? (
         <section className="section section--soft">
@@ -77,7 +91,7 @@ export default async function ProductPage({
                 Ver {category?.name}
               </Link>
             </div>
-            <ProductGrid products={related} />
+            <ProductGrid products={related} tags={tags} />
           </div>
         </section>
       ) : null}

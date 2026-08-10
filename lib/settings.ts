@@ -1,4 +1,5 @@
 import { formatPrice } from "@/lib/format";
+import type { ProductNotice } from "@/lib/catalog";
 
 /**
  * Contenido general del sitio editable desde /admin/generales: hero, footer
@@ -122,9 +123,29 @@ export const DEFAULT_HOME: HomeSettings = {
   showNewArrivals: false,
 };
 
+export type ProductNoticesSettings = {
+  /** Avisos que se muestran en cualquier producto cuya categoría no tenga los suyos propios. */
+  defaultNotices: ProductNotice[];
+};
+
+export const DEFAULT_PRODUCT_NOTICES: ProductNoticesSettings = {
+  defaultNotices: [
+    {
+      icon: "truck",
+      text: `Entrega estimada en 48 h · Gratis desde ${formatPrice(640000)}`,
+    },
+    {
+      icon: "print",
+      text: `Personalización oficial disponible desde ${formatPrice(120000)}`,
+    },
+    { icon: "return", text: "30 días para cambiar la talla sin coste" },
+  ],
+};
+
 export type SiteSettingsKey =
   | "hero"
   | "footer"
   | "navbar"
   | "customBanner"
-  | "home";
+  | "home"
+  | "productNotices";

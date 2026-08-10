@@ -8,10 +8,12 @@ import {
   type Pattern,
   type Product,
   type StockMode,
+  type Tag,
 } from "@/lib/catalog";
 import { slugify } from "@/lib/slug";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 import { CategoryPathPicker } from "@/components/admin/CategoryPathPicker";
+import { TagPicker } from "@/components/admin/TagPicker";
 
 const STOCK_MODES: { value: StockMode; label: string; help: string }[] = [
   {
@@ -49,7 +51,7 @@ type FormState = {
   colorAccent: string;
   pattern: Pattern;
   description: string;
-  tags: string;
+  tags: string[];
   images: string[];
   slug: string;
 };
@@ -77,7 +79,7 @@ function toFormState(product?: Product): FormState {
     colorAccent: product?.colors.accent ?? "#d4af37",
     pattern: product?.pattern ?? "solid",
     description: product?.description ?? "",
-    tags: product?.tags.join(", ") ?? "",
+    tags: product?.tags ?? [],
     images: product?.images ?? [],
     slug: product?.slug ?? "",
   };
@@ -85,14 +87,17 @@ function toFormState(product?: Product): FormState {
 
 export function ProductForm({
   categories,
+  tags,
   product,
 }: {
   categories: Category[];
+  tags: Tag[];
   product?: Product;
 }) {
   const router = useRouter();
   const isEdit = Boolean(product);
   const [form, setForm] = useState<FormState>(() => toFormState(product));
+  const [tagsCatalog, setTagsCatalog] = useState(tags);
   const [slugTouched, setSlugTouched] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -169,10 +174,7 @@ export function ProductForm({
       },
       pattern: form.pattern,
       description: form.description.trim(),
-      tags: form.tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
+      tags: form.tags,
       images: form.images,
       slug: (slugTouched ? form.slug : suggestedSlug).trim() || undefined,
     };
@@ -397,13 +399,12 @@ export function ProductForm({
           />
         </div>
         <div className="admin-field">
-          <label htmlFor="tags">Etiquetas (separadas por comas)</label>
-          <input
-            id="tags"
-            type="text"
+          <label>Etiquetas</label>
+          <TagPicker
+            catalog={tagsCatalog}
             value={form.tags}
-            onChange={(e) => update("tags", e.target.value)}
-            placeholder="rojo, casa, liga"
+            onChange={(next) => update("tags", next)}
+            onCatalogChange={setTagsCatalog}
           />
         </div>
       </div>

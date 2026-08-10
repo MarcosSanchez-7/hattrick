@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAllProducts } from "@/lib/data";
+import { getAllProducts, getAllTags } from "@/lib/data";
 import { FavoritosView } from "@/components/wishlist/FavoritosView";
 
 export const metadata: Metadata = {
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function FavoritosPage() {
-  const products = await getAllProducts();
+  const [products, tags] = await Promise.all([getAllProducts(), getAllTags()]);
 
   return (
     <>
@@ -27,7 +27,7 @@ export default async function FavoritosPage() {
       </header>
 
       <section className="section section--tight">
-        <FavoritosView products={products} />
+        <FavoritosView products={products} tags={tags} />
       </section>
     </>
   );

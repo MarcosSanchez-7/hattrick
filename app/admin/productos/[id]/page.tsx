@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getProductById } from "@/lib/catalog";
-import { getAllCategories, getAllProducts } from "@/lib/data";
+import { getAllCategories, getAllProducts, getAllTags } from "@/lib/data";
 import { ProductForm } from "@/components/admin/ProductForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
@@ -15,9 +15,10 @@ export default async function EditProductPage({
   params: Promise<Params>;
 }) {
   const { id } = await params;
-  const [products, categories] = await Promise.all([
+  const [products, categories, tags] = await Promise.all([
     getAllProducts({ includeHidden: true }),
     getAllCategories({ includeHidden: true }),
+    getAllTags(),
   ]);
   const product = getProductById(products, id);
   if (!product) notFound();
@@ -32,7 +33,7 @@ export default async function EditProductPage({
       <h1 className="h1" style={{ marginBottom: 24 }}>
         Editar producto
       </h1>
-      <ProductForm categories={categories} product={product} />
+      <ProductForm categories={categories} tags={tags} product={product} />
     </>
   );
 }

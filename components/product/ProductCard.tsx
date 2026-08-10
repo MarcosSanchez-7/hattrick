@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { discountPercent, isOnSale, isSoldOut, type Product } from "@/lib/catalog";
+import { discountPercent, isOnSale, isSoldOut, type Product, type Tag } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
+import { readableTextColor } from "@/lib/color";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import { WishlistHeartButton } from "@/components/wishlist/WishlistHeartButton";
 import { QuickAddButton } from "@/components/cart/QuickAddButton";
 
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({ product, tags = [] }: { product: Product; tags?: Tag[] }) {
   const sale = isOnSale(product);
   const allSoldOut = isSoldOut(product);
   const hasSecondImage = (product.images?.length ?? 0) > 1;
@@ -22,11 +23,18 @@ export function ProductCard({ product }: { product: Product }) {
             </span>
           ) : null}
           {allSoldOut ? <span className="badge badge--out">Agotado</span> : null}
-          {product.tags.map((tag) => (
-            <span key={tag} className="badge badge--tag">
-              {tag}
-            </span>
-          ))}
+          {product.tags.map((tag) => {
+            const color = tags.find((t) => t.name === tag)?.color;
+            return (
+              <span
+                key={tag}
+                className="badge badge--tag"
+                style={color ? { background: color, color: readableTextColor(color) } : undefined}
+              >
+                {tag}
+              </span>
+            );
+          })}
         </div>
 
         <WishlistHeartButton product={product} className="wishlist-heart--card" />
@@ -78,15 +86,17 @@ export function ProductCard({ product }: { product: Product }) {
 
 export function ProductGrid({
   products,
+  tags = [],
   columns = 4,
 }: {
   products: Product[];
+  tags?: Tag[];
   columns?: 3 | 4;
 }) {
   return (
     <div className={columns === 3 ? "grid-products grid-products--3" : "grid-products"}>
       {products.map((p) => (
-        <ProductCard key={p.id} product={p} />
+        <ProductCard key={p.id} product={p} tags={tags} />
       ))}
     </div>
   );

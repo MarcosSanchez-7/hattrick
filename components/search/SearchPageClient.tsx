@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { searchProducts, type Product } from "@/lib/catalog";
+import { searchProducts, type Product, type Tag } from "@/lib/catalog";
 import { ProductBrowser } from "@/components/product/ProductBrowser";
 import { IconSearch } from "@/components/ui/Icons";
 
@@ -18,9 +18,11 @@ const URL_SYNC_DELAY_MS = 400;
  */
 export function SearchPageClient({
   products,
+  tags = [],
   initialQuery,
 }: {
   products: Product[];
+  tags?: Tag[];
   initialQuery: string;
 }) {
   const [query, setQuery] = useState(initialQuery);
@@ -117,7 +119,7 @@ export function SearchPageClient({
               </Link>
             </div>
           ) : (
-            <ProductBrowser products={results} />
+            <ProductBrowser products={results} tags={tags} />
           )}
         </div>
       </section>

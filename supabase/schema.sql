@@ -488,3 +488,30 @@ alter table inventory_movements
 alter table categories add column if not exists parent_slug text references categories (slug);
 
 create index if not exists categories_parent_slug_idx on categories (parent_slug);
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Catálogo de etiquetas estandarizadas (ej. "Versión Fan", "Bajo pedido"),
+-- cada una con un color elegido desde el admin. products.tags sigue siendo
+-- texto libre (no cambia, no requiere migrar nada): al mostrar una etiqueta
+-- se busca su color acá por nombre exacto; si no está en el catálogo (una
+-- etiqueta vieja, o borrada después), se muestra igual con el color neutro
+-- de siempre — nunca rompe la ficha ni la tarjeta del producto.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists tags (
+  name text primary key,
+  color text not null default '#2f2f2f',
+  created_at timestamptz not null default now()
+);
+
+alter table tags enable row level security;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Avisos configurables bajo el botón "Añadir al carrito" (ej. "Entrega
+-- estimada en 48 h", "Personalización disponible"). Antes eran fijos para
+-- todos los productos; ahora cada categoría puede definir los suyos (ej.
+-- "Importados" con plazos de entrega distintos). null = usa los avisos por
+-- defecto del sitio (configurables en Generales).
+-- ═══════════════════════════════════════════════════════════════════════════
+
+alter table categories add column if not exists notices jsonb;

@@ -34,6 +34,16 @@ const SECTIONS = [
     title: "Categorías",
     description: "Crear, editar y eliminar categorías del catálogo.",
   },
+  {
+    href: "/admin/generales/etiquetas",
+    title: "Etiquetas",
+    description: "Etiquetas estandarizadas con color para los productos.",
+  },
+  {
+    href: "/admin/generales/avisos",
+    title: "Avisos del producto",
+    description: "Avisos por defecto bajo \"Añadir al carrito\" (editables por categoría).",
+  },
 ];
 
 export default function GeneralesPage() {

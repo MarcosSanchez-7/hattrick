@@ -52,6 +52,10 @@ export type Product = {
   images?: string[];
 };
 
+export type NoticeIcon = "truck" | "print" | "return" | "shield";
+
+export type ProductNotice = { icon: NoticeIcon; text: string };
+
 export type Category = {
   slug: string;
   name: string;
@@ -63,7 +67,12 @@ export type Category = {
   isVisible: boolean;
   /** Slug de la categoría padre. Null = categoría raíz (nivel superior). */
   parentSlug: string | null;
+  /** Avisos propios bajo "Añadir al carrito". Null/vacío = usa los del sitio. */
+  notices: ProductNotice[] | null;
 };
+
+/** Etiqueta estandarizada del catálogo (ej. "Versión Fan"), con su color. */
+export type Tag = { name: string; color: string };
 
 export const SIZES_ADULT = ["P", "M", "G", "XL", "XXL"];
 export const SIZES_KIDS = ["4A", "6A", "8A", "10A", "12A", "14A"];
@@ -195,6 +204,24 @@ export function categoryPath(categories: Category[], slug: string): Category[] {
 /** Igual que categoryPath pero solo los slugs, para armar URLs anidadas. */
 export const categorySlugPath = (categories: Category[], slug: string) =>
   categoryPath(categories, slug).map((c) => c.slug);
+
+/**
+ * Avisos a mostrar en la ficha de un producto de esta categoría: los suyos
+ * propios si los definió, si no los del ancestro más cercano que sí tenga,
+ * y si ninguno definió nada, los avisos por defecto del sitio.
+ */
+export function resolveCategoryNotices(
+  categories: Category[],
+  slug: string,
+  siteDefault: ProductNotice[],
+): ProductNotice[] {
+  const chain = categoryPath(categories, slug);
+  for (let i = chain.length - 1; i >= 0; i--) {
+    const own = chain[i].notices;
+    if (own && own.length > 0) return own;
+  }
+  return siteDefault;
+}
 
 /** Todos los descendientes (hijos, nietos, ...), sin incluir la propia categoría. */
 export function descendantSlugs(
