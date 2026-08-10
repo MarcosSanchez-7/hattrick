@@ -2485,6 +2485,43 @@ textarea {
   overflow-x: auto;
 }
 
+.admin-cat-group {
+  border-bottom: 1px solid var(--line);
+}
+
+.admin-cat-group:last-child {
+  border-bottom: 0;
+}
+
+.admin-cat-group__head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-align: left;
+  background: var(--surface-soft);
+  transition: background-color 0.2s var(--ease);
+}
+
+.admin-cat-group__head:hover {
+  background: var(--surface-muted);
+}
+
+.admin-cat-group__head .meta {
+  margin-left: auto;
+}
+
+.admin-cat-group__head .icon {
+  transition: transform 0.22s var(--ease);
+}
+
+.admin-cat-group__head[aria-expanded='false'] .icon:last-child {
+  transform: rotate(-90deg);
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;

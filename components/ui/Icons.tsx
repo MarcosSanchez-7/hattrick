@@ -156,6 +156,12 @@ export const IconYoutube = ({ className }: IconProps) => (
   </svg>
 );
 
+export const IconFolder = ({ className }: IconProps) => (
+  <svg className={base(className)} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M3.5 6.5a1.5 1.5 0 0 1 1.5-1.5h4.5l2 2.5h9a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-16A1.5 1.5 0 0 1 3.5 18Z" />
+  </svg>
+);
+
 export const IconUpload = ({ className }: IconProps) => (
   <svg className={base(className)} viewBox="0 0 24 24" aria-hidden="true">
     <path d="M12 15V4M8 8l4-4 4 4" />
