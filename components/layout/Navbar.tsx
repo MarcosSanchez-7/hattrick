@@ -37,7 +37,12 @@ export function Navbar({
   customerName?: string | null;
 }) {
   const { count, openCart } = useCart();
-  const { count: wishlistCount } = useWishlist();
+  const { slugs: wishlistSlugs } = useWishlist();
+  // No usa el conteo crudo de localStorage: si un favorito quedó oculto o
+  // se borró, seguiría contando acá aunque no aparezca en /favoritos.
+  const wishlistCount = products.filter((p) =>
+    wishlistSlugs.includes(p.slug),
+  ).length;
   const [megaOpen, setMegaOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
