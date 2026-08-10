@@ -9,7 +9,13 @@ import {
   orderCategoriesTree,
   type Category,
 } from "@/lib/catalog";
-import { IconExternal, IconEye, IconEyeOff, IconTrash } from "@/components/ui/Icons";
+import {
+  IconExternal,
+  IconEye,
+  IconEyeOff,
+  IconPlus,
+  IconTrash,
+} from "@/components/ui/Icons";
 
 export function CategoriesTable({
   categories,
@@ -135,6 +141,14 @@ export function CategoriesTable({
                           title="Ver en la tienda"
                         >
                           <IconExternal className="icon--sm" />
+                        </Link>
+                        <Link
+                          href={`/admin/categorias/nueva?parent=${c.slug}`}
+                          className="admin-icon-btn"
+                          aria-label="Añadir subcategoría"
+                          title="Añadir subcategoría"
+                        >
+                          <IconPlus className="icon--sm" />
                         </Link>
                         <button
                           type="button"

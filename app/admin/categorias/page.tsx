@@ -22,8 +22,10 @@ export default async function AdminCategoriesPage() {
         <div>
           <h1 className="h1">Categorías</h1>
           <p className="lead" style={{ marginTop: 8, fontSize: "0.9375rem" }}>
-            Organiza el catálogo. Las categorías con productos no se pueden
-            eliminar.
+            Organiza el catálogo. Usá el ícono{" "}
+            <span style={{ fontWeight: 600 }}>+</span> de cada fila para
+            añadirle una subcategoría. Las categorías con productos o
+            subcategorías no se pueden eliminar.
           </p>
         </div>
         <Link href="/admin/categorias/nueva" className="btn btn--sm">

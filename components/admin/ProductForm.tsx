@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  orderCategoriesTree,
   SIZES_ADULT,
   type Category,
   type Pattern,
@@ -12,6 +11,7 @@ import {
 } from "@/lib/catalog";
 import { slugify } from "@/lib/slug";
 import { ImageUploader } from "@/components/admin/ImageUploader";
+import { CategoryPathPicker } from "@/components/admin/CategoryPathPicker";
 
 const STOCK_MODES: { value: StockMode; label: string; help: string }[] = [
   {
@@ -217,23 +217,12 @@ export function ProductForm({
             />
           </div>
           <div className="admin-field">
-            <label htmlFor="category">Categoría</label>
-            <select
-              id="category"
-              required
+            <label>Categoría</label>
+            <CategoryPathPicker
+              categories={categories}
               value={form.category}
-              onChange={(e) => update("category", e.target.value)}
-            >
-              <option value="" disabled>
-                Selecciona una categoría
-              </option>
-              {orderCategoriesTree(categories).map(({ category: c, depth }) => (
-                <option key={c.slug} value={c.slug}>
-                  {"— ".repeat(depth)}
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              onChange={(slug) => update("category", slug)}
+            />
             {categories.length === 0 ? (
               <p className="admin-help">
                 Todavía no hay categorías. Crea una primero.

@@ -13,9 +13,12 @@ import { ImageUploader } from "@/components/admin/ImageUploader";
 export function CategoryForm({
   category,
   categories,
+  defaultParentSlug,
 }: {
   category?: Category;
   categories: Category[];
+  /** Preselecciona el padre al crear (viene de "Añadir subcategoría" en la lista). */
+  defaultParentSlug?: string;
 }) {
   const router = useRouter();
   const isEdit = Boolean(category);
@@ -27,7 +30,9 @@ export function CategoryForm({
     category?.image ? [category.image] : [],
   );
   const [isVisible, setIsVisible] = useState(category?.isVisible ?? true);
-  const [parentSlug, setParentSlug] = useState(category?.parentSlug ?? "");
+  const [parentSlug, setParentSlug] = useState(
+    category?.parentSlug ?? defaultParentSlug ?? "",
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
