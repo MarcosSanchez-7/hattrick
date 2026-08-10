@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LEAGUES, type Category } from "@/lib/catalog";
+import type { Category } from "@/lib/catalog";
 import type { FooterSettings } from "@/lib/settings";
 import {
   IconInstagram,
@@ -78,17 +78,6 @@ export function Footer({
               {categories.map((c) => (
                 <li key={c.slug}>
                   <Link href={`/categoria/${c.slug}`}>{c.name}</Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="footer__col">
-            <p className="label footer__col-title">Ligas</p>
-            <ul>
-              {LEAGUES.map((l) => (
-                <li key={l}>
-                  <Link href={`/buscar?q=${encodeURIComponent(l)}`}>{l}</Link>
                 </li>
               ))}
             </ul>

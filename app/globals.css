@@ -601,7 +601,7 @@ textarea {
 
 .megamenu__inner {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--sp-7);
   padding-block: var(--sp-7);
 }
@@ -1624,7 +1624,7 @@ textarea {
 
 .footer__top {
   display: grid;
-  grid-template-columns: 1.4fr repeat(4, 1fr);
+  grid-template-columns: 1.4fr repeat(3, 1fr);
   gap: var(--sp-7);
   padding-bottom: var(--sp-8);
   border-bottom: 1px solid rgba(250, 250, 250, 0.14);

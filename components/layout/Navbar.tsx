@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LEAGUES, type Category, type Product } from "@/lib/catalog";
+import type { Category, Product } from "@/lib/catalog";
 import type { NavLink } from "@/lib/settings";
 import { useCart } from "@/components/cart/CartProvider";
 import { useWishlist } from "@/components/wishlist/WishlistProvider";
@@ -187,17 +187,6 @@ export function Navbar({
         {megaOpen ? (
           <div className="megamenu" onMouseLeave={() => setMegaOpen(false)}>
             <div className="container megamenu__inner">
-              <div>
-                <p className="label megamenu__col-title">Por liga</p>
-                <ul className="megamenu__list">
-                  {LEAGUES.map((l) => (
-                    <li key={l}>
-                      <Link href={`/buscar?q=${encodeURIComponent(l)}`}>{l}</Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
               {Object.entries(CLUBS_BY_LEAGUE)
                 .slice(0, 2)
                 .map(([league, clubs]) => (
@@ -284,18 +273,6 @@ export function Navbar({
                   className="mobile-menu__link"
                 >
                   {link.label}
-                </Link>
-              ))}
-            </div>
-            <div className="mobile-menu__group">
-              <p className="label mobile-menu__title">Por liga</p>
-              {LEAGUES.map((l) => (
-                <Link
-                  key={l}
-                  href={`/buscar?q=${encodeURIComponent(l)}`}
-                  className="mobile-menu__link"
-                >
-                  {l}
                 </Link>
               ))}
             </div>
