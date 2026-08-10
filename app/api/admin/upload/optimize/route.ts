@@ -17,12 +17,22 @@ function isHeic(contentType: string, pathname: string) {
   return HEIC_MIME_TYPES.has(contentType) || /\.hei[cf]$/i.test(pathname);
 }
 
+/** Solo letras/números/guiones (mismo alfabeto que un slug) — nunca se
+ * confía en el valor tal cual porque termina siendo parte de una ruta. */
+function sanitizeFolder(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const clean = value.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 60);
+  return clean || null;
+}
+
 export async function POST(request: NextRequest) {
   let rawUrl: string | undefined;
+  let folder: string | null = null;
 
   try {
     const body = await request.json();
     rawUrl = typeof body?.url === "string" ? body.url : undefined;
+    folder = sanitizeFolder(body?.folder);
   } catch {
     return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 });
   }
@@ -101,7 +111,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const finalBlob = await put(`products/${randomUUID()}${outputExt}`, payload, {
+    const folderPath = folder ? `products/${folder}` : "products";
+    const finalBlob = await put(`${folderPath}/${randomUUID()}${outputExt}`, payload, {
       access: "public",
       contentType: outputContentType,
       addRandomSuffix: false,

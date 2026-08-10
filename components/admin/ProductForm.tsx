@@ -389,6 +389,7 @@ export function ProductForm({
           images={form.images}
           onChange={(images) => update("images", images)}
           max={6}
+          folder={form.category || undefined}
         />
       </div>
 

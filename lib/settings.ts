@@ -52,7 +52,6 @@ export type FooterSettings = {
   xUrl: string;
   youtubeUrl: string;
   legalName: string;
-  paymentMethods: string[];
   /** Sólo números, con código de país (ej. 595981234567). Vacío = sin botón flotante. */
   whatsappNumber: string;
 };
@@ -65,7 +64,6 @@ export const DEFAULT_FOOTER: FooterSettings = {
   xUrl: "",
   youtubeUrl: "",
   legalName: "HATTRICK",
-  paymentMethods: ["VISA", "MASTERCARD", "TRANSFERENCIA", "EFECTIVO"],
   whatsappNumber: "",
 };
 

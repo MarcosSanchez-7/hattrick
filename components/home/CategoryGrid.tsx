@@ -34,24 +34,11 @@ export function CategoryGrid({
                 href={`/categoria/${cat.slug}`}
                 className="cats__card"
               >
-                <div>
-                  <div className="row" style={{ justifyContent: "space-between" }}>
-                    <h3 className="h2">{cat.name}</h3>
-                    <span className="cats__count">
-                      {inCategory.length} artículos
-                    </span>
-                  </div>
-                  <p className="meta" style={{ marginTop: 6, maxWidth: "34ch" }}>
-                    {cat.tagline}
-                  </p>
-                </div>
-                {cat.image ? (
-                  <div className="cats__art">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                <div className="cats__art">
+                  {cat.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={cat.image} alt={cat.name} />
-                  </div>
-                ) : cover ? (
-                  <div className="cats__art">
+                  ) : cover ? (
                     <ProductVisual
                       images={cover.images}
                       colors={cover.colors}
@@ -59,12 +46,18 @@ export function CategoryGrid({
                       uid={`cat-${cat.slug}`}
                       alt={cat.name}
                     />
-                  </div>
-                ) : null}
-                <span className="cats__go">
-                  Explorar
-                  <IconArrow className="icon--sm" />
-                </span>
+                  ) : null}
+                </div>
+                <div className="cats__overlay" />
+                <div className="cats__content">
+                  <span className="label cats__eyebrow">Colección</span>
+                  <h3 className="h2">{cat.name}</h3>
+                  <p className="meta">{cat.tagline}</p>
+                  <span className="cats__go">
+                    Explorar
+                    <IconArrow className="icon--sm" />
+                  </span>
+                </div>
               </Link>
             );
           })}

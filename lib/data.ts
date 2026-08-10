@@ -458,12 +458,6 @@ export async function deleteProduct(id: string): Promise<void> {
     .eq("id", id)
     .select("id");
   if (error) {
-    if (error.code === "23503") {
-      fail(
-        "No puedes eliminar este producto: tiene ventas o movimientos de stock registrados. Podés ocultarlo en vez de eliminarlo.",
-        400,
-      );
-    }
     fail(`No se pudo eliminar el producto: ${error.message}`);
   }
   if (!data || data.length === 0) {

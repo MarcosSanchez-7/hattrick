@@ -422,3 +422,53 @@ end $$;
 alter table products drop column if exists team;
 alter table products drop column if exists league;
 alter table products drop column if exists season;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Permite borrar un producto aunque tenga ventas o movimientos de stock
+-- registrados. Antes "on delete restrict" lo bloqueaba por completo (la
+-- única salida era ocultarlo). Se cambia a "on delete set null": al borrar
+-- el producto (y en cascada sus tallas), las líneas de venta e inventario
+-- YA REGISTRADAS se conservan intactas (importe, costo, cantidad, fecha —
+-- todo lo que alimenta los totales de Ventas), solo pierden la referencia a
+-- qué talla/producto exacto era. Por eso variant_id pasa a admitir null.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+do $$
+declare
+  fk_name text;
+begin
+  select conname into fk_name
+  from pg_constraint
+  where conrelid = 'sale_items'::regclass
+    and confrelid = 'product_variants'::regclass
+    and contype = 'f';
+  if fk_name is not null then
+    execute format('alter table sale_items drop constraint %I', fk_name);
+  end if;
+end $$;
+
+alter table sale_items alter column variant_id drop not null;
+
+alter table sale_items
+  add constraint sale_items_variant_id_fkey
+  foreign key (variant_id) references product_variants (id) on delete set null;
+
+do $$
+declare
+  fk_name text;
+begin
+  select conname into fk_name
+  from pg_constraint
+  where conrelid = 'inventory_movements'::regclass
+    and confrelid = 'product_variants'::regclass
+    and contype = 'f';
+  if fk_name is not null then
+    execute format('alter table inventory_movements drop constraint %I', fk_name);
+  end if;
+end $$;
+
+alter table inventory_movements alter column variant_id drop not null;
+
+alter table inventory_movements
+  add constraint inventory_movements_variant_id_fkey
+  foreign key (variant_id) references product_variants (id) on delete set null;

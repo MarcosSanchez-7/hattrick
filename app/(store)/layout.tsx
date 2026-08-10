@@ -3,6 +3,7 @@ import { getCurrentCustomer } from "@/lib/auth";
 import { DEFAULT_FOOTER, DEFAULT_NAVBAR } from "@/lib/settings";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { CartStockToast } from "@/components/cart/CartStockToast";
 import { WishlistProvider } from "@/components/wishlist/WishlistProvider";
 import { WishlistToast } from "@/components/wishlist/WishlistToast";
 import { AnnouncementBar } from "@/components/layout/AnnouncementBar";
@@ -37,6 +38,7 @@ export default async function StoreLayout({
         <main>{children}</main>
         <Footer categories={categories} settings={footerSettings} />
         <CartDrawer />
+        <CartStockToast />
         <WishlistToast />
         <WhatsAppButton phoneNumber={footerSettings.whatsappNumber} />
       </WishlistProvider>

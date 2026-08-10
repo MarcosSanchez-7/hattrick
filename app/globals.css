@@ -1054,18 +1054,9 @@ textarea {
 
 .cats__card {
   position: relative;
-  background: var(--surface);
-  padding: var(--sp-5);
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-  min-height: 220px;
+  display: block;
+  min-height: 240px;
   overflow: hidden;
-  transition: background-color 0.25s var(--ease);
-}
-
-.cats__card:hover {
-  background: var(--surface-soft);
 }
 
 .cats__card:first-child {
@@ -1073,12 +1064,10 @@ textarea {
   grid-row: span 2;
 }
 
-/* Ocupa todo el espacio que sobra bajo el texto — antes la imagen quedaba
-   chica y centrada, dejando mucho aire sin usar alrededor. */
 .cats__art {
-  position: relative;
-  flex: 1;
-  min-height: 90px;
+  position: absolute;
+  inset: 0;
+  background: var(--surface-soft);
 }
 
 .cats__art img,
@@ -1087,7 +1076,7 @@ textarea {
   inset: 0;
   width: 100%;
   height: 100%;
-  transition: transform 0.35s var(--ease);
+  transition: transform 0.5s var(--ease);
 }
 
 .cats__art img {
@@ -1102,22 +1091,56 @@ textarea {
 
 .cats__card:hover .cats__art img,
 .cats__card:hover .cats__art svg {
-  transform: scale(1.05);
+  transform: scale(1.06);
 }
 
-.cats__count {
-  color: var(--ink-muted);
-  font-size: 0.75rem;
+/* Degradado para que el texto blanco se lea siempre, sin importar la foto. */
+.cats__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.78) 0%,
+    rgba(0, 0, 0, 0.3) 45%,
+    rgba(0, 0, 0, 0) 70%
+  );
+}
+
+.cats__content {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  padding: var(--sp-5);
+  color: var(--on-inverse);
+}
+
+.cats__content .h2 {
+  color: var(--on-inverse);
+  margin-top: 4px;
+}
+
+.cats__content .meta {
+  color: rgba(255, 255, 255, 0.78);
+  margin-top: 4px;
+  max-width: 34ch;
+}
+
+.cats__eyebrow {
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .cats__go {
   display: inline-flex;
   align-items: center;
   gap: var(--sp-2);
+  margin-top: var(--sp-3);
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  color: var(--on-inverse);
 }
 
 .cats__card:hover .cats__go .icon {
@@ -1141,6 +1164,9 @@ textarea {
 @media (max-width: 560px) {
   .cats {
     grid-template-columns: 1fr;
+  }
+  .cats__card {
+    min-height: 340px;
   }
   .cats__card:first-child {
     grid-column: auto;
@@ -1676,24 +1702,6 @@ textarea {
   font-size: 0.75rem;
   color: #8a8a8a;
   flex-wrap: wrap;
-}
-
-.footer__pay {
-  display: flex;
-  gap: var(--sp-2);
-  align-items: center;
-}
-
-.footer__pay span {
-  height: 26px;
-  padding-inline: var(--sp-3);
-  border: 1px solid rgba(250, 250, 250, 0.22);
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  display: inline-flex;
-  align-items: center;
-  color: #b4b4b4;
 }
 
 @media (max-width: 1080px) {
@@ -2927,6 +2935,44 @@ textarea {
 @media (max-width: 400px) {
   .admin-topbar__link-text {
     display: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Aviso de stock del carrito
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.stock-toast {
+  position: fixed;
+  left: var(--sp-5);
+  bottom: var(--sp-5);
+  z-index: 120;
+  max-width: 360px;
+  background: var(--ink);
+  color: var(--on-inverse);
+  padding: var(--sp-4) var(--sp-5);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  font-size: 0.8125rem;
+  animation: wishlist-toast-in 0.25s var(--ease);
+}
+
+.stock-toast__close {
+  flex: none;
+  color: var(--on-inverse);
+  opacity: 0.7;
+}
+
+.stock-toast__close:hover {
+  opacity: 1;
+}
+
+@media (max-width: 480px) {
+  .stock-toast {
+    left: var(--sp-4);
+    right: var(--sp-4);
+    max-width: none;
   }
 }
 

@@ -123,7 +123,7 @@ export function ProductDetail({ product }: { product: Product }) {
             </>
           ) : null}
         </div>
-        <p className="meta">IVA incluido. Envío calculado en el checkout.</p>
+        <p className="meta">IVA incluido. Envío a coordinar por WhatsApp.</p>
 
         <div>
           <div

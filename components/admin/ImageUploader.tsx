@@ -10,6 +10,8 @@ type Props = {
   /** 1 = portada única (categorías); mayor que 1 = galería (productos). */
   max?: number;
   label?: string;
+  /** Slug de categoría: organiza el archivo en products/{folder}/... en vez de products/. */
+  folder?: string;
 };
 
 /**
@@ -18,7 +20,7 @@ type Props = {
  * las funciones serverless) y luego pide al servidor que lo procese
  * (convertir HEIC, redimensionar, comprimir) a partir de esa URL.
  */
-async function uploadFile(file: File): Promise<string> {
+async function uploadFile(file: File, folder?: string): Promise<string> {
   const rawBlob = await upload(file.name, file, {
     access: "public",
     handleUploadUrl: "/api/admin/upload",
@@ -27,7 +29,7 @@ async function uploadFile(file: File): Promise<string> {
   const res = await fetch("/api/admin/upload/optimize", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url: rawBlob.url }),
+    body: JSON.stringify({ url: rawBlob.url, folder }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? "No se pudo procesar la imagen.");
@@ -43,7 +45,7 @@ function isValidHttpUrl(value: string) {
   }
 }
 
-export function ImageUploader({ images, onChange, max = 6, label }: Props) {
+export function ImageUploader({ images, onChange, max = 6, label, folder }: Props) {
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +67,7 @@ export function ImageUploader({ images, onChange, max = 6, label }: Props) {
     try {
       const uploaded: string[] = [];
       for (const file of files) {
-        uploaded.push(await uploadFile(file));
+        uploaded.push(await uploadFile(file, folder));
       }
       onChange([...images, ...uploaded]);
     } catch (err) {

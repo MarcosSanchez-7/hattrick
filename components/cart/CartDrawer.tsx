@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatPrice } from "@/lib/format";
 import {
   FREE_SHIPPING_FROM,
+  availableStock,
   useCart,
   type CartLine,
 } from "@/components/cart/CartProvider";
@@ -126,6 +127,8 @@ export function CartDrawer() {
 function DrawerLine({ line }: { line: CartLine }) {
   const { setQty, remove, closeCart } = useCart();
   const { product } = line;
+  const max = availableStock(product, line.size);
+  const atMax = max != null ? line.qty >= max : line.qty >= 10;
 
   return (
     <div className="line-item">
@@ -172,7 +175,7 @@ function DrawerLine({ line }: { line: CartLine }) {
             <button
               type="button"
               onClick={() => setQty(line.key, line.qty + 1)}
-              disabled={line.qty >= 10}
+              disabled={atMax}
               aria-label="Sumar unidad"
             >
               <IconPlus className="icon--sm" />

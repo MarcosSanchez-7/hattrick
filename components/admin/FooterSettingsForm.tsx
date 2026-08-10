@@ -7,9 +7,6 @@ import type { FooterSettings } from "@/lib/settings";
 export function FooterSettingsForm({ initial }: { initial: FooterSettings }) {
   const router = useRouter();
   const [form, setForm] = useState<FooterSettings>(initial);
-  const [paymentMethods, setPaymentMethods] = useState(
-    initial.paymentMethods.join(", "),
-  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -27,13 +24,7 @@ export function FooterSettingsForm({ initial }: { initial: FooterSettings }) {
     setError(null);
     setSubmitting(true);
     try {
-      const payload: FooterSettings = {
-        ...form,
-        paymentMethods: paymentMethods
-          .split(",")
-          .map((m) => m.trim().toUpperCase())
-          .filter(Boolean),
-      };
+      const payload: FooterSettings = form;
       const res = await fetch("/api/admin/settings/footer", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -144,23 +135,6 @@ export function FooterSettingsForm({ initial }: { initial: FooterSettings }) {
           <p className="admin-help">
             Vacío = no se muestra el botón flotante de WhatsApp en la tienda.
           </p>
-        </div>
-      </div>
-
-      <div className="admin-fieldset">
-        <p className="admin-fieldset__title">Métodos de pago mostrados</p>
-        <div className="admin-field">
-          <label htmlFor="paymentMethods">Separados por comas</label>
-          <input
-            id="paymentMethods"
-            type="text"
-            value={paymentMethods}
-            onChange={(e) => {
-              setSaved(false);
-              setPaymentMethods(e.target.value);
-            }}
-            placeholder="VISA, MASTERCARD, TRANSFERENCIA, EFECTIVO"
-          />
         </div>
       </div>
 

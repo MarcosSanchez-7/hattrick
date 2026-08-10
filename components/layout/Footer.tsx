@@ -126,11 +126,6 @@ export function Footer({
             <Link href="/legal/cookies">Cookies</Link>
             <Link href="/legal/terminos">Términos</Link>
           </div>
-          <div className="footer__pay">
-            {settings.paymentMethods.map((method) => (
-              <span key={method}>{method}</span>
-            ))}
-          </div>
         </div>
       </div>
     </footer>
