@@ -61,6 +61,8 @@ export type Category = {
   image?: string | null;
   /** false = oculta: desaparece del menú y sus productos dejan de verse en la tienda. */
   isVisible: boolean;
+  /** Slug de la categoría padre. Null = categoría raíz (nivel superior). */
+  parentSlug: string | null;
 };
 
 export const SIZES_ADULT = ["P", "M", "G", "XL", "XXL"];
@@ -112,15 +114,6 @@ export const PATTERNS: { value: Pattern; label: string }[] = [
   { value: "sash", label: "Banda diagonal/central" },
 ];
 
-export const LEAGUES = [
-  "LaLiga",
-  "Premier League",
-  "Serie A",
-  "Bundesliga",
-  "Ligue 1",
-  "Selecciones",
-];
-
 // ── Selectores puros ─────────────────────────────────────────────────────
 // Todos reciben los datos como argumento: quien los llama decide de dónde
 // vienen (JSON en servidor, props ya cargadas en cliente).
@@ -148,8 +141,117 @@ export const getProductById = (products: Product[], id: string) =>
 export const getCategory = (categories: Category[], slug: string) =>
   categories.find((c) => c.slug === slug);
 
-export const byCategory = (products: Product[], slug: string) =>
-  products.filter((p) => p.category === slug);
+// ── Árbol de categorías ──────────────────────────────────────────────────
+// "categories" es una adjacency list (cada una apunta a su padre por slug).
+// Con pocas decenas de filas alcanza con recorrerlo en memoria; todas las
+// funciones de acá abajo llevan un `visited` para no colgarse si alguna vez
+// se cuela un ciclo por fuera de la app (ej. edición manual en SQL).
+
+export const topLevelCategories = (categories: Category[]) =>
+  categories.filter((c) => !c.parentSlug);
+
+export const categoryChildren = (categories: Category[], slug: string) =>
+  categories.filter((c) => c.parentSlug === slug);
+
+/** Cadena de ancestros, raíz→padre-directo, sin incluir la propia categoría. */
+export function categoryAncestors(
+  categories: Category[],
+  slug: string,
+): Category[] {
+  const chain: Category[] = [];
+  const visited = new Set<string>([slug]);
+  let current = getCategory(categories, slug);
+  while (current?.parentSlug && !visited.has(current.parentSlug)) {
+    const parent = getCategory(categories, current.parentSlug);
+    if (!parent) break;
+    visited.add(parent.slug);
+    chain.unshift(parent);
+    current = parent;
+  }
+  return chain;
+}
+
+/**
+ * Visible para el cliente solo si ella misma Y todos sus ancestros están
+ * visibles — ocultar "NBA" también saca a "Lakers" de la tienda, aunque
+ * "Lakers" siga marcada como visible individualmente. Requiere la lista
+ * COMPLETA de categorías (incluidas las ocultas) para recorrer bien la
+ * cadena de ancestros; con una lista ya filtrada, un ancestro oculto
+ * desaparecería del árbol y rompería el cálculo de la ruta.
+ */
+export function isCategoryVisible(categories: Category[], slug: string): boolean {
+  const self = getCategory(categories, slug);
+  if (!self || !self.isVisible) return false;
+  return categoryAncestors(categories, slug).every((a) => a.isVisible);
+}
+
+/** Ancestros + la propia categoría, raíz→hoja. */
+export function categoryPath(categories: Category[], slug: string): Category[] {
+  const self = getCategory(categories, slug);
+  if (!self) return [];
+  return [...categoryAncestors(categories, slug), self];
+}
+
+/** Igual que categoryPath pero solo los slugs, para armar URLs anidadas. */
+export const categorySlugPath = (categories: Category[], slug: string) =>
+  categoryPath(categories, slug).map((c) => c.slug);
+
+/** Todos los descendientes (hijos, nietos, ...), sin incluir la propia categoría. */
+export function descendantSlugs(
+  categories: Category[],
+  slug: string,
+): Set<string> {
+  const result = new Set<string>();
+  const stack = [slug];
+  while (stack.length > 0) {
+    const current = stack.pop()!;
+    for (const child of categoryChildren(categories, current)) {
+      if (result.has(child.slug)) continue;
+      result.add(child.slug);
+      stack.push(child.slug);
+    }
+  }
+  return result;
+}
+
+/** Productos de una categoría y de todas sus subcategorías. */
+export function byCategoryTree(
+  products: Product[],
+  categories: Category[],
+  slug: string,
+): Product[] {
+  const slugs = new Set([slug, ...descendantSlugs(categories, slug)]);
+  return products.filter((p) => slugs.has(p.category));
+}
+
+/**
+ * Orden depth-first (padre seguido de sus hijos, recursivamente) con la
+ * profundidad de cada una, para indentar en tablas/selects del admin.
+ */
+export function orderCategoriesTree(
+  categories: Category[],
+): { category: Category; depth: number }[] {
+  const result: { category: Category; depth: number }[] = [];
+  const visit = (parentSlug: string | null, depth: number) => {
+    for (const c of categories.filter((c) => (c.parentSlug ?? null) === parentSlug)) {
+      result.push({ category: c, depth });
+      visit(c.slug, depth + 1);
+    }
+  };
+  visit(null, 0);
+  return result;
+}
+
+/** True si asignarle `newParentSlug` a `slug` formaría un ciclo (o es auto-referencia). */
+export function wouldCreateCycle(
+  categories: Category[],
+  slug: string,
+  newParentSlug: string | null,
+): boolean {
+  if (!newParentSlug) return false;
+  if (newParentSlug === slug) return true;
+  return categoryAncestors(categories, newParentSlug).some((c) => c.slug === slug);
+}
 
 export const onSaleProducts = (products: Product[]) =>
   products.filter(isOnSale);

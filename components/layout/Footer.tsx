@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Category } from "@/lib/catalog";
+import { topLevelCategories, type Category } from "@/lib/catalog";
 import type { FooterSettings } from "@/lib/settings";
 import {
   IconInstagram,
@@ -75,7 +75,7 @@ export function Footer({
               <li>
                 <Link href="/ofertas">Ofertas</Link>
               </li>
-              {categories.map((c) => (
+              {topLevelCategories(categories).map((c) => (
                 <li key={c.slug}>
                   <Link href={`/categoria/${c.slug}`}>{c.name}</Link>
                 </li>

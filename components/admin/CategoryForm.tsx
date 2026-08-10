@@ -2,11 +2,21 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Category } from "@/lib/catalog";
+import {
+  descendantSlugs,
+  orderCategoriesTree,
+  type Category,
+} from "@/lib/catalog";
 import { slugify } from "@/lib/slug";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 
-export function CategoryForm({ category }: { category?: Category }) {
+export function CategoryForm({
+  category,
+  categories,
+}: {
+  category?: Category;
+  categories: Category[];
+}) {
   const router = useRouter();
   const isEdit = Boolean(category);
 
@@ -17,10 +27,26 @@ export function CategoryForm({ category }: { category?: Category }) {
     category?.image ? [category.image] : [],
   );
   const [isVisible, setIsVisible] = useState(category?.isVisible ?? true);
+  const [parentSlug, setParentSlug] = useState(category?.parentSlug ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const suggestedSlug = useMemo(() => slugify(name), [name]);
+
+  // En modo edición, no se puede elegir a sí misma ni a ninguna de sus
+  // propias subcategorías como padre (formaría un ciclo).
+  const excluded = useMemo(() => {
+    if (!category) return new Set<string>();
+    return new Set([category.slug, ...descendantSlugs(categories, category.slug)]);
+  }, [category, categories]);
+
+  const parentOptions = useMemo(
+    () =>
+      orderCategoriesTree(categories).filter(
+        ({ category: c }) => !excluded.has(c.slug),
+      ),
+    [categories, excluded],
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +63,7 @@ export function CategoryForm({ category }: { category?: Category }) {
       description: description.trim(),
       image: image[0] ?? null,
       isVisible,
+      parentSlug: parentSlug || null,
     };
 
     setSubmitting(true);
@@ -99,6 +126,27 @@ export function CategoryForm({ category }: { category?: Category }) {
           <p className="admin-help">
             /categoria/{isEdit ? category!.slug : suggestedSlug || "…"}
             {isEdit ? " — no se puede cambiar una vez creada." : ""}
+          </p>
+        </div>
+        <div className="admin-field">
+          <label htmlFor="parentSlug">Categoría padre</label>
+          <select
+            id="parentSlug"
+            value={parentSlug}
+            onChange={(e) => setParentSlug(e.target.value)}
+          >
+            <option value="">— Ninguna (categoría raíz) —</option>
+            {parentOptions.map(({ category: c, depth }) => (
+              <option key={c.slug} value={c.slug}>
+                {"— ".repeat(depth)}
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <p className="admin-help">
+            Dejalo vacío para que sea una categoría de nivel superior, o
+            elegí una para convertirla en subcategoría (ej. "NBA" dentro de
+            "Importados").
           </p>
         </div>
         <div className="admin-field">

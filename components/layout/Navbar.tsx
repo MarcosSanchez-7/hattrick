@@ -3,7 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { Category, Product } from "@/lib/catalog";
+import {
+  categoryChildren,
+  categorySlugPath,
+  topLevelCategories,
+  type Category,
+  type Product,
+} from "@/lib/catalog";
 import type { NavLink } from "@/lib/settings";
 import { useCart } from "@/components/cart/CartProvider";
 import { useWishlist } from "@/components/wishlist/WishlistProvider";
@@ -17,13 +23,6 @@ import {
   IconSearch,
   IconUser,
 } from "@/components/ui/Icons";
-
-const CLUBS_BY_LEAGUE: Record<string, string[]> = {
-  LaLiga: ["Real Madrid", "FC Barcelona", "Atlético de Madrid"],
-  "Premier League": ["Manchester City", "Liverpool FC", "Arsenal FC"],
-  "Serie A": ["Inter de Milán", "AC Milan", "Juventus"],
-  "Bundesliga / Ligue 1": ["Bayern de Múnich", "Borussia Dortmund", "PSG"],
-};
 
 export function Navbar({
   categories,
@@ -43,7 +42,7 @@ export function Navbar({
   const wishlistCount = products.filter((p) =>
     wishlistSlugs.includes(p.slug),
   ).length;
-  const [megaOpen, setMegaOpen] = useState(false);
+  const [megaCategory, setMegaCategory] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [cartBump, setCartBump] = useState(false);
@@ -60,17 +59,19 @@ export function Navbar({
     prevCount.current = count;
   }, [count]);
 
-  const menu: { label: string; href: string; mega: boolean }[] = [
-    { label: "Novedades", href: "/novedades", mega: false },
-    ...categories.map((c) => ({
+  const topCategories = topLevelCategories(categories);
+  const menu = [
+    { label: "Novedades", href: "/novedades", slug: null as string | null },
+    ...topCategories.map((c) => ({
       label: c.name,
-      href: `/categoria/${c.slug}`,
-      mega: c.slug === "clubes",
+      href: `/categoria/${categorySlugPath(categories, c.slug).join("/")}`,
+      slug: c.slug,
     })),
   ];
+  const megaChildren = megaCategory ? categoryChildren(categories, megaCategory) : [];
 
   useEffect(() => {
-    setMegaOpen(false);
+    setMegaCategory(null);
     setMobileOpen(false);
   }, [pathname]);
 
@@ -84,7 +85,7 @@ export function Navbar({
 
   return (
     <>
-      <header className="nav" onMouseLeave={() => setMegaOpen(false)}>
+      <header className="nav" onMouseLeave={() => setMegaCategory(null)}>
         <div className="container nav__bar">
           <button
             type="button"
@@ -100,28 +101,33 @@ export function Navbar({
           </Link>
 
           <nav className="nav__links" aria-label="Navegación principal">
-            {menu.map((item) => (
-              <div
-                key={item.href}
-                className="nav__item"
-                data-open={item.mega && megaOpen ? "true" : "false"}
-                onMouseEnter={() => setMegaOpen(Boolean(item.mega))}
-              >
-                <Link
-                  href={item.href}
-                  className="nav__link"
-                  data-active={pathname === item.href ? "true" : "false"}
+            {menu.map((item) => {
+              const hasChildren = item.slug
+                ? categoryChildren(categories, item.slug).length > 0
+                : false;
+              return (
+                <div
+                  key={item.href}
+                  className="nav__item"
+                  data-open={hasChildren && megaCategory === item.slug ? "true" : "false"}
+                  onMouseEnter={() => setMegaCategory(hasChildren ? item.slug : null)}
                 >
-                  {item.label}
-                  {item.mega ? <IconChevron className="icon--sm" /> : null}
-                </Link>
-              </div>
-            ))}
+                  <Link
+                    href={item.href}
+                    className="nav__link"
+                    data-active={pathname === item.href ? "true" : "false"}
+                  >
+                    {item.label}
+                    {hasChildren ? <IconChevron className="icon--sm" /> : null}
+                  </Link>
+                </div>
+              );
+            })}
             {extraLinks.map((link) => (
               <div
                 key={link.href}
                 className="nav__item"
-                onMouseEnter={() => setMegaOpen(false)}
+                onMouseEnter={() => setMegaCategory(null)}
               >
                 <Link
                   href={link.href}
@@ -132,7 +138,7 @@ export function Navbar({
                 </Link>
               </div>
             ))}
-            <div className="nav__item" onMouseEnter={() => setMegaOpen(false)}>
+            <div className="nav__item" onMouseEnter={() => setMegaCategory(null)}>
               <Link
                 href="/ofertas"
                 className="nav__link nav__link--sale"
@@ -184,25 +190,21 @@ export function Navbar({
           </div>
         </div>
 
-        {megaOpen ? (
-          <div className="megamenu" onMouseLeave={() => setMegaOpen(false)}>
+        {megaCategory && megaChildren.length > 0 ? (
+          <div className="megamenu" onMouseLeave={() => setMegaCategory(null)}>
             <div className="container megamenu__inner">
-              {Object.entries(CLUBS_BY_LEAGUE)
-                .slice(0, 2)
-                .map(([league, clubs]) => (
-                  <div key={league}>
-                    <p className="label megamenu__col-title">{league}</p>
-                    <ul className="megamenu__list">
-                      {clubs.map((c) => (
-                        <li key={c}>
-                          <Link href={`/buscar?q=${encodeURIComponent(c)}`}>
-                            {c}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
+              <div>
+                <p className="label megamenu__col-title">Subcategorías</p>
+                <ul className="megamenu__list">
+                  {megaChildren.map((c) => (
+                    <li key={c.slug}>
+                      <Link href={`/categoria/${categorySlugPath(categories, c.slug).join("/")}`}>
+                        {c.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
               <div className="megamenu__promo">
                 <div>
@@ -257,10 +259,10 @@ export function Navbar({
               >
                 Ofertas
               </Link>
-              {categories.map((c) => (
+              {topCategories.map((c) => (
                 <Link
                   key={c.slug}
-                  href={`/categoria/${c.slug}`}
+                  href={`/categoria/${categorySlugPath(categories, c.slug).join("/")}`}
                   className="mobile-menu__link"
                 >
                   {c.name}

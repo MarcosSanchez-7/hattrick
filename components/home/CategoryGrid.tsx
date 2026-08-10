@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { byCategory, type Category, type Product } from "@/lib/catalog";
+import {
+  byCategoryTree,
+  topLevelCategories,
+  type Category,
+  type Product,
+} from "@/lib/catalog";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import { IconArrow } from "@/components/ui/Icons";
 
@@ -10,6 +15,8 @@ export function CategoryGrid({
   categories: Category[];
   products: Product[];
 }) {
+  const topCategories = topLevelCategories(categories);
+
   return (
     <section className="section">
       <div className="container">
@@ -19,14 +26,14 @@ export function CategoryGrid({
             <h2 className="h1">Compra por categoría</h2>
           </div>
           <p className="lead" style={{ maxWidth: "40ch", fontSize: "0.9375rem" }}>
-            {categories.length} secciones, un mismo estándar de calidad. Todo
-            el catálogo está organizado por tipo de producto y por liga.
+            {topCategories.length} secciones, un mismo estándar de calidad.
+            Todo el catálogo está organizado por tipo de producto.
           </p>
         </div>
 
         <div className="cats">
-          {categories.map((cat) => {
-            const inCategory = byCategory(products, cat.slug);
+          {topCategories.map((cat) => {
+            const inCategory = byCategoryTree(products, categories, cat.slug);
             const cover = inCategory[0];
             return (
               <Link

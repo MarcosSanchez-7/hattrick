@@ -3,7 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { Category } from "@/lib/catalog";
+import {
+  categoryChildren,
+  categorySlugPath,
+  orderCategoriesTree,
+  type Category,
+} from "@/lib/catalog";
 import { IconExternal, IconEye, IconEyeOff, IconTrash } from "@/components/ui/Icons";
 
 export function CategoriesTable({
@@ -79,12 +84,22 @@ export function CategoriesTable({
               </tr>
             </thead>
             <tbody>
-              {categories.map((c) => {
+              {orderCategoriesTree(categories).map(({ category: c, depth }) => {
                 const count = productCounts[c.slug] ?? 0;
+                const childCount = categoryChildren(categories, c.slug).length;
+                const blockedReason =
+                  childCount > 0
+                    ? "No se puede eliminar: tiene subcategorías"
+                    : count > 0
+                      ? "No se puede eliminar: tiene productos"
+                      : "Eliminar";
                 return (
                   <tr key={c.slug}>
                     <td>
-                      <div className="admin-table__product">
+                      <div
+                        className="admin-table__product"
+                        style={{ paddingLeft: depth * 20 }}
+                      >
                         <div className="admin-table__thumb">
                           {c.image ? (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -95,7 +110,10 @@ export function CategoriesTable({
                             </span>
                           )}
                         </div>
-                        <div style={{ fontWeight: 600 }}>{c.name}</div>
+                        <div style={{ fontWeight: 600 }}>
+                          {depth > 0 ? "— " : ""}
+                          {c.name}
+                        </div>
                       </div>
                     </td>
                     <td className="meta">{c.tagline}</td>
@@ -110,7 +128,7 @@ export function CategoriesTable({
                     <td>
                       <div className="admin-row-actions">
                         <Link
-                          href={`/categoria/${c.slug}`}
+                          href={`/categoria/${categorySlugPath(categories, c.slug).join("/")}`}
                           target="_blank"
                           className="admin-icon-btn"
                           aria-label="Ver en la tienda"
@@ -143,12 +161,8 @@ export function CategoriesTable({
                           type="button"
                           className="admin-icon-btn admin-icon-btn--danger"
                           aria-label="Eliminar categoría"
-                          title={
-                            count > 0
-                              ? "No se puede eliminar: tiene productos"
-                              : "Eliminar"
-                          }
-                          disabled={pendingSlug === c.slug || count > 0}
+                          title={blockedReason}
+                          disabled={pendingSlug === c.slug || count > 0 || childCount > 0}
                           onClick={() => handleDelete(c)}
                         >
                           <IconTrash className="icon--sm" />

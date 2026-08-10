@@ -15,10 +15,8 @@ export default async function EditCategoryPage({
   params: Promise<Params>;
 }) {
   const { slug } = await params;
-  const category = getCategory(
-    await getAllCategories({ includeHidden: true }),
-    slug,
-  );
+  const categories = await getAllCategories({ includeHidden: true });
+  const category = getCategory(categories, slug);
   if (!category) notFound();
 
   return (
@@ -31,7 +29,7 @@ export default async function EditCategoryPage({
       <h1 className="h1" style={{ marginBottom: 24 }}>
         Editar categoría
       </h1>
-      <CategoryForm category={category} />
+      <CategoryForm category={category} categories={categories} />
     </>
   );
 }

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  orderCategoriesTree,
   SIZES_ADULT,
   type Category,
   type Pattern,
@@ -226,8 +227,9 @@ export function ProductForm({
               <option value="" disabled>
                 Selecciona una categoría
               </option>
-              {categories.map((c) => (
+              {orderCategoriesTree(categories).map(({ category: c, depth }) => (
                 <option key={c.slug} value={c.slug}>
+                  {"— ".repeat(depth)}
                   {c.name}
                 </option>
               ))}

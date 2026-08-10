@@ -9,6 +9,7 @@ import type {
   SaleLine,
   StockMode,
 } from "@/lib/catalog";
+import { descendantSlugs, wouldCreateCycle } from "@/lib/catalog";
 import { slugify, uniqueSlug } from "@/lib/slug";
 import type { SiteSettingsKey } from "@/lib/settings";
 import { supabaseAdmin } from "@/lib/supabase/server";
@@ -70,6 +71,7 @@ type CategoryRow = {
   description: string;
   image: string | null;
   is_visible: boolean;
+  parent_slug: string | null;
 };
 
 function rowToProduct(row: ProductRow, variantRows: VariantRow[]): Product {
@@ -118,6 +120,7 @@ function rowToCategory(row: CategoryRow): Category {
     description: row.description,
     image: row.image ?? null,
     isVisible: row.is_visible,
+    parentSlug: row.parent_slug ?? null,
   };
 }
 
@@ -179,16 +182,15 @@ export async function getAllProducts(
   let rows = data as ProductRow[];
 
   if (!opts.includeHidden) {
-    const { data: hiddenCats, error: catError } = await supabaseAdmin
-      .from("categories")
-      .select("slug")
-      .eq("is_visible", false);
-    if (catError) {
-      fail(`No se pudieron comprobar las categorías ocultas: ${catError.message}`);
+    // Ocultar una categoría oculta también a sus subcategorías (y por lo
+    // tanto a los productos de esas subcategorías), aunque cada una siga
+    // marcada como visible individualmente.
+    const allCategories = await getAllCategories({ includeHidden: true });
+    const hiddenSlugs = new Set<string>();
+    for (const c of allCategories.filter((c) => !c.isVisible)) {
+      hiddenSlugs.add(c.slug);
+      for (const d of descendantSlugs(allCategories, c.slug)) hiddenSlugs.add(d);
     }
-    const hiddenSlugs = new Set(
-      (hiddenCats as { slug: string }[]).map((c) => c.slug),
-    );
     rows = rows.filter((r) => !hiddenSlugs.has(r.category));
   }
 
@@ -482,14 +484,21 @@ export async function createCategory(
 ): Promise<Category> {
   assertValidCategory(input);
 
-  const { data: existing, error: readError } = await supabaseAdmin
-    .from("categories")
-    .select("slug");
-  if (readError) fail(`No se pudo comprobar el slug: ${readError.message}`);
-  const taken = new Set((existing as { slug: string }[]).map((c) => c.slug));
+  const categories = await getAllCategories({ includeHidden: true });
+  const taken = new Set(categories.map((c) => c.slug));
   const slug = input.slug?.trim()
     ? uniqueSlug(input.slug, taken)
     : uniqueSlug(input.name, taken);
+
+  const parentSlug = input.parentSlug ?? null;
+  if (parentSlug && !categories.some((c) => c.slug === parentSlug)) {
+    throw new DataError("La categoría padre seleccionada no existe.");
+  }
+  if (wouldCreateCycle(categories, slug, parentSlug)) {
+    throw new DataError(
+      "Esa categoría padre generaría un ciclo: no puede ser ni la propia categoría ni una de sus subcategorías.",
+    );
+  }
 
   const { data, error } = await supabaseAdmin
     .from("categories")
@@ -500,6 +509,7 @@ export async function createCategory(
       description: input.description,
       image: input.image ?? null,
       is_visible: input.isVisible ?? true,
+      parent_slug: parentSlug,
     })
     .select()
     .single();
@@ -514,6 +524,21 @@ export async function updateCategory(
 ): Promise<Category> {
   assertValidCategory(input);
 
+  const categories = await getAllCategories({ includeHidden: true });
+  if (!categories.some((c) => c.slug === slug)) {
+    throw new DataError("Categoría no encontrada.", 404);
+  }
+
+  const parentSlug = input.parentSlug ?? null;
+  if (parentSlug && !categories.some((c) => c.slug === parentSlug)) {
+    throw new DataError("La categoría padre seleccionada no existe.");
+  }
+  if (wouldCreateCycle(categories, slug, parentSlug)) {
+    throw new DataError(
+      "Esa categoría padre generaría un ciclo: no puede ser ni la propia categoría ni una de sus subcategorías.",
+    );
+  }
+
   // El slug es la clave usada por los productos: no se permite cambiarlo.
   const { data, error } = await supabaseAdmin
     .from("categories")
@@ -523,6 +548,7 @@ export async function updateCategory(
       description: input.description,
       image: input.image ?? null,
       is_visible: input.isVisible ?? true,
+      parent_slug: parentSlug,
     })
     .eq("slug", slug)
     .select()
@@ -534,6 +560,19 @@ export async function updateCategory(
 }
 
 export async function deleteCategory(slug: string): Promise<void> {
+  const { count: childCount, error: childError } = await supabaseAdmin
+    .from("categories")
+    .select("slug", { count: "exact", head: true })
+    .eq("parent_slug", slug);
+  if (childError) {
+    fail(`No se pudo comprobar las subcategorías: ${childError.message}`);
+  }
+  if (childCount && childCount > 0) {
+    throw new DataError(
+      "No puedes eliminar una categoría con subcategorías. Elimina o reasigna esas subcategorías primero.",
+    );
+  }
+
   const { count, error: countError } = await supabaseAdmin
     .from("products")
     .select("id", { count: "exact", head: true })

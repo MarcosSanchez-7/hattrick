@@ -472,3 +472,19 @@ alter table inventory_movements alter column variant_id drop not null;
 alter table inventory_movements
   add constraint inventory_movements_variant_id_fkey
   foreign key (variant_id) references product_variants (id) on delete set null;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Subcategorías anidadas a profundidad arbitraria (ej. Importados → NBA →
+-- Lakers). "categories" pasa de ser una lista plana a un árbol simple
+-- (adjacency list): cada fila puede apuntar a su categoría padre. Sin
+-- "on delete" explícito a propósito (igual estilo que products.category):
+-- Postgres rechaza por defecto borrar un padre con hijos, respaldado además
+-- por un guard de aplicación con mensaje en español antes de intentarlo.
+-- Ninguna categoría existente tiene padre hoy, así que todas quedan como
+-- raíz automáticamente — la tienda no cambia de comportamiento hasta que se
+-- cree una subcategoría a propósito desde el admin.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+alter table categories add column if not exists parent_slug text references categories (slug);
+
+create index if not exists categories_parent_slug_idx on categories (parent_slug);
