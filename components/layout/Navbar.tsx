@@ -21,19 +21,16 @@ import {
   IconHeart,
   IconMenu,
   IconSearch,
-  IconUser,
 } from "@/components/ui/Icons";
 
 export function Navbar({
   categories,
   products,
   extraLinks = [],
-  customerName = null,
 }: {
   categories: Category[];
   products: Product[];
   extraLinks?: NavLink[];
-  customerName?: string | null;
 }) {
   const { count, openCart } = useCart();
   const { slugs: wishlistSlugs } = useWishlist();
@@ -159,14 +156,6 @@ export function Navbar({
               <IconSearch />
             </button>
             <Link
-              href="/cuenta"
-              className="nav__icon-btn nav__icon-btn--optional"
-              aria-label={customerName ? `Hola, ${customerName}` : "Iniciar sesión"}
-              title={customerName ? `Hola, ${customerName}` : "Iniciar sesión"}
-            >
-              <IconUser />
-            </Link>
-            <Link
               href="/favoritos"
               className="nav__icon-btn nav__icon-btn--optional"
               aria-label={`Favoritos (${wishlistCount} artículos)`}
@@ -277,12 +266,6 @@ export function Navbar({
                   {link.label}
                 </Link>
               ))}
-            </div>
-            <div className="mobile-menu__group">
-              <p className="label mobile-menu__title">Cuenta</p>
-              <Link href="/cuenta" className="mobile-menu__link">
-                {customerName ? `Hola, ${customerName}` : "Iniciar sesión"}
-              </Link>
               <Link href="/favoritos" className="mobile-menu__link">
                 Favoritos ({wishlistCount})
               </Link>

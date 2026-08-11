@@ -1,5 +1,4 @@
 import { getAllCategories, getAllProducts, getSetting } from "@/lib/data";
-import { getCurrentCustomer } from "@/lib/auth";
 import { DEFAULT_FOOTER, DEFAULT_NAVBAR } from "@/lib/settings";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { CartDrawer } from "@/components/cart/CartDrawer";
@@ -16,13 +15,12 @@ export const dynamic = "force-dynamic";
 export default async function StoreLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [categories, products, navbarSettings, footerSettings, customer] =
+  const [categories, products, navbarSettings, footerSettings] =
     await Promise.all([
       getAllCategories(),
       getAllProducts(),
       getSetting("navbar", DEFAULT_NAVBAR),
       getSetting("footer", DEFAULT_FOOTER),
-      getCurrentCustomer(),
     ]);
 
   return (
@@ -33,7 +31,6 @@ export default async function StoreLayout({
           categories={categories}
           products={products}
           extraLinks={navbarSettings.extraLinks}
-          customerName={customer?.fullName ?? null}
         />
         <main>{children}</main>
         <Footer categories={categories} settings={footerSettings} />
