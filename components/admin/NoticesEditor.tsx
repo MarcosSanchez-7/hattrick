@@ -3,7 +3,7 @@
 import type { NoticeIcon, ProductNotice } from "@/lib/catalog";
 import { IconTrash } from "@/components/ui/Icons";
 
-const ICON_OPTIONS: { value: NoticeIcon; label: string }[] = [
+export const ICON_OPTIONS: { value: NoticeIcon; label: string }[] = [
   { value: "truck", label: "Envío" },
   { value: "print", label: "Personalización" },
   { value: "return", label: "Devolución" },

@@ -227,3 +227,10 @@ export const IconReceipt = ({ className }: IconProps) => (
     <path d="M9 8h6M9 12h6M9 16h3" />
   </svg>
 );
+
+export const IconDocument = ({ className }: IconProps) => (
+  <svg className={base(className)} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M6.5 3.5h7l4 4v13h-11Z" />
+    <path d="M13.5 3.5v4h4M9 12h6M9 15.5h6" />
+  </svg>
+);

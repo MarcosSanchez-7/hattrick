@@ -33,7 +33,9 @@ export function ProductsTable({
   const [query, setQuery] = useState("");
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // Arranca vacío a propósito: ninguna carpeta expandida = todas cerradas
+  // hasta que el admin haga click.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const categoryName = (slug: string) =>
     categories.find((c) => c.slug === slug)?.name ?? slug;
@@ -64,8 +66,8 @@ export function ProductsTable({
     return ordered;
   }, [filtered, categories]);
 
-  const toggleCollapsed = (slug: string) => {
-    setCollapsed((prev) => {
+  const toggleExpanded = (slug: string) => {
+    setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(slug)) next.delete(slug);
       else next.add(slug);
@@ -145,14 +147,14 @@ export function ProductsTable({
         <ProductRowsTable products={filtered} categoryName={categoryName} actions={actions} />
       ) : (
         groups.map((group) => {
-          const isCollapsed = collapsed.has(group.slug);
+          const isExpanded = expanded.has(group.slug);
           return (
             <div key={group.slug} className="admin-cat-group">
               <button
                 type="button"
                 className="admin-cat-group__head"
-                aria-expanded={!isCollapsed}
-                onClick={() => toggleCollapsed(group.slug)}
+                aria-expanded={isExpanded}
+                onClick={() => toggleExpanded(group.slug)}
               >
                 <IconFolder className="icon--sm" />
                 <span>{group.name}</span>
@@ -161,7 +163,7 @@ export function ProductsTable({
                 </span>
                 <IconChevron className="icon--sm" />
               </button>
-              {!isCollapsed ? (
+              {isExpanded ? (
                 <ProductRowsTable
                   products={group.items}
                   categoryName={categoryName}

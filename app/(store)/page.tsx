@@ -5,6 +5,7 @@ import {
   DEFAULT_CUSTOM_BANNER,
   DEFAULT_HERO,
   DEFAULT_HOME,
+  DEFAULT_VALUE_PROPS,
 } from "@/lib/settings";
 import { Hero } from "@/components/home/Hero";
 import { ValueProps } from "@/components/home/ValueProps";
@@ -16,22 +17,30 @@ import { ProductGrid } from "@/components/product/ProductCard";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [products, categories, tags, heroSettings, customBannerSettings, homeSettings] =
-    await Promise.all([
-      getAllProducts(),
-      getAllCategories(),
-      getAllTags(),
-      getSetting("hero", DEFAULT_HERO),
-      getSetting("customBanner", DEFAULT_CUSTOM_BANNER),
-      getSetting("home", DEFAULT_HOME),
-    ]);
+  const [
+    products,
+    categories,
+    tags,
+    heroSettings,
+    customBannerSettings,
+    homeSettings,
+    valuePropsSettings,
+  ] = await Promise.all([
+    getAllProducts(),
+    getAllCategories(),
+    getAllTags(),
+    getSetting("hero", DEFAULT_HERO),
+    getSetting("customBanner", DEFAULT_CUSTOM_BANNER),
+    getSetting("home", DEFAULT_HOME),
+    getSetting("valueProps", DEFAULT_VALUE_PROPS),
+  ]);
   const nuevos = newArrivals(products).slice(0, 8);
   const populares = bestSellers(products).slice(0, 4);
 
   return (
     <>
       <Hero settings={heroSettings} />
-      <ValueProps />
+      <ValueProps settings={valuePropsSettings} />
 
       {/* Nuevos ingresos: solo cuando el admin la activa (mucho stock nuevo cargado) */}
       {homeSettings.showNewArrivals && nuevos.length > 0 ? (

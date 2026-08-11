@@ -1200,6 +1200,12 @@ textarea {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--sp-6) var(--sp-4);
   }
+  .price {
+    font-size: 0.9375rem;
+  }
+  .price--old {
+    font-size: 0.75rem;
+  }
 }
 
 .card {
@@ -1315,8 +1321,9 @@ textarea {
 
 .card__prices {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--sp-2);
+  gap: var(--sp-1) var(--sp-2);
   margin-top: var(--sp-1);
 }
 
@@ -1979,6 +1986,18 @@ textarea {
   border-color: var(--ink);
 }
 
+@media (max-width: 640px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-3);
+  }
+  .filters {
+    justify-content: center;
+  }
+}
+
 .filter[data-active='true'] {
   background: var(--ink);
   color: var(--on-inverse);
@@ -2395,6 +2414,40 @@ textarea {
   flex: none;
 }
 
+.admin-sidebar__user {
+  font-size: 0.8125rem;
+  color: var(--on-inverse);
+}
+
+.admin-sidebar__user-role {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.6875rem;
+  color: #9a9a9a;
+  text-transform: capitalize;
+}
+
+.admin-sidebar__logout {
+  text-align: left;
+  font-size: 0.8125rem;
+  color: #c7c7c7;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.admin-sidebar__logout:hover:not(:disabled) {
+  color: var(--on-inverse);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.admin-sidebar__logout:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .admin-main {
   flex: 1;
   min-width: 0;
@@ -2417,6 +2470,8 @@ textarea {
 .admin-content {
   padding: var(--sp-6);
   max-width: 1240px;
+  margin-inline: auto;
+  width: 100%;
 }
 
 .admin-page-head {
@@ -2613,6 +2668,8 @@ textarea {
   flex-direction: column;
   gap: var(--sp-6);
   max-width: 960px;
+  margin-inline: auto;
+  width: 100%;
 }
 
 .admin-fieldset {
@@ -2918,6 +2975,23 @@ textarea {
 .admin-single-upload {
   width: 160px;
   height: 190px;
+}
+
+.admin-auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-soft);
+  padding: var(--sp-5);
+}
+
+.admin-auth-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: var(--sp-6);
 }
 
 @media (max-width: 980px) {

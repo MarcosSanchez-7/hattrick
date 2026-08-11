@@ -7,6 +7,7 @@ import {
   DEFAULT_HOME,
   DEFAULT_NAVBAR,
   DEFAULT_PRODUCT_NOTICES,
+  DEFAULT_VALUE_PROPS,
   type SiteSettingsKey,
 } from "@/lib/settings";
 
@@ -17,6 +18,7 @@ const DEFAULTS: Record<SiteSettingsKey, unknown> = {
   customBanner: DEFAULT_CUSTOM_BANNER,
   home: DEFAULT_HOME,
   productNotices: DEFAULT_PRODUCT_NOTICES,
+  valueProps: DEFAULT_VALUE_PROPS,
 };
 
 function isValidKey(key: string): key is SiteSettingsKey {

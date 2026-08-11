@@ -3,6 +3,8 @@ import { cache } from "react";
 import { randomUUID } from "crypto";
 import type {
   Category,
+  Page,
+  PagePlacement,
   Product,
   ProductNotice,
   ProductVariant,
@@ -12,10 +14,11 @@ import type {
   StockMode,
   Tag,
 } from "@/lib/catalog";
-import { descendantSlugs, wouldCreateCycle } from "@/lib/catalog";
+import { descendantSlugs, SIZES_ADULT, wouldCreateCycle } from "@/lib/catalog";
 import { slugify, uniqueSlug } from "@/lib/slug";
 import type { SiteSettingsKey } from "@/lib/settings";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { hashPassword, verifyPassword, type AdminRole } from "@/lib/admin-auth";
 
 /**
  * Capa de datos sobre Supabase (Postgres). El resto de la app (páginas del
@@ -78,9 +81,18 @@ type CategoryRow = {
   notices: ProductNotice[] | null;
 };
 
+/** P/M/G/XL/XXL primero, en ese orden; cualquier talla no reconocida va al final. */
+function sizeRank(size: string): number {
+  const i = SIZES_ADULT.indexOf(size);
+  return i === -1 ? SIZES_ADULT.length : i;
+}
+
 function rowToProduct(row: ProductRow, variantRows: VariantRow[]): Product {
   const isPropio = row.stock_mode === "propio";
-  const variants: ProductVariant[] = variantRows.map((v) => ({
+  const orderedVariantRows = [...variantRows].sort(
+    (a, b) => sizeRank(a.size) - sizeRank(b.size),
+  );
+  const variants: ProductVariant[] = orderedVariantRows.map((v) => ({
     id: v.id,
     size: v.size,
     stock: v.stock_on_hand,
@@ -677,6 +689,309 @@ export async function deleteTag(name: string): Promise<void> {
   if (error) fail(`No se pudo eliminar la etiqueta: ${error.message}`);
   if (!data || data.length === 0) {
     throw new DataError("Etiqueta no encontrada.", 404);
+  }
+}
+
+// ── Páginas de contenido (Términos, Envíos, Contacto, etc.) ────────────────
+
+type PageRow = {
+  slug: string;
+  title: string;
+  body: string;
+  placement: PagePlacement;
+  sort_order: number;
+};
+
+function rowToPage(row: PageRow): Page {
+  return {
+    slug: row.slug,
+    title: row.title,
+    body: row.body,
+    placement: row.placement,
+    sortOrder: row.sort_order,
+  };
+}
+
+// cache(): tanto el layout (para el footer) como /pagina/[slug] la piden en
+// el mismo request; React la memoiza para no pegarle dos veces a Supabase.
+export const getAllPages = cache(async (): Promise<Page[]> => {
+  const { data, error } = await supabaseAdmin
+    .from("pages")
+    .select("*")
+    .order("placement", { ascending: true })
+    .order("sort_order", { ascending: true });
+  if (error) fail(`No se pudieron cargar las páginas: ${error.message}`);
+  return (data as PageRow[]).map(rowToPage);
+});
+
+export type PageInput = Omit<Page, "slug" | "sortOrder"> & {
+  slug?: string;
+  sortOrder?: number;
+};
+
+function assertValidPage(input: PageInput) {
+  if (!input.title?.trim()) throw new DataError("El título es obligatorio.");
+  if (!input.body?.trim()) throw new DataError("El contenido es obligatorio.");
+  if (!["legal", "ayuda", "empresa"].includes(input.placement)) {
+    throw new DataError("Selecciona dónde debe aparecer la página.");
+  }
+}
+
+export async function createPage(input: PageInput): Promise<Page> {
+  assertValidPage(input);
+
+  const { data: existing, error: readError } = await supabaseAdmin
+    .from("pages")
+    .select("slug");
+  if (readError) fail(`No se pudo comprobar el slug: ${readError.message}`);
+  const taken = new Set((existing as { slug: string }[]).map((p) => p.slug));
+  const slug = input.slug?.trim()
+    ? uniqueSlug(input.slug, taken)
+    : uniqueSlug(input.title, taken);
+
+  const { data, error } = await supabaseAdmin
+    .from("pages")
+    .insert({
+      slug,
+      title: input.title,
+      body: input.body,
+      placement: input.placement,
+      sort_order: input.sortOrder ?? 0,
+    })
+    .select()
+    .single();
+
+  if (error) fail(`No se pudo crear la página: ${error.message}`);
+  return rowToPage(data as PageRow);
+}
+
+export async function updatePage(slug: string, input: PageInput): Promise<Page> {
+  assertValidPage(input);
+
+  // El slug es la URL pública (/pagina/<slug>): no se permite cambiarlo.
+  const { data, error } = await supabaseAdmin
+    .from("pages")
+    .update({
+      title: input.title,
+      body: input.body,
+      placement: input.placement,
+      sort_order: input.sortOrder ?? 0,
+    })
+    .eq("slug", slug)
+    .select()
+    .single();
+
+  if (error) fail(`No se pudo actualizar la página: ${error.message}`);
+  if (!data) throw new DataError("Página no encontrada.", 404);
+  return rowToPage(data as PageRow);
+}
+
+export async function deletePage(slug: string): Promise<void> {
+  const { data, error } = await supabaseAdmin
+    .from("pages")
+    .delete()
+    .eq("slug", slug)
+    .select("slug");
+  if (error) fail(`No se pudo eliminar la página: ${error.message}`);
+  if (!data || data.length === 0) {
+    throw new DataError("Página no encontrada.", 404);
+  }
+}
+
+// ── Usuarios del panel de administración ───────────────────────────────
+
+type AdminUserRow = {
+  id: string;
+  name: string;
+  email: string;
+  password_hash: string;
+  role: AdminRole;
+  created_at: string;
+};
+
+/** Nunca incluye password_hash — eso solo lo maneja verifyAdminCredentials. */
+export type AdminUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: AdminRole;
+  createdAt: string;
+};
+
+function rowToAdminUser(row: AdminUserRow): AdminUser {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    role: row.role,
+    createdAt: row.created_at,
+  };
+}
+
+export async function getAdminUserCount(): Promise<number> {
+  const { count, error } = await supabaseAdmin
+    .from("admin_users")
+    .select("id", { count: "exact", head: true });
+  if (error) fail(`No se pudo comprobar los usuarios del panel: ${error.message}`);
+  return count ?? 0;
+}
+
+export async function getAllAdminUsers(): Promise<AdminUser[]> {
+  const { data, error } = await supabaseAdmin
+    .from("admin_users")
+    .select("id, name, email, role, created_at")
+    .order("created_at", { ascending: true });
+  if (error) fail(`No se pudieron cargar los usuarios del panel: ${error.message}`);
+  return (data as AdminUserRow[]).map(rowToAdminUser);
+}
+
+export async function getAdminUserById(id: string): Promise<AdminUser | null> {
+  const { data, error } = await supabaseAdmin
+    .from("admin_users")
+    .select("id, name, email, role, created_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) fail(`No se pudo cargar el usuario: ${error.message}`);
+  return data ? rowToAdminUser(data as AdminUserRow) : null;
+}
+
+/** Única función que toca password_hash — solo la usa el login. */
+export async function verifyAdminCredentials(
+  email: string,
+  password: string,
+): Promise<AdminUser | null> {
+  const { data, error } = await supabaseAdmin
+    .from("admin_users")
+    .select("*")
+    .eq("email", email.trim().toLowerCase())
+    .maybeSingle();
+  if (error) fail(`No se pudo verificar las credenciales: ${error.message}`);
+  if (!data) return null;
+  const row = data as AdminUserRow;
+  if (!verifyPassword(password, row.password_hash)) return null;
+  return rowToAdminUser(row);
+}
+
+async function countSuperadmins(excludingId?: string): Promise<number> {
+  let query = supabaseAdmin
+    .from("admin_users")
+    .select("id", { count: "exact", head: true })
+    .eq("role", "superadmin");
+  if (excludingId) query = query.neq("id", excludingId);
+  const { count, error } = await query;
+  if (error) fail(`No se pudo comprobar los superadmins: ${error.message}`);
+  return count ?? 0;
+}
+
+export type AdminUserInput = {
+  name: string;
+  email: string;
+  password: string;
+  role: AdminRole;
+};
+
+export async function createAdminUser(input: AdminUserInput): Promise<AdminUser> {
+  if (!input.name?.trim()) throw new DataError("El nombre es obligatorio.");
+  if (!input.email?.trim() || !input.email.includes("@")) {
+    throw new DataError("Ingresa un correo válido.");
+  }
+  if (!["superadmin", "editor", "viewer"].includes(input.role)) {
+    throw new DataError("Selecciona un rol válido.");
+  }
+  if (!input.password || input.password.length < 8) {
+    throw new DataError("La contraseña debe tener al menos 8 caracteres.");
+  }
+
+  const id = `admin-${randomUUID().slice(0, 8)}`;
+  const { data, error } = await supabaseAdmin
+    .from("admin_users")
+    .insert({
+      id,
+      name: input.name.trim(),
+      email: input.email.trim().toLowerCase(),
+      password_hash: hashPassword(input.password),
+      role: input.role,
+    })
+    .select("id, name, email, role, created_at")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      throw new DataError("Ya existe un usuario con ese correo.");
+    }
+    fail(`No se pudo crear el usuario: ${error.message}`);
+  }
+  return rowToAdminUser(data as AdminUserRow);
+}
+
+export type AdminUserUpdateInput = {
+  name: string;
+  role: AdminRole;
+  /** Vacío o ausente = no cambiar la contraseña actual. */
+  password?: string;
+};
+
+export async function updateAdminUser(
+  id: string,
+  input: AdminUserUpdateInput,
+): Promise<AdminUser> {
+  if (!input.name?.trim()) throw new DataError("El nombre es obligatorio.");
+  if (!["superadmin", "editor", "viewer"].includes(input.role)) {
+    throw new DataError("Selecciona un rol válido.");
+  }
+  if (input.password && input.password.length < 8) {
+    throw new DataError("La contraseña debe tener al menos 8 caracteres.");
+  }
+
+  const current = await getAdminUserById(id);
+  if (!current) throw new DataError("Usuario no encontrado.", 404);
+
+  if (current.role === "superadmin" && input.role !== "superadmin") {
+    const remaining = await countSuperadmins(id);
+    if (remaining === 0) {
+      throw new DataError(
+        "No puedes quitarle el rol de superadmin al único que queda.",
+      );
+    }
+  }
+
+  const patch: Record<string, unknown> = {
+    name: input.name.trim(),
+    role: input.role,
+  };
+  if (input.password) patch.password_hash = hashPassword(input.password);
+
+  const { data, error } = await supabaseAdmin
+    .from("admin_users")
+    .update(patch)
+    .eq("id", id)
+    .select("id, name, email, role, created_at")
+    .single();
+
+  if (error) fail(`No se pudo actualizar el usuario: ${error.message}`);
+  if (!data) throw new DataError("Usuario no encontrado.", 404);
+  return rowToAdminUser(data as AdminUserRow);
+}
+
+export async function deleteAdminUser(id: string): Promise<void> {
+  const current = await getAdminUserById(id);
+  if (!current) throw new DataError("Usuario no encontrado.", 404);
+
+  if (current.role === "superadmin") {
+    const remaining = await countSuperadmins(id);
+    if (remaining === 0) {
+      throw new DataError("No puedes eliminar al único superadmin que queda.");
+    }
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("admin_users")
+    .delete()
+    .eq("id", id)
+    .select("id");
+  if (error) fail(`No se pudo eliminar el usuario: ${error.message}`);
+  if (!data || data.length === 0) {
+    throw new DataError("Usuario no encontrado.", 404);
   }
 }
 

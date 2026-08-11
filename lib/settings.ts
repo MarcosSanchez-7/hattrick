@@ -1,5 +1,5 @@
 import { formatPrice } from "@/lib/format";
-import type { ProductNotice } from "@/lib/catalog";
+import type { NoticeIcon, ProductNotice } from "@/lib/catalog";
 
 /**
  * Contenido general del sitio editable desde /admin/generales: hero, footer
@@ -142,10 +142,40 @@ export const DEFAULT_PRODUCT_NOTICES: ProductNoticesSettings = {
   ],
 };
 
+export type ValueProp = { icon: NoticeIcon; title: string; text: string };
+
+export type ValuePropsSettings = { items: ValueProp[] };
+
+export const DEFAULT_VALUE_PROPS: ValuePropsSettings = {
+  items: [
+    {
+      icon: "truck",
+      title: "Envío en 48 h",
+      text: `Gratuito a partir de ${formatPrice(640000)}. Seguimiento en tiempo real.`,
+    },
+    {
+      icon: "print",
+      title: "Personalización oficial",
+      text: "Nombre y dorsal con la tipografía real de cada competición.",
+    },
+    {
+      icon: "shield",
+      title: "100 % originales",
+      text: "Distribuidor autorizado. Cada pedido incluye certificado.",
+    },
+    {
+      icon: "return",
+      title: "30 días de cambio",
+      text: "¿No es tu talla? La recogemos y la cambiamos sin coste.",
+    },
+  ],
+};
+
 export type SiteSettingsKey =
   | "hero"
   | "footer"
   | "navbar"
   | "customBanner"
   | "home"
-  | "productNotices";
+  | "productNotices"
+  | "valueProps";

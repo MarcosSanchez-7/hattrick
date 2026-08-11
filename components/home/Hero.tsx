@@ -74,8 +74,8 @@ export function Hero({ settings }: { settings: HeroSettings }) {
       {settings.stats.length > 0 ? (
         <div className="container">
           <div className="hero__stats-strip">
-            {settings.stats.map((stat) => (
-              <div key={stat.label}>
+            {settings.stats.map((stat, i) => (
+              <div key={i}>
                 <div className="hero__stat-value">{stat.value}</div>
                 <div className="meta">{stat.label}</div>
               </div>

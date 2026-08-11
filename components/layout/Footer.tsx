@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { topLevelCategories, type Category } from "@/lib/catalog";
+import { topLevelCategories, type Category, type Page } from "@/lib/catalog";
 import type { FooterSettings } from "@/lib/settings";
 import {
   IconInstagram,
@@ -7,23 +7,6 @@ import {
   IconX,
   IconYoutube,
 } from "@/components/ui/Icons";
-
-const AYUDA = [
-  ["Envíos y plazos", "/ayuda/envios"],
-  ["Devoluciones", "/ayuda/devoluciones"],
-  ["Guía de tallas", "/ayuda/tallas"],
-  ["Personalización", "/personalizacion"],
-  ["Seguimiento de pedido", "/ayuda/pedido"],
-  ["Contacto", "/ayuda/contacto"],
-];
-
-const EMPRESA = [
-  ["Sobre HATTRICK", "/sobre-nosotros"],
-  ["Tiendas físicas", "/tiendas"],
-  ["Autenticidad", "/autenticidad"],
-  ["Programa de socios", "/socios"],
-  ["Trabaja con nosotros", "/empleo"],
-];
 
 const SOCIALS: { key: keyof FooterSettings; icon: typeof IconInstagram; label: string }[] = [
   { key: "instagramUrl", icon: IconInstagram, label: "Instagram" },
@@ -35,10 +18,16 @@ const SOCIALS: { key: keyof FooterSettings; icon: typeof IconInstagram; label: s
 export function Footer({
   categories,
   settings,
+  pages,
 }: {
   categories: Category[];
   settings: FooterSettings;
+  pages: Page[];
 }) {
+  const ayuda = pages.filter((p) => p.placement === "ayuda");
+  const empresa = pages.filter((p) => p.placement === "empresa");
+  const legal = pages.filter((p) => p.placement === "legal");
+
   return (
     <footer className="footer">
       <div className="container">
@@ -86,24 +75,29 @@ export function Footer({
           <div className="footer__col">
             <p className="label footer__col-title">Ayuda</p>
             <ul>
-              {AYUDA.map(([label, href]) => (
-                <li key={href}>
-                  <Link href={href}>{label}</Link>
+              <li>
+                <Link href="/personalizacion">Personalización</Link>
+              </li>
+              {ayuda.map((p) => (
+                <li key={p.slug}>
+                  <Link href={`/pagina/${p.slug}`}>{p.title}</Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="footer__col">
-            <p className="label footer__col-title">Empresa</p>
-            <ul>
-              {EMPRESA.map(([label, href]) => (
-                <li key={href}>
-                  <Link href={href}>{label}</Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {empresa.length > 0 ? (
+            <div className="footer__col">
+              <p className="label footer__col-title">Empresa</p>
+              <ul>
+                {empresa.map((p) => (
+                  <li key={p.slug}>
+                    <Link href={`/pagina/${p.slug}`}>{p.title}</Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
 
         <div className="footer__bottom">
@@ -111,9 +105,11 @@ export function Footer({
             <span>
               © {new Date().getFullYear()} {settings.legalName}
             </span>
-            <Link href="/legal/privacidad">Privacidad</Link>
-            <Link href="/legal/cookies">Cookies</Link>
-            <Link href="/legal/terminos">Términos</Link>
+            {legal.map((p) => (
+              <Link key={p.slug} href={`/pagina/${p.slug}`}>
+                {p.title}
+              </Link>
+            ))}
           </div>
         </div>
       </div>

@@ -74,6 +74,18 @@ export type Category = {
 /** Etiqueta estandarizada del catálogo (ej. "Versión Fan"), con su color. */
 export type Tag = { name: string; color: string };
 
+/** Dónde aparece el enlace en el footer: franja legal, columna Ayuda o Empresa. */
+export type PagePlacement = "legal" | "ayuda" | "empresa";
+
+/** Página de contenido editable (Términos, Envíos, Contacto, etc.). */
+export type Page = {
+  slug: string;
+  title: string;
+  body: string;
+  placement: PagePlacement;
+  sortOrder: number;
+};
+
 export const SIZES_ADULT = ["P", "M", "G", "XL", "XXL"];
 export const SIZES_KIDS = ["4A", "6A", "8A", "10A", "12A", "14A"];
 

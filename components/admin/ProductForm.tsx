@@ -36,8 +36,10 @@ const STOCK_MODES: { value: StockMode; label: string; help: string }[] = [
 type FormState = {
   name: string;
   category: string;
-  price: string;
-  compareAt: string;
+  /** Precio normal del producto. */
+  regularPrice: string;
+  /** Precio de oferta, vacío = sin oferta. Debe ser menor al precio normal. */
+  offerPrice: string;
   costPrice: string;
   isNew: boolean;
   isVisible: boolean;
@@ -62,11 +64,16 @@ function toFormState(product?: Product): FormState {
     variantQuantities[v.size] = String(v.stock);
   }
 
+  // El precio "normal" es siempre el más alto de los dos si hay oferta —
+  // acá se invierte la relación price/compareAt guardada para que el admin
+  // piense "precio normal" + "precio oferta (opcional, más barato)".
+  const onSale = product?.compareAt != null;
+
   return {
     name: product?.name ?? "",
     category: product?.category ?? "",
-    price: product ? String(product.price) : "",
-    compareAt: product?.compareAt != null ? String(product.compareAt) : "",
+    regularPrice: product ? String(onSale ? product.compareAt : product.price) : "",
+    offerPrice: onSale ? String(product!.price) : "",
     costPrice: product?.costPrice != null ? String(product.costPrice) : "",
     isNew: product?.isNew ?? false,
     isVisible: product?.isVisible ?? true,
@@ -132,15 +139,23 @@ export function ProductForm({
     e.preventDefault();
     setError(null);
 
-    const price = Number(form.price);
-    const compareAt = form.compareAt.trim() ? Number(form.compareAt) : null;
+    const regularPrice = Number(form.regularPrice);
+    const offerPrice = form.offerPrice.trim() ? Number(form.offerPrice) : null;
 
     if (!form.category) {
       setError("Selecciona una categoría.");
       return;
     }
-    if (!Number.isFinite(price) || price <= 0) {
+    if (!Number.isFinite(regularPrice) || regularPrice <= 0) {
       setError("Introduce un precio válido.");
+      return;
+    }
+    if (offerPrice != null && (!Number.isFinite(offerPrice) || offerPrice <= 0)) {
+      setError("El precio oferta no es válido.");
+      return;
+    }
+    if (offerPrice != null && offerPrice >= regularPrice) {
+      setError("El precio oferta debe ser menor al precio normal.");
       return;
     }
     if (isPropio && Object.keys(form.variantQuantities).length === 0) {
@@ -151,8 +166,8 @@ export function ProductForm({
     const payload = {
       name: form.name.trim(),
       category: form.category,
-      price,
-      compareAt,
+      price: offerPrice ?? regularPrice,
+      compareAt: offerPrice != null ? regularPrice : null,
       costPrice: form.costPrice.trim() ? Number(form.costPrice) : null,
       isNew: form.isNew,
       isVisible: form.isVisible,
@@ -252,28 +267,29 @@ export function ProductForm({
         <p className="admin-fieldset__title">Precio y estado</p>
         <div className="admin-form__grid admin-form__grid--3">
           <div className="admin-field">
-            <label htmlFor="price">Precio (Gs.)</label>
+            <label htmlFor="regularPrice">Precio (Gs.)</label>
             <input
-              id="price"
+              id="regularPrice"
               type="number"
               step="1000"
               min="0"
               required
-              value={form.price}
-              onChange={(e) => update("price", e.target.value)}
+              value={form.regularPrice}
+              onChange={(e) => update("regularPrice", e.target.value)}
             />
           </div>
           <div className="admin-field">
-            <label htmlFor="compareAt">Precio anterior (Gs., oferta)</label>
+            <label htmlFor="offerPrice">Precio oferta (Gs.)</label>
             <input
-              id="compareAt"
+              id="offerPrice"
               type="number"
               step="1000"
               min="0"
-              value={form.compareAt}
-              onChange={(e) => update("compareAt", e.target.value)}
+              value={form.offerPrice}
+              onChange={(e) => update("offerPrice", e.target.value)}
               placeholder="Vacío = sin oferta"
             />
+            <p className="admin-help">Debe ser menor al precio normal.</p>
           </div>
           <div className="admin-field">
             <label htmlFor="costPrice">Precio de costo (Gs., opcional)</label>
