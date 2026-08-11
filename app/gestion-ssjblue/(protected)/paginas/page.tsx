@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAllPages } from "@/lib/data";
 import { PagesTable } from "@/components/admin/PagesTable";
+import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Páginas" };
@@ -10,6 +11,7 @@ export default async function AdminPagesPage() {
 
   return (
     <>
+      <AdminBackLink href="/gestion-ssjblue" label="Panel" />
       <div className="admin-page-head">
         <div>
           <h1 className="h1">Páginas</h1>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAllCategories, getAllProducts } from "@/lib/data";
 import { CategoriesTable } from "@/components/admin/CategoriesTable";
+import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Categorías" };
@@ -18,6 +19,7 @@ export default async function AdminCategoriesPage() {
 
   return (
     <>
+      <AdminBackLink href="/gestion-ssjblue" label="Panel" />
       <div className="admin-page-head">
         <div>
           <h1 className="h1">Categorías</h1>

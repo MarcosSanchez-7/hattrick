@@ -103,8 +103,10 @@ export default async function AdminDashboard() {
                         <div style={{ fontWeight: 600 }}>{p.name}</div>
                       </div>
                     </td>
-                    <td>{formatPrice(p.price)}</td>
-                    <td>{p.isNew ? <span className="badge">Nuevo</span> : "—"}</td>
+                    <td data-label="Precio">{formatPrice(p.price)}</td>
+                    <td data-label="Novedad">
+                      {p.isNew ? <span className="badge">Nuevo</span> : "—"}
+                    </td>
                     <td>
                       <Link
                         href={`/gestion-ssjblue/productos/${p.id}`}

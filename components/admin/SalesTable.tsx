@@ -41,8 +41,8 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
           <table className="admin-table">
             <thead>
               <tr>
-                <th>Fecha</th>
                 <th>Artículo</th>
+                <th>Fecha</th>
                 <th>Cant.</th>
                 <th>Precio compra</th>
                 <th>Precio venta</th>
@@ -53,18 +53,18 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
             <tbody>
               {rows.map(({ sale, item }) => (
                 <tr key={item.id}>
-                  <td className="meta">
-                    {dateTimeFormatter.format(new Date(sale.soldAt))}
-                  </td>
                   <td>
                     <div style={{ fontWeight: 600 }}>{item.name}</div>
                     <div className="meta">Talla {item.size}</div>
                   </td>
-                  <td>{item.quantity}</td>
-                  <td>{formatPrice(item.costPrice)}</td>
-                  <td>{formatPrice(item.unitPrice)}</td>
-                  <td>{formatPrice(lineProfit(item))}</td>
-                  <td>
+                  <td className="meta" data-label="Fecha">
+                    {dateTimeFormatter.format(new Date(sale.soldAt))}
+                  </td>
+                  <td data-label="Cant.">{item.quantity}</td>
+                  <td data-label="Precio compra">{formatPrice(item.costPrice)}</td>
+                  <td data-label="Precio venta">{formatPrice(item.unitPrice)}</td>
+                  <td data-label="Ganancia">{formatPrice(lineProfit(item))}</td>
+                  <td data-label="Canal">
                     <span className="meta">{channelLabel(sale.channel)}</span>
                   </td>
                 </tr>

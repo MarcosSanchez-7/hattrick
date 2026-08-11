@@ -68,8 +68,12 @@ export function AdminUsersTable({
                     </span>
                   ) : null}
                 </td>
-                <td className="meta">{u.email}</td>
-                <td className="meta">{ROLE_LABEL[u.role] ?? u.role}</td>
+                <td className="meta" data-label="Correo">
+                  {u.email}
+                </td>
+                <td className="meta" data-label="Rol">
+                  {ROLE_LABEL[u.role] ?? u.role}
+                </td>
                 <td>
                   <div className="admin-row-actions">
                     <Link

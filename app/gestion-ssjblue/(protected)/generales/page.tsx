@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { IconArrow } from "@/components/ui/Icons";
+import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
 export const metadata = { title: "Generales" };
 
@@ -54,6 +55,7 @@ const SECTIONS = [
 export default function GeneralesPage() {
   return (
     <>
+      <AdminBackLink href="/gestion-ssjblue" label="Panel" />
       <div className="admin-page-head">
         <div>
           <h1 className="h1">Generales</h1>

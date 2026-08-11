@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getSales } from "@/lib/data";
 import { SalesTable } from "@/components/admin/SalesTable";
+import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Ventas" };
@@ -25,6 +26,7 @@ export default async function VentasPage({
 
   return (
     <>
+      <AdminBackLink href="/gestion-ssjblue" label="Panel" />
       <div className="admin-page-head">
         <div>
           <h1 className="h1">Ventas diarias</h1>

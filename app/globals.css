@@ -3041,6 +3041,61 @@ textarea {
     min-width: 0;
     width: 100%;
   }
+
+  /* Las tablas del admin dejan de desbordar horizontalmente: cada fila
+     pasa a ser una tarjeta apilada, con el nombre/foto arriba, los datos
+     como pares "etiqueta: valor" en el medio, y las acciones al final. */
+  .admin-table-wrap {
+    overflow-x: visible;
+  }
+  .admin-table thead {
+    display: none;
+  }
+  .admin-table,
+  .admin-table tbody,
+  .admin-table tr,
+  .admin-table td {
+    display: block;
+    width: 100%;
+  }
+  .admin-table tr {
+    border: 1px solid var(--line);
+    padding: var(--sp-4);
+    margin-bottom: var(--sp-3);
+  }
+  .admin-table td {
+    border: none;
+    padding: 0;
+  }
+  .admin-table td:not([data-label]) {
+    padding-block: var(--sp-2);
+  }
+  .admin-table td:not([data-label]):first-child {
+    padding-top: 0;
+    padding-bottom: var(--sp-3);
+    margin-bottom: var(--sp-2);
+    border-bottom: 1px solid var(--line);
+  }
+  .admin-table td[data-label] {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--sp-3);
+    padding-block: 6px;
+  }
+  .admin-table td[data-label] ~ td[data-label] {
+    border-top: 1px solid var(--line);
+  }
+  .admin-table td[data-label]::before {
+    content: attr(data-label);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+    flex-shrink: 0;
+  }
+  .admin-row-actions {
+    flex-wrap: wrap;
+  }
 }
 
 @media (max-width: 400px) {

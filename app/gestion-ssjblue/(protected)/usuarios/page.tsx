@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getAllAdminUsers } from "@/lib/data";
 import { getCurrentAdmin } from "@/lib/admin-session";
 import { AdminUsersTable } from "@/components/admin/AdminUsersTable";
+import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Usuarios" };
@@ -16,6 +17,7 @@ export default async function AdminUsersPage() {
 
   return (
     <>
+      <AdminBackLink href="/gestion-ssjblue" label="Panel" />
       <div className="admin-page-head">
         <div>
           <h1 className="h1">Usuarios</h1>

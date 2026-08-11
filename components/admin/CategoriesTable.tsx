@@ -122,9 +122,11 @@ export function CategoriesTable({
                         </div>
                       </div>
                     </td>
-                    <td className="meta">{c.tagline}</td>
-                    <td>{count}</td>
-                    <td>
+                    <td className="meta" data-label="Eslogan">
+                      {c.tagline}
+                    </td>
+                    <td data-label="Productos">{count}</td>
+                    <td data-label="Estado">
                       {c.isVisible ? (
                         <span className="meta">Visible</span>
                       ) : (

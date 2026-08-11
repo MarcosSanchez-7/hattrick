@@ -219,8 +219,10 @@ function ProductRowsTable({
                   <div style={{ fontWeight: 600 }}>{p.name}</div>
                 </div>
               </td>
-              {hideCategoryColumn ? null : <td>{categoryName(p.category)}</td>}
-              <td>
+              {hideCategoryColumn ? null : (
+                <td data-label="Categoría">{categoryName(p.category)}</td>
+              )}
+              <td data-label="Precio">
                 {formatPrice(p.price)}
                 {isOnSale(p) ? (
                   <span className="meta" style={{ marginLeft: 6 }}>
@@ -228,7 +230,7 @@ function ProductRowsTable({
                   </span>
                 ) : null}
               </td>
-              <td>
+              <td data-label="Estado">
                 {!p.isVisible ? (
                   <span className="badge badge--out">Oculto</span>
                 ) : p.stockMode !== "propio" ? (

@@ -59,7 +59,9 @@ export function PagesTable({ pages }: { pages: Page[] }) {
               {pages.map((p) => (
                 <tr key={p.slug}>
                   <td style={{ fontWeight: 600 }}>{p.title}</td>
-                  <td className="meta">{PLACEMENT_LABEL[p.placement]}</td>
+                  <td className="meta" data-label="Dónde aparece">
+                    {PLACEMENT_LABEL[p.placement]}
+                  </td>
                   <td>
                     <div className="admin-row-actions">
                       <Link
