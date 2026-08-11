@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { CONSULT_SIZE_LABEL, needsSizeSelection, type Product } from "@/lib/catalog";
 import { useCart } from "@/components/cart/CartProvider";
 import { IconBag } from "@/components/ui/Icons";
@@ -37,6 +37,13 @@ function flyToCart(source: HTMLElement) {
   setTimeout(() => clone.remove(), 550);
 }
 
+/**
+ * Clic directo en el botón = añadir sin salir de la página (nunca navega).
+ * Cuando el producto lleva stock por talla y hace falta elegir cuál, en vez
+ * de mandar al cliente a la ficha se abre un selector chiquito ahí mismo —
+ * así puede seguir agregando varios productos sin perder el lugar. Abrir la
+ * ficha queda reservado para tocar la foto del producto (el Link del card).
+ */
 export function QuickAddButton({
   product,
   className,
@@ -45,26 +52,98 @@ export function QuickAddButton({
   className?: string;
 }) {
   const { add } = useCart();
-  const router = useRouter();
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [pickerAnchor, setPickerAnchor] = useState<{ top: number; left: number } | null>(null);
+
+  const soldOut = product.soldOut ?? [];
+  const availableSizes = product.sizes.filter((s) => !soldOut.includes(s));
+  const requiresSize = needsSizeSelection(product);
+  const disabled = requiresSize && availableSizes.length === 0;
+
+  useEffect(() => {
+    if (!pickerAnchor) return;
+    const close = () => setPickerAnchor(null);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
+    document.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [pickerAnchor]);
+
+  const addSize = (size: string) => {
+    if (buttonRef.current) flyToCart(buttonRef.current);
+    add(product, size, 1, { silent: true });
+    setPickerAnchor(null);
+  };
 
   return (
-    <button
-      type="button"
-      className={`quick-add${className ? ` ${className}` : ""}`}
-      aria-label="Añadir al carrito"
-      title="Añadir al carrito"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (needsSizeSelection(product)) {
-          router.push(`/producto/${product.slug}`);
-          return;
-        }
-        flyToCart(e.currentTarget);
-        add(product, CONSULT_SIZE_LABEL, 1, { silent: true });
-      }}
-    >
-      <IconBag className="icon--sm" />
-    </button>
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        className={`quick-add${className ? ` ${className}` : ""}`}
+        aria-label="Añadir al carrito"
+        title={disabled ? "Sin stock" : "Añadir al carrito"}
+        disabled={disabled}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (requiresSize) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            setPickerAnchor({ top: rect.top, left: rect.left + rect.width / 2 });
+            return;
+          }
+          flyToCart(e.currentTarget);
+          add(product, CONSULT_SIZE_LABEL, 1, { silent: true });
+        }}
+      >
+        <IconBag className="icon--sm" />
+      </button>
+
+      {pickerAnchor ? (
+        <>
+          <button
+            type="button"
+            className="quick-add-picker__scrim"
+            aria-label="Cerrar selector de talla"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setPickerAnchor(null);
+            }}
+          />
+          <div
+            className="quick-add-picker"
+            style={{ top: pickerAnchor.top, left: pickerAnchor.left }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
+            <p className="quick-add-picker__title">Elegí la talla</p>
+            <div className="sizes">
+              {availableSizes.map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  className="size"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addSize(size);
+                  }}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : null}
+    </>
   );
 }

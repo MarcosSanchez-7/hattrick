@@ -3126,6 +3126,45 @@ textarea {
   will-change: transform, opacity;
 }
 
+.quick-add:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.quick-add-picker__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: transparent;
+  cursor: default;
+}
+
+.quick-add-picker {
+  position: fixed;
+  z-index: 201;
+  transform: translate(-50%, calc(-100% - 12px));
+  width: max-content;
+  max-width: min(240px, calc(100vw - var(--sp-5) * 2));
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  padding: var(--sp-3);
+  animation: fade-in 0.16s var(--ease);
+}
+
+.quick-add-picker__title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  margin-bottom: var(--sp-2);
+}
+
+.quick-add-picker .size {
+  min-width: 42px;
+  height: 38px;
+  font-size: 0.8125rem;
+}
+
 button[aria-pressed='true'] .wishlist-heart-icon {
   fill: currentColor;
 }
