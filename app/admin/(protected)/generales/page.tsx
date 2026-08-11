@@ -15,6 +15,11 @@ const SECTIONS = [
     description: "Titular, texto, botones y estadísticas de la home.",
   },
   {
+    href: "/admin/generales/informacion",
+    title: "Franja de información",
+    description: "Los 4 ítems (envío, personalización, etc.) debajo del Hero.",
+  },
+  {
     href: "/admin/generales/navbar",
     title: "Menú y avisos",
     description: "Mensajes de la barra superior y enlaces extra del menú.",

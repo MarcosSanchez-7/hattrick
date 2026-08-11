@@ -515,3 +515,123 @@ alter table tags enable row level security;
 -- ═══════════════════════════════════════════════════════════════════════════
 
 alter table categories add column if not exists notices jsonb;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Páginas de contenido editables (Términos, Privacidad, Envíos, Contacto,
+-- etc.) — antes el footer enlazaba a rutas que no existían. Cada página
+-- tiene un lugar fijo en el sitio (placement): "legal" va en la franja
+-- inferior del footer, "ayuda" y "empresa" en sus columnas correspondientes.
+-- Se pueden crear, editar y borrar libremente desde /admin/paginas; el
+-- footer solo muestra las que existen en la tabla.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists pages (
+  slug text primary key,
+  title text not null,
+  body text not null,
+  placement text not null check (placement in ('legal', 'ayuda', 'empresa')),
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+alter table pages enable row level security;
+
+create index if not exists pages_placement_idx on pages (placement);
+
+-- Contenido inicial real (no genérico de relleno), pensado para esta tienda
+-- puntual: catálogo informativo, venta cerrada por WhatsApp, sin pasarela de
+-- pago propia, envíos a todo Paraguay. Editable después desde el admin.
+insert into pages (slug, title, body, placement, sort_order) values
+(
+  'terminos',
+  'Términos y Condiciones',
+  E'Estos Términos y Condiciones regulan el uso del sitio web de HATTRICK y la compra de los productos que se ofrecen en él. Al navegar o realizar un pedido, aceptás estas condiciones.\n\nHATTRICK comercializa camisetas de fútbol, oficiales, de importación y personalizadas, en Paraguay. Los precios publicados están expresados en guaraníes (Gs.) e incluyen IVA.\n\nEl sitio web funciona como catálogo: no procesamos pagos en línea. Una vez elegido el producto, la talla y la cantidad, la compra se coordina y se confirma directamente por WhatsApp, donde se define la forma de pago y de entrega.\n\nEl stock, los precios y las promociones pueden cambiar sin previo aviso. Confirmamos disponibilidad real al momento de coordinar tu pedido por WhatsApp.\n\nLos productos personalizados con nombre y dorsal se confeccionan a pedido y no admiten cambio de talla ni devolución, salvo error nuestro en la confección.\n\nPara cambios de talla en productos sin personalizar, aplica la Política de Devoluciones y Cambios publicada en este sitio.\n\nNos reservamos el derecho de no procesar un pedido ante indicios de error, fraude o falta de stock real, informando al cliente por WhatsApp.\n\nCualquier consulta sobre estos términos puede hacerse por WhatsApp o Instagram, según los datos de contacto publicados en el sitio.',
+  'legal',
+  1
+),
+(
+  'privacidad',
+  'Política de Privacidad',
+  E'En HATTRICK respetamos tu privacidad. Esta página explica qué datos usamos y para qué.\n\nNo tenemos un sistema de cuentas de usuario. Los datos que guarda el sitio en tu propio navegador (favoritos y carrito de compra) quedan almacenados localmente en tu dispositivo y no se envían a nuestros servidores hasta que decidís continuar la compra por WhatsApp.\n\nCuando coordinás una compra por WhatsApp, nos compartís voluntariamente los datos necesarios para procesarla: nombre, número de teléfono, dirección de entrega y, si corresponde, el nombre y dorsal para personalización. Usamos esos datos únicamente para gestionar tu pedido y comunicarnos con vos sobre él.\n\nNo vendemos ni compartimos tus datos con terceros con fines comerciales.\n\nSi en algún momento querés que eliminemos tus datos de nuestras conversaciones o registros de venta, escribinos por WhatsApp y lo resolvemos.',
+  'legal',
+  2
+),
+(
+  'cookies',
+  'Política de Cookies',
+  E'Este sitio no utiliza cookies de terceros con fines publicitarios ni de seguimiento entre páginas.\n\nPara que la tienda funcione, guardamos cierta información técnica directamente en tu navegador (no en cookies tradicionales, sino en almacenamiento local): los productos que agregaste al carrito y los que marcaste como favoritos. Esa información es privada de tu navegador y se borra si limpiás los datos de navegación.\n\nSi en el futuro incorporamos herramientas de estadísticas o publicidad que usen cookies, actualizaremos esta página para explicarlo.',
+  'legal',
+  3
+),
+(
+  'envios',
+  'Envíos y plazos',
+  E'Realizamos envíos a todo Paraguay.\n\nLa entrega estándar de productos con stock propio tiene un plazo estimado de 48 horas hábiles desde que se confirma el pedido por WhatsApp. También ofrecemos envío express en 24 horas por un costo adicional.\n\nEl envío es gratuito a partir de Gs. 640.000 en compras con stock propio.\n\nLos productos importados o bajo pedido (por ejemplo, la categoría Importados) tienen un plazo de entrega más largo, que te confirmamos al coordinar la compra según el artículo, generalmente entre 25 y 30 días.\n\nLa forma de envío (moto, encomienda, punto de retiro) se coordina por WhatsApp según tu ubicación.',
+  'ayuda',
+  1
+),
+(
+  'devoluciones',
+  'Devoluciones y cambios',
+  E'Si la talla no te queda bien, tenés 30 días desde la entrega para cambiarla, sin costo adicional.\n\nPara que el cambio sea posible, el producto no debe tener uso y debe conservar sus etiquetas originales.\n\nLos productos personalizados con nombre y dorsal no admiten cambio de talla, salvo que el error en la confección haya sido nuestro.\n\nPara iniciar un cambio, escribinos por WhatsApp con tu nombre y el producto: coordinamos el retiro o el punto de entrega según tu zona.',
+  'ayuda',
+  2
+),
+(
+  'tallas',
+  'Guía de tallas',
+  E'Nuestras camisetas usan talles P, M, G, XL y XXL, equivalentes a S, M, L, XL y XXL internacional.\n\nComo el corte puede variar un poco según el modelo y el proveedor, si tenés dudas sobre qué talla elegir escribinos por WhatsApp con tu contextura o con las medidas de una remera que ya uses: te ayudamos a elegir la talla correcta antes de confirmar la compra.\n\nRecordá que, si de todas formas la talla no queda bien, tenés 30 días para cambiarla según nuestra Política de Devoluciones y Cambios.',
+  'ayuda',
+  3
+),
+(
+  'pedido',
+  'Seguimiento de pedido',
+  E'Como las compras se coordinan y confirman por WhatsApp, no tenemos todavía un sistema de seguimiento online de pedidos.\n\nPara consultar el estado de tu compra, escribinos por WhatsApp con tu nombre y la fecha aproximada del pedido, y te contamos en qué etapa está (preparación, envío o entrega).',
+  'ayuda',
+  4
+),
+(
+  'contacto',
+  'Contacto',
+  E'La forma más rápida de contactarnos es por WhatsApp, con el botón flotante que encontrás en cualquier página del sitio.\n\nTambién podés escribirnos por nuestras redes sociales, que encontrás en el pie de página.\n\nNo contamos con local físico de atención al público por el momento: toda la operación es por WhatsApp y envíos a todo el país.',
+  'ayuda',
+  5
+),
+(
+  'sobre-nosotros',
+  'Sobre HATTRICK',
+  E'HATTRICK nace de la pasión por el fútbol y por las camisetas que representan a los equipos y selecciones que seguimos. Armamos un catálogo con equipaciones de Europa, Sudamérica, selecciones para el Mundial 2026, ediciones retro y opciones de importación bajo pedido.\n\nTrabajamos con un catálogo organizado por categorías, así es más fácil encontrar la camiseta que buscás según el torneo o la región. Además, ofrecemos un servicio de personalización para sumarle el nombre y el dorsal que quieras a cualquier camiseta del catálogo.\n\nToda la operación es simple y directa: elegís el producto en la web, y cerramos los detalles de la compra por WhatsApp.',
+  'empresa',
+  1
+),
+(
+  'autenticidad',
+  'Autenticidad',
+  E'Cada producto de nuestro catálogo indica en su categoría y descripción qué tipo de artículo es: equipaciones de las categorías Europa, Sudamérica y Mundial 2026, ediciones Retro, o productos de la categoría Importados. Así sabés exactamente qué estás comprando antes de confirmar el pedido.\n\nRevisamos la calidad de cada artículo antes de enviarlo. Si al recibirlo encontrás algún defecto de fabricación, escribinos por WhatsApp dentro de los 30 días y lo resolvemos con un cambio.\n\nSi tenés dudas sobre el tipo de tela, el corte o el origen de un modelo puntual, preguntanos por WhatsApp antes de comprar: te contamos con el detalle que necesites.',
+  'empresa',
+  2
+)
+on conflict (slug) do nothing;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Usuarios del panel de administración. Antes /admin no tenía ninguna
+-- autenticación a propósito; ahora sí, con roles pensados para escalar:
+-- "superadmin" tiene acceso total, y los roles nuevos (editor, viewer) se
+-- van habilitando en el mapa de permisos en lib/admin-auth.ts sin necesitar
+-- otra migración. La contraseña nunca se guarda en texto plano: se hashea
+-- con scrypt (Node nativo) antes de insertarse.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists admin_users (
+  id text primary key,
+  name text not null,
+  email text not null unique,
+  password_hash text not null,
+  role text not null default 'superadmin' check (role in ('superadmin', 'editor', 'viewer')),
+  created_at timestamptz not null default now()
+);
+
+alter table admin_users enable row level security;
+
+create index if not exists admin_users_email_idx on admin_users (lower(email));

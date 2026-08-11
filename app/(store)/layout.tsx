@@ -1,4 +1,4 @@
-import { getAllCategories, getAllProducts, getSetting } from "@/lib/data";
+import { getAllCategories, getAllPages, getAllProducts, getSetting } from "@/lib/data";
 import { DEFAULT_FOOTER, DEFAULT_NAVBAR } from "@/lib/settings";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { CartDrawer } from "@/components/cart/CartDrawer";
@@ -15,10 +15,11 @@ export const dynamic = "force-dynamic";
 export default async function StoreLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [categories, products, navbarSettings, footerSettings] =
+  const [categories, products, pages, navbarSettings, footerSettings] =
     await Promise.all([
       getAllCategories(),
       getAllProducts(),
+      getAllPages(),
       getSetting("navbar", DEFAULT_NAVBAR),
       getSetting("footer", DEFAULT_FOOTER),
     ]);
@@ -33,7 +34,7 @@ export default async function StoreLayout({
           extraLinks={navbarSettings.extraLinks}
         />
         <main>{children}</main>
-        <Footer categories={categories} settings={footerSettings} />
+        <Footer categories={categories} settings={footerSettings} pages={pages} />
         <CartDrawer />
         <CartStockToast />
         <WishlistToast />
