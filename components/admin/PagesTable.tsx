@@ -72,7 +72,7 @@ export function PagesTable({ pages }: { pages: Page[] }) {
                         <IconExternal className="icon--sm" />
                       </Link>
                       <Link
-                        href={`/admin/paginas/${p.slug}`}
+                        href={`/gestion-ssjblue/paginas/${p.slug}`}
                         className="btn btn--ghost btn--sm"
                         style={{ height: 32, paddingInline: 12 }}
                       >

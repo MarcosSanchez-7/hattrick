@@ -21,16 +21,16 @@ type NavItem = {
 };
 
 const ITEMS: NavItem[] = [
-  { href: "/admin", label: "Panel", icon: IconLayout, exact: true },
-  { href: "/admin/productos", label: "Productos", icon: IconGrid },
-  { href: "/admin/categorias", label: "Categorías", icon: IconTag },
-  { href: "/admin/paginas", label: "Páginas", icon: IconDocument },
-  { href: "/admin/ventas", label: "Ventas", icon: IconReceipt },
-  { href: "/admin/generales", label: "Generales", icon: IconSettings },
+  { href: "/gestion-ssjblue", label: "Panel", icon: IconLayout, exact: true },
+  { href: "/gestion-ssjblue/productos", label: "Productos", icon: IconGrid },
+  { href: "/gestion-ssjblue/categorias", label: "Categorías", icon: IconTag },
+  { href: "/gestion-ssjblue/paginas", label: "Páginas", icon: IconDocument },
+  { href: "/gestion-ssjblue/ventas", label: "Ventas", icon: IconReceipt },
+  { href: "/gestion-ssjblue/generales", label: "Generales", icon: IconSettings },
 ];
 
 const SUPERADMIN_ITEM: NavItem = {
-  href: "/admin/usuarios",
+  href: "/gestion-ssjblue/usuarios",
   label: "Usuarios",
   icon: IconUser,
 };

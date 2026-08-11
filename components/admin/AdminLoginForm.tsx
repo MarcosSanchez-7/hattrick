@@ -22,7 +22,7 @@ export function AdminLoginForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "No se pudo iniciar sesión.");
-      router.push("/admin");
+      router.push("/gestion-ssjblue");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado.");

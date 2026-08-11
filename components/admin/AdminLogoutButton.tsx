@@ -12,7 +12,7 @@ export function AdminLogoutButton() {
     try {
       await fetch("/api/admin/logout", { method: "POST" });
     } finally {
-      router.push("/admin/login");
+      router.push("/gestion-ssjblue/login");
       router.refresh();
     }
   };

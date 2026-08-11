@@ -51,7 +51,7 @@ export function AdminUserForm({ user }: { user?: AdminUser }) {
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "No se pudo guardar el usuario.");
-      router.push("/admin/usuarios");
+      router.push("/gestion-ssjblue/usuarios");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado.");
@@ -126,7 +126,7 @@ export function AdminUserForm({ user }: { user?: AdminUser }) {
         <button
           type="button"
           className="btn btn--ghost btn--sm"
-          onClick={() => router.push("/admin/usuarios")}
+          onClick={() => router.push("/gestion-ssjblue/usuarios")}
         >
           Cancelar
         </button>

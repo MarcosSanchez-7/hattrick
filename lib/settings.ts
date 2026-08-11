@@ -2,7 +2,7 @@ import { formatPrice } from "@/lib/format";
 import type { NoticeIcon, ProductNotice } from "@/lib/catalog";
 
 /**
- * Contenido general del sitio editable desde /admin/generales: hero, footer
+ * Contenido general del sitio editable desde /gestion-ssjblue/generales: hero, footer
  * y navbar. Se guarda en la tabla site_settings (clave -> jsonb) para poder
  * seguir añadiendo ajustes sin migraciones nuevas cada vez.
  */

@@ -91,7 +91,7 @@ export function CategoryForm({
       if (!res.ok) {
         throw new Error(data.error ?? "No se pudo guardar la categoría.");
       }
-      router.push("/admin/categorias");
+      router.push("/gestion-ssjblue/categorias");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado.");
@@ -206,7 +206,7 @@ export function CategoryForm({
         <button
           type="button"
           className="btn btn--ghost btn--sm"
-          onClick={() => router.push("/admin/categorias")}
+          onClick={() => router.push("/gestion-ssjblue/categorias")}
         >
           Cancelar
         </button>

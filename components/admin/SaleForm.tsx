@@ -118,7 +118,7 @@ export function SaleForm({ products }: { products: Product[] }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "No se pudo registrar la venta.");
-      router.push("/admin/ventas");
+      router.push("/gestion-ssjblue/ventas");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado.");
@@ -344,7 +344,7 @@ export function SaleForm({ products }: { products: Product[] }) {
         <button
           type="button"
           className="btn btn--ghost btn--sm"
-          onClick={() => router.push("/admin/ventas")}
+          onClick={() => router.push("/gestion-ssjblue/ventas")}
         >
           Cancelar
         </button>

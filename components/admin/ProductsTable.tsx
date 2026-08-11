@@ -267,7 +267,7 @@ function ProductRowsTable({
                     )}
                   </button>
                   <Link
-                    href={`/admin/productos/${p.id}`}
+                    href={`/gestion-ssjblue/productos/${p.id}`}
                     className="btn btn--ghost btn--sm"
                     style={{ height: 32, paddingInline: 12 }}
                   >

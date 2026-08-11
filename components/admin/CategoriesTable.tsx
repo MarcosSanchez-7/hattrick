@@ -143,7 +143,7 @@ export function CategoriesTable({
                           <IconExternal className="icon--sm" />
                         </Link>
                         <Link
-                          href={`/admin/categorias/nueva?parent=${c.slug}`}
+                          href={`/gestion-ssjblue/categorias/nueva?parent=${c.slug}`}
                           className="admin-icon-btn"
                           aria-label="Añadir subcategoría"
                           title="Añadir subcategoría"
@@ -165,7 +165,7 @@ export function CategoriesTable({
                           )}
                         </button>
                         <Link
-                          href={`/admin/categorias/${c.slug}`}
+                          href={`/gestion-ssjblue/categorias/${c.slug}`}
                           className="btn btn--ghost btn--sm"
                           style={{ height: 32, paddingInline: 12 }}
                         >

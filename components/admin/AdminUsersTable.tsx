@@ -73,7 +73,7 @@ export function AdminUsersTable({
                 <td>
                   <div className="admin-row-actions">
                     <Link
-                      href={`/admin/usuarios/${u.id}`}
+                      href={`/gestion-ssjblue/usuarios/${u.id}`}
                       className="btn btn--ghost btn--sm"
                       style={{ height: 32, paddingInline: 12 }}
                     >

@@ -3,7 +3,7 @@ import { verifyAdminSessionToken } from "@/lib/admin-auth";
 
 const COOKIE_NAME = "hattrick_admin_session";
 
-const PUBLIC_ADMIN_PATHS = ["/admin/login", "/admin/setup"];
+const PUBLIC_ADMIN_PATHS = ["/gestion-ssjblue/login", "/gestion-ssjblue/setup"];
 const PUBLIC_API_PATHS = [
   "/api/admin/login",
   "/api/admin/setup",
@@ -13,9 +13,9 @@ const PUBLIC_API_PATHS = [
 /**
  * proxy.ts (antes middleware.ts — renombrado en Next.js 16). Única
  * responsabilidad: chequeo OPTIMISTA de la sesión del panel de admin (solo
- * firma/expiración del JWT, sin tocar la base) para /admin/** y
+ * firma/expiración del JWT, sin tocar la base) para /gestion-ssjblue/** y
  * /api/admin/**. El chequeo autoritativo (¿el admin sigue existiendo?) vive
- * en app/admin/(protected)/layout.tsx, vía getCurrentAdmin().
+ * en app/gestion-ssjblue/(protected)/layout.tsx, vía getCurrentAdmin().
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -32,12 +32,12 @@ export async function proxy(request: NextRequest) {
     if (isApi) {
       return NextResponse.json({ error: "No autorizado." }, { status: 401 });
     }
-    return NextResponse.redirect(new URL("/admin/login", request.url));
+    return NextResponse.redirect(new URL("/gestion-ssjblue/login", request.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: ["/gestion-ssjblue/:path*", "/api/admin/:path*"],
 };
