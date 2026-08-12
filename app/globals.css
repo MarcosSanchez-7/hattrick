@@ -2511,6 +2511,7 @@ textarea {
 }
 
 .admin-stat {
+  min-width: 0;
   background: var(--surface);
   border: 1px solid var(--line);
   padding: var(--sp-4) var(--sp-5);
@@ -2521,6 +2522,7 @@ textarea {
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.1;
+  overflow-wrap: break-word;
 }
 
 .admin-stat__label {
