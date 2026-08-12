@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Category, Product } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
+import { ProductVisual } from "@/components/product/ProductVisual";
 import { IconChevron, IconFolder } from "@/components/ui/Icons";
 import { StockAdjustForm } from "@/components/admin/StockAdjustForm";
 
@@ -13,6 +14,9 @@ type ProductStockRow = {
   productName: string;
   category: string;
   costPrice: number | null;
+  images?: string[];
+  colors: Product["colors"];
+  pattern: Product["pattern"];
   variants: { variantId: string; size: string; stock: number }[];
 };
 
@@ -32,6 +36,9 @@ function toRows(products: Product[]): ProductStockRow[] {
       productName: p.name,
       category: p.category,
       costPrice: p.costPrice ?? null,
+      images: p.images,
+      colors: p.colors,
+      pattern: p.pattern,
       variants: p.variants.map((v) => ({ variantId: v.id, size: v.size, stock: v.stock })),
     });
   }
@@ -116,11 +123,12 @@ export function InventoryTable({
       ) : (
         <>
           <p className="admin-help" style={{ padding: "0 var(--sp-5)", marginTop: 0 }}>
-            Tocá una talla para reponer o corregir su stock. Ámbar = stock
-            bajo (≤ {LOW_STOCK_THRESHOLD}), rojo = agotado.
+            Tocá el nombre de un producto para ver sus tallas. Dentro, tocá
+            una talla para reponer o corregir su stock. Ámbar = stock bajo
+            (≤ {LOW_STOCK_THRESHOLD}), rojo = agotado.
           </p>
           {isSearching ? (
-            <InventoryRowsTable rows={filtered} onAdjust={setAdjusting} />
+            <InventoryProductList rows={filtered} onAdjust={setAdjusting} />
           ) : (
             groups.map((group) => {
               const isExpanded = expanded.has(group.slug);
@@ -140,7 +148,7 @@ export function InventoryTable({
                     <IconChevron className="icon--sm" />
                   </button>
                   {isExpanded ? (
-                    <InventoryRowsTable rows={group.items} onAdjust={setAdjusting} />
+                    <InventoryProductList rows={group.items} onAdjust={setAdjusting} />
                   ) : null}
                 </div>
               );
@@ -162,32 +170,55 @@ export function InventoryTable({
   );
 }
 
-function InventoryRowsTable({
+function InventoryProductList({
   rows,
   onAdjust,
 }: {
   rows: ProductStockRow[];
   onAdjust: (a: Adjusting) => void;
 }) {
+  const [openProducts, setOpenProducts] = useState<Set<string>>(new Set());
+
+  const toggleProduct = (id: string) => {
+    setOpenProducts((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   return (
-    <div className="admin-table-wrap">
-      <table className="admin-table">
-        <thead>
-          <tr>
-            <th>Producto</th>
-            <th>Tallas</th>
-            <th>Stock total</th>
-            <th>Invertido</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => {
-            const totalStock = r.variants.reduce((acc, v) => acc + v.stock, 0);
-            const invested = r.costPrice != null ? r.costPrice * totalStock : null;
-            return (
-              <tr key={r.productId}>
-                <td style={{ fontWeight: 600 }}>{r.productName}</td>
-                <td data-label="Tallas">
+    <div className="inventory-products">
+      {rows.map((r) => {
+        const isOpen = openProducts.has(r.productId);
+        const totalStock = r.variants.reduce((acc, v) => acc + v.stock, 0);
+        const invested = r.costPrice != null ? r.costPrice * totalStock : null;
+        return (
+          <div key={r.productId} className="inventory-product">
+            <button
+              type="button"
+              className="inventory-product__head"
+              aria-expanded={isOpen}
+              onClick={() => toggleProduct(r.productId)}
+            >
+              <div className="admin-table__thumb">
+                <ProductVisual
+                  images={r.images}
+                  colors={r.colors}
+                  pattern={r.pattern}
+                  uid={`inv-${r.productId}`}
+                  alt={r.productName}
+                />
+              </div>
+              <span className="inventory-product__name">{r.productName}</span>
+              <IconChevron className="icon--sm" />
+            </button>
+
+            {isOpen ? (
+              <div className="inventory-product__body">
+                <div className="inventory-product__row">
+                  <span className="meta">Tallas</span>
                   <div className="inventory-sizes">
                     {r.variants.map((v) => (
                       <button
@@ -215,18 +246,20 @@ function InventoryRowsTable({
                       </button>
                     ))}
                   </div>
-                </td>
-                <td data-label="Stock total" style={{ fontWeight: 600 }}>
-                  {totalStock}
-                </td>
-                <td data-label="Invertido">
-                  {invested != null ? formatPrice(invested) : <span className="meta">—</span>}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                </div>
+                <div className="inventory-product__row">
+                  <span className="meta">Stock total</span>
+                  <span style={{ fontWeight: 600 }}>{totalStock}</span>
+                </div>
+                <div className="inventory-product__row">
+                  <span className="meta">Invertido</span>
+                  <span>{invested != null ? formatPrice(invested) : <span className="meta">—</span>}</span>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
     </div>
   );
 }

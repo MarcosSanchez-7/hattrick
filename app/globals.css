@@ -2621,6 +2621,64 @@ textarea {
   transform: rotate(-90deg);
 }
 
+.inventory-products {
+  padding: 0 var(--sp-5) var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.inventory-product {
+  border: 1px solid var(--line);
+}
+
+.inventory-product__head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.inventory-product__head:hover {
+  background: var(--surface-soft);
+}
+
+.inventory-product__name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.inventory-product__head .icon {
+  transition: transform 0.22s var(--ease);
+}
+
+.inventory-product__head[aria-expanded='false'] .icon {
+  transform: rotate(-90deg);
+}
+
+.inventory-product__body {
+  padding: 0 var(--sp-4) var(--sp-4);
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inventory-product__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding-top: var(--sp-3);
+  font-size: 0.875rem;
+}
+
 .inventory-sizes {
   display: flex;
   flex-wrap: wrap;
