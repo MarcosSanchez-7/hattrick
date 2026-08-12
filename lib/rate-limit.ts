@@ -34,11 +34,17 @@ const strictLimiter = redis
   : null;
 
 // Resto del panel: generoso (es un solo admin usando la UI), pero frena un
-// script que golpee la API en bucle.
+// script que golpee la API en bucle. 60/60s se sentía bajo en la práctica:
+// cada navegación por el sidebar dispara varios prefetch de Next.js (cada
+// link visible se precarga en segundo plano) y encima cada acción en lote
+// (ej. borrar varios productos seguidos) suma un DELETE + una recarga por
+// cada uno — todo eso cuenta contra el mismo límite. 300/60s sigue
+// bloqueando un script automatizado real, sin frenar el uso normal de un
+// solo admin navegando y haciendo varias acciones seguidas.
 const adminLimiter = redis
   ? new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(60, "60 s"),
+      limiter: Ratelimit.slidingWindow(300, "60 s"),
       prefix: "rl:admin",
     })
   : null;
