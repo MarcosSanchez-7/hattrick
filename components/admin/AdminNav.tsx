@@ -11,6 +11,7 @@ import {
   IconSettings,
   IconTag,
   IconUser,
+  IconWallet,
 } from "@/components/ui/Icons";
 
 type NavItem = {
@@ -29,15 +30,14 @@ const ITEMS: NavItem[] = [
   { href: "/gestion-ssjblue/generales", label: "Generales", icon: IconSettings },
 ];
 
-const SUPERADMIN_ITEM: NavItem = {
-  href: "/gestion-ssjblue/usuarios",
-  label: "Usuarios",
-  icon: IconUser,
-};
+const SUPERADMIN_ITEMS: NavItem[] = [
+  { href: "/gestion-ssjblue/finanzas", label: "Finanzas", icon: IconWallet },
+  { href: "/gestion-ssjblue/usuarios", label: "Usuarios", icon: IconUser },
+];
 
 export function AdminNav({ role }: { role: AdminRole }) {
   const pathname = usePathname();
-  const items = role === "superadmin" ? [...ITEMS, SUPERADMIN_ITEM] : ITEMS;
+  const items = role === "superadmin" ? [...ITEMS, ...SUPERADMIN_ITEMS] : ITEMS;
 
   return (
     <nav className="admin-nav" aria-label="Navegación del panel">
