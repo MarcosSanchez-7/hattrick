@@ -1110,6 +1110,8 @@ type SaleItemRow = {
   quantity: number;
   unit_price: number | string;
   cost_price: number | string;
+  product_name_snapshot: string | null;
+  size_snapshot: string | null;
   product_variants: {
     size: string;
     product_id: string;
@@ -1127,14 +1129,18 @@ type SaleRow = {
 };
 
 const SALE_SELECT =
-  "id, channel, staff_name, customer_note, sold_at, sale_items(id, quantity, unit_price, cost_price, product_variants(size, product_id, products(name)))";
+  "id, channel, staff_name, customer_note, sold_at, sale_items(id, quantity, unit_price, cost_price, product_name_snapshot, size_snapshot, product_variants(size, product_id, products(name)))";
 
 function rowToSale(row: SaleRow): Sale {
+  // product_name_snapshot/size_snapshot solo existen en ventas importadas
+  // desde CSV (sin variant_id, para no tocar el stock actual): ahí no hay
+  // join a product_variants, así que el nombre/talla se leen de ese texto
+  // guardado al importar en vez de la relación.
   const items: SaleLine[] = (row.sale_items ?? []).map((si) => ({
     id: si.id,
     productId: si.product_variants?.product_id ?? "",
-    name: si.product_variants?.products?.name ?? "—",
-    size: si.product_variants?.size ?? "—",
+    name: si.product_variants?.products?.name ?? si.product_name_snapshot ?? "—",
+    size: si.product_variants?.size ?? si.size_snapshot ?? "—",
     quantity: si.quantity,
     unitPrice: Number(si.unit_price),
     costPrice: Number(si.cost_price),
@@ -1226,6 +1232,76 @@ export async function recordSale(input: SaleInput): Promise<string> {
     fail(`No se pudo registrar la venta: ${error.message}`);
   }
   return id;
+}
+
+export type SaleImportRow = {
+  soldAt: string;
+  productName: string;
+  size: string;
+  quantity: number;
+  unitPrice: number;
+  costPrice: number;
+  channel: SaleChannel;
+  staffName?: string | null;
+  note?: string | null;
+};
+
+export type SaleImportResult = {
+  imported: number;
+  errors: { row: number; message: string }[];
+};
+
+/**
+ * Carga ventas que ya ocurrieron antes de tener el sistema (desde un CSV).
+ * A propósito NO usa el RPC record_sale ni linkea variant_id: son hechos
+ * pasados, no deben descontar stock actual. El nombre/talla se guardan como
+ * texto plano (product_name_snapshot/size_snapshot) porque sin variant_id
+ * no hay de dónde sacarlos por join. Sigue de largo ante errores por fila
+ * (reporta cuáles fallaron) en vez de abortar todo el archivo.
+ */
+export async function importHistoricalSales(
+  rows: SaleImportRow[],
+): Promise<SaleImportResult> {
+  let imported = 0;
+  const errors: { row: number; message: string }[] = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const saleId = `s-${randomUUID().slice(0, 8)}`;
+    try {
+      const { error: saleError } = await supabaseAdmin.from("sales").insert({
+        id: saleId,
+        channel: r.channel,
+        staff_name: r.staffName ?? null,
+        customer_note: r.note ?? null,
+        sold_at: r.soldAt,
+      });
+      if (saleError) throw new Error(saleError.message);
+
+      const { error: itemError } = await supabaseAdmin.from("sale_items").insert({
+        sale_id: saleId,
+        variant_id: null,
+        quantity: r.quantity,
+        unit_price: r.unitPrice,
+        cost_price: r.costPrice,
+        product_name_snapshot: r.productName,
+        size_snapshot: r.size,
+      });
+      if (itemError) {
+        await supabaseAdmin.from("sales").delete().eq("id", saleId);
+        throw new Error(itemError.message);
+      }
+
+      imported++;
+    } catch (err) {
+      errors.push({
+        row: i + 1,
+        message: err instanceof Error ? err.message : "Error desconocido.",
+      });
+    }
+  }
+
+  return { imported, errors };
 }
 
 // ── Configuración general del sitio ────────────────────────────────────────
