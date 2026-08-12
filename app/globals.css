@@ -3092,6 +3092,13 @@ textarea {
     min-width: 0;
     width: 100%;
   }
+  /* .row no envolvía sus hijos (ej. los dos botones de admin-page-head, o
+     Desde/Hasta/Filtrar del formulario de fechas): en pantallas chicas eso
+     desbordaba horizontalmente toda la página en vez de pasar a varias
+     líneas. */
+  .row {
+    flex-wrap: wrap;
+  }
 
   /* Las tablas del admin dejan de desbordar horizontalmente: cada fila
      pasa a ser una tarjeta apilada, con el nombre/foto arriba, los datos
