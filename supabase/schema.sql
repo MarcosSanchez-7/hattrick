@@ -635,3 +635,16 @@ create table if not exists admin_users (
 alter table admin_users enable row level security;
 
 create index if not exists admin_users_email_idx on admin_users (lower(email));
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Importación de ventas históricas desde CSV — /admin/ventas/importar.
+-- Las ventas importadas NO se linkean a product_variants (variant_id queda
+-- null a propósito): son ventas que ya ocurrieron antes de tener el sistema,
+-- así que no deben tocar el stock actual. Sin variant_id no hay de dónde
+-- sacar el nombre/talla via join, por eso se guardan como texto plano acá,
+-- solo para las líneas importadas (las ventas normales siguen sacando
+-- nombre/talla de product_variants → products, estas columnas quedan null).
+-- ═══════════════════════════════════════════════════════════════════════════
+
+alter table sale_items add column if not exists product_name_snapshot text;
+alter table sale_items add column if not exists size_snapshot text;

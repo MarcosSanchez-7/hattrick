@@ -42,6 +42,9 @@ export default async function VentasPage({
           >
             Descargar CSV
           </Link>
+          <Link href="/gestion-ssjblue/ventas/importar" className="btn btn--ghost btn--sm">
+            Importar CSV
+          </Link>
           <Link href="/gestion-ssjblue/ventas/nueva" className="btn btn--sm">
             Registrar venta
           </Link>
