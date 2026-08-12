@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Personalización",
   description: "Personaliza cualquier camiseta del catálogo con nombre y dorsal.",
+  alternates: { canonical: "/personalizacion" },
 };
 
 export default async function PersonalizacionPage() {

@@ -6,11 +6,13 @@ import {
   categoryPath,
   categorySlugPath,
   getProduct,
+  isSoldOut,
   relatedTo,
   resolveCategoryNotices,
 } from "@/lib/catalog";
 import { getAllCategories, getAllProducts, getAllTags, getSetting } from "@/lib/data";
 import { DEFAULT_PRODUCT_NOTICES } from "@/lib/settings";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { ProductDetail } from "@/components/product/ProductDetail";
 import { ProductGrid } from "@/components/product/ProductCard";
 
@@ -26,9 +28,20 @@ export async function generateMetadata({
   const { slug } = await params;
   const product = getProduct(await getAllProducts(), slug);
   if (!product) return { title: "Producto no encontrado" };
+  const image = product.images?.[0];
   return {
     title: product.name,
     description: product.description,
+    alternates: { canonical: `/producto/${product.slug}` },
+    openGraph: {
+      title: product.name,
+      description: product.description,
+      url: `${SITE_URL}/producto/${product.slug}`,
+      images: image ? [{ url: image }] : undefined,
+    },
+    twitter: image
+      ? { card: "summary_large_image", images: [image] }
+      : undefined,
   };
 }
 
@@ -57,8 +70,38 @@ export default async function ProductPage({
     productNotices.defaultNotices,
   );
 
+  const productUrl = `${SITE_URL}/producto/${product.slug}`;
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description: product.description,
+    image: product.images?.length ? product.images : undefined,
+    sku: product.id,
+    url: productUrl,
+    brand: { "@type": "Brand", name: SITE_NAME },
+    offers: {
+      "@type": "Offer",
+      url: productUrl,
+      priceCurrency: "PYG",
+      price: product.price,
+      availability: isSoldOut(product)
+        ? "https://schema.org/OutOfStock"
+        : "https://schema.org/InStock",
+    },
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        // JSON.stringify de datos del propio catálogo (no de input de usuario);
+        // igual se escapa "<" para que un nombre/descr. con "</script>" no
+        // pueda romper el tag.
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(productJsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
       <div className="container" style={{ paddingTop: 24 }}>
         <nav className="breadcrumbs" aria-label="Migas de pan">
           <Link href="/">Inicio</Link>

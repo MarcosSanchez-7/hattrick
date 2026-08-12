@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DataError, getSetting, updateSetting } from "@/lib/data";
 import {
+  DEFAULT_BRANDING,
   DEFAULT_CUSTOM_BANNER,
   DEFAULT_FOOTER,
   DEFAULT_HERO,
@@ -19,6 +20,7 @@ const DEFAULTS: Record<SiteSettingsKey, unknown> = {
   home: DEFAULT_HOME,
   productNotices: DEFAULT_PRODUCT_NOTICES,
   valueProps: DEFAULT_VALUE_PROPS,
+  branding: DEFAULT_BRANDING,
 };
 
 function isValidKey(key: string): key is SiteSettingsKey {

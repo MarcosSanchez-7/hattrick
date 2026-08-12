@@ -171,6 +171,15 @@ export const DEFAULT_VALUE_PROPS: ValuePropsSettings = {
   ],
 };
 
+export type BrandingSettings = {
+  /** URL de imagen (subida desde el panel). Vacío = se usa el ícono genérico "H". */
+  faviconUrl: string;
+};
+
+export const DEFAULT_BRANDING: BrandingSettings = {
+  faviconUrl: "",
+};
+
 export type SiteSettingsKey =
   | "hero"
   | "footer"
@@ -178,4 +187,5 @@ export type SiteSettingsKey =
   | "customBanner"
   | "home"
   | "productNotices"
-  | "valueProps";
+  | "valueProps"
+  | "branding";

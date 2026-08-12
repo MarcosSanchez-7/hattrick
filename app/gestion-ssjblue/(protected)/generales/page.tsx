@@ -6,6 +6,11 @@ export const metadata = { title: "Generales" };
 
 const SECTIONS = [
   {
+    href: "/gestion-ssjblue/generales/branding",
+    title: "Branding",
+    description: "Favicon / ícono del sitio (pestaña del navegador).",
+  },
+  {
     href: "/gestion-ssjblue/generales/home",
     title: "Secciones de la home",
     description: "Mostrar u ocultar bloques como \"Nuevos ingresos\".",

@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: "Ofertas",
   description:
     "Camisetas de fútbol rebajadas hasta un 25 %. Stock limitado y envío gratis desde Gs. 640.000.",
+  alternates: { canonical: "/ofertas" },
 };
 
 export const dynamic = "force-dynamic";

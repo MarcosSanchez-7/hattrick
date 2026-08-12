@@ -28,9 +28,18 @@ export async function generateMetadata({
   if (!category || !isCategoryVisible(categories, category.slug)) {
     return { title: "Categoría no encontrada" };
   }
+  const canonicalPath = `/categoria/${categorySlugPath(categories, category.slug).join("/")}`;
+  const title = `${category.name} — Camisetas de fútbol`;
   return {
-    title: `${category.name} — Camisetas de fútbol`,
+    title,
     description: category.description,
+    alternates: { canonical: canonicalPath },
+    openGraph: {
+      title,
+      description: category.description,
+      url: canonicalPath,
+      images: category.image ? [{ url: category.image }] : undefined,
+    },
   };
 }
 
