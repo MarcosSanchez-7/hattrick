@@ -1,5 +1,10 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { SALE_CHANNELS, lineProfit, lineTotal, type Sale } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
+import { IconTrash } from "@/components/ui/Icons";
 
 const channelLabel = (value: string) =>
   SALE_CHANNELS.find((c) => c.value === value)?.label ?? value;
@@ -12,6 +17,9 @@ const dateTimeFormatter = new Intl.DateTimeFormat("es-PY", {
 });
 
 export function SalesTable({ sales }: { sales: Sale[] }) {
+  const router = useRouter();
+  const [pendingId, setPendingId] = useState<string | null>(null);
+
   const rows = sales.flatMap((sale) =>
     sale.items.map((item) => ({ sale, item })),
   );
@@ -19,6 +27,27 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
   const totalVenta = rows.reduce((acc, r) => acc + lineTotal(r.item), 0);
   const totalGanancia = rows.reduce((acc, r) => acc + lineProfit(r.item), 0);
   const totalUnidades = rows.reduce((acc, r) => acc + r.item.quantity, 0);
+
+  const handleDelete = async (sale: Sale) => {
+    const aviso =
+      sale.items.length > 1
+        ? `Esta venta tiene ${sale.items.length} artículos: se eliminan todos juntos. Si descontaron stock, se repone automáticamente. ¿Eliminar?`
+        : "¿Eliminar esta venta? Si descontó stock, se repone automáticamente.";
+    if (!window.confirm(aviso)) return;
+    setPendingId(sale.id);
+    try {
+      const res = await fetch(`/api/admin/sales/${sale.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "No se pudo eliminar la venta.");
+      }
+      router.refresh();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Error inesperado.");
+    } finally {
+      setPendingId(null);
+    }
+  };
 
   return (
     <div className="admin-card">
@@ -48,6 +77,7 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                 <th>Precio venta</th>
                 <th>Ganancia</th>
                 <th>Canal</th>
+                <th aria-label="Acciones" />
               </tr>
             </thead>
             <tbody>
@@ -66,6 +96,20 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                   <td data-label="Ganancia">{formatPrice(lineProfit(item))}</td>
                   <td data-label="Canal">
                     <span className="meta">{channelLabel(sale.channel)}</span>
+                  </td>
+                  <td>
+                    <div className="admin-row-actions">
+                      <button
+                        type="button"
+                        className="admin-icon-btn admin-icon-btn--danger"
+                        aria-label="Eliminar venta"
+                        title="Eliminar venta"
+                        disabled={pendingId === sale.id}
+                        onClick={() => handleDelete(sale)}
+                      >
+                        <IconTrash className="icon--sm" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
