@@ -273,12 +273,14 @@ async function insertMovement(
   movementType: "restock" | "correction",
   quantityDelta: number,
   note: string,
+  createdBy?: string | null,
 ) {
   const { error } = await supabaseAdmin.from("inventory_movements").insert({
     variant_id: variantId,
     movement_type: movementType,
     quantity_delta: quantityDelta,
     note,
+    created_by: createdBy ?? null,
   });
   if (error) {
     if (error.message.includes("stock_on_hand"))  {
@@ -344,6 +346,112 @@ async function syncProductVariants(
       );
     }
   }
+}
+
+export type StockAdjustmentInput = {
+  variantId: string;
+  /** restock: suma `quantity` al stock actual. correction: fija `quantity` como el nuevo valor absoluto. */
+  mode: "restock" | "correction";
+  quantity: number;
+  note?: string | null;
+  adminName?: string | null;
+};
+
+export async function registerStockAdjustment(
+  input: StockAdjustmentInput,
+): Promise<void> {
+  const quantity = Math.round(input.quantity);
+
+  const { data: variant, error } = await supabaseAdmin
+    .from("product_variants")
+    .select("id, stock_on_hand")
+    .eq("id", input.variantId)
+    .maybeSingle();
+  if (error) fail(`No se pudo leer la talla: ${error.message}`);
+  if (!variant) throw new DataError("Talla no encontrada.", 404);
+
+  let delta: number;
+  let defaultNote: string;
+  if (input.mode === "restock") {
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      throw new DataError("La cantidad a reponer debe ser mayor que 0.");
+    }
+    delta = quantity;
+    defaultNote = "Reposición manual desde Inventario";
+  } else {
+    if (!Number.isFinite(quantity) || quantity < 0) {
+      throw new DataError("La cantidad no puede ser negativa.");
+    }
+    delta = quantity - (variant as VariantRow).stock_on_hand;
+    defaultNote = "Corrección manual desde Inventario";
+    if (delta === 0) return;
+  }
+
+  await insertMovement(
+    input.variantId,
+    input.mode,
+    delta,
+    input.note?.trim() || defaultNote,
+    input.adminName ?? null,
+  );
+}
+
+type MovementRow = {
+  id: number;
+  movement_type: string;
+  quantity_delta: number;
+  note: string | null;
+  created_by: string | null;
+  created_at: string;
+  product_variants: {
+    size: string;
+    product_id: string;
+    products: { name: string } | null;
+  } | null;
+};
+
+export type InventoryMovement = {
+  id: number;
+  productId: string;
+  productName: string;
+  size: string;
+  movementType: string;
+  quantityDelta: number;
+  note: string | null;
+  createdBy: string | null;
+  createdAt: string;
+};
+
+const MOVEMENT_SELECT =
+  "id, movement_type, quantity_delta, note, created_by, created_at, product_variants(size, product_id, products(name))";
+
+export async function getInventoryMovements(
+  range?: { from?: string; to?: string },
+  limit = 200,
+): Promise<InventoryMovement[]> {
+  let query = supabaseAdmin
+    .from("inventory_movements")
+    .select(MOVEMENT_SELECT)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (range?.from) query = query.gte("created_at", range.from);
+  if (range?.to) query = query.lte("created_at", range.to);
+
+  const { data, error } = await query;
+  if (error) fail(`No se pudieron cargar los movimientos de stock: ${error.message}`);
+
+  return (data as unknown as MovementRow[]).map((row) => ({
+    id: row.id,
+    productId: row.product_variants?.product_id ?? "",
+    productName: row.product_variants?.products?.name ?? "—",
+    size: row.product_variants?.size ?? "—",
+    movementType: row.movement_type,
+    quantityDelta: row.quantity_delta,
+    note: row.note,
+    createdBy: row.created_by,
+    createdAt: row.created_at,
+  }));
 }
 
 // ── Productos ────────────────────────────────────────────────────────────

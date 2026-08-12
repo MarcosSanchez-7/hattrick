@@ -228,6 +228,13 @@ export const IconReceipt = ({ className }: IconProps) => (
   </svg>
 );
 
+export const IconBox = ({ className }: IconProps) => (
+  <svg className={base(className)} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M3.5 8 12 3.5 20.5 8 12 12.5 3.5 8Z" />
+    <path d="M3.5 8v8.5L12 21l8.5-4.5V8M12 12.5V21" />
+  </svg>
+);
+
 export const IconDocument = ({ className }: IconProps) => (
   <svg className={base(className)} viewBox="0 0 24 24" aria-hidden="true">
     <path d="M6.5 3.5h7l4 4v13h-11Z" />

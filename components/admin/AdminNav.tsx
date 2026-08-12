@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { AdminRole } from "@/lib/admin-auth";
 import {
+  IconBox,
   IconDocument,
   IconGrid,
   IconLayout,
@@ -23,6 +24,7 @@ type NavItem = {
 const ITEMS: NavItem[] = [
   { href: "/gestion-ssjblue", label: "Panel", icon: IconLayout, exact: true },
   { href: "/gestion-ssjblue/productos", label: "Productos", icon: IconGrid },
+  { href: "/gestion-ssjblue/inventario", label: "Inventario", icon: IconBox },
   { href: "/gestion-ssjblue/categorias", label: "Categorías", icon: IconTag },
   { href: "/gestion-ssjblue/paginas", label: "Páginas", icon: IconDocument },
   { href: "/gestion-ssjblue/ventas", label: "Ventas", icon: IconReceipt },
