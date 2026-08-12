@@ -61,7 +61,10 @@ export function FinanceAccountsTable({ accounts }: { accounts: FinanceAccount[] 
             <tbody>
               {accounts.map((a) => (
                 <tr key={a.id}>
-                  <td style={{ fontWeight: 600 }}>{a.name}</td>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{a.name}</div>
+                    {a.notes ? <div className="meta">{a.notes}</div> : null}
+                  </td>
                   <td className="meta" data-label="Tipo">
                     {KIND_LABEL[a.kind]}
                   </td>
