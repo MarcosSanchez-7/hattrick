@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getFinanceSummary } from "@/lib/data";
+import { getFinanceSummary, getInventoryValuation, getLiquiditySummary } from "@/lib/data";
 import { getCurrentAdmin } from "@/lib/admin-session";
 import { formatPrice } from "@/lib/format";
 import { BarChart } from "@/components/admin/charts/BarChart";
@@ -43,10 +43,16 @@ export default async function FinancePage({
   const fromDate = from || monthsAgoStr(6);
   const toDate = to || todayStr();
 
-  const summary = await getFinanceSummary({
-    from: `${fromDate}T00:00:00`,
-    to: `${toDate}T23:59:59`,
-  });
+  const [summary, inventoryValuation, liquidity] = await Promise.all([
+    getFinanceSummary({
+      from: `${fromDate}T00:00:00`,
+      to: `${toDate}T23:59:59`,
+    }),
+    getInventoryValuation(),
+    getLiquiditySummary(),
+  ]);
+
+  const patrimonioAproximado = liquidity.liquidezTotal + inventoryValuation.costValue;
 
   return (
     <>
@@ -62,11 +68,59 @@ export default async function FinancePage({
           <Link href="/gestion-ssjblue/finanzas/cuentas" className="btn btn--ghost btn--sm">
             Cuentas y tarjetas
           </Link>
+          <Link href="/gestion-ssjblue/finanzas/compras" className="btn btn--ghost btn--sm">
+            Compras de mercadería
+          </Link>
           <Link href="/gestion-ssjblue/finanzas/movimientos" className="btn btn--sm">
             Ver movimientos
           </Link>
         </div>
       </div>
+
+      <p className="h3" style={{ fontSize: "0.9375rem", marginBottom: 12 }}>
+        Patrimonio actual
+      </p>
+      <p className="admin-help" style={{ marginTop: 0, marginBottom: 12 }}>
+        No depende del rango de fechas de abajo — es la foto de ahora mismo.
+      </p>
+      <div className="admin-stats" style={{ marginBottom: 40 }}>
+        <div className="admin-stat">
+          <div className="admin-stat__value">{formatPrice(inventoryValuation.costValue)}</div>
+          <div className="admin-stat__label">Valor de stock (a costo)</div>
+        </div>
+        <div className="admin-stat">
+          <div className="admin-stat__value">{formatPrice(inventoryValuation.retailValue)}</div>
+          <div className="admin-stat__label">Valor de stock (a venta)</div>
+        </div>
+        <div className="admin-stat">
+          <div className="admin-stat__value">{formatPrice(liquidity.liquidezTotal)}</div>
+          <div className="admin-stat__label">Liquidez total</div>
+        </div>
+        <div className="admin-stat">
+          <div className="admin-stat__value">{formatPrice(patrimonioAproximado)}</div>
+          <div className="admin-stat__label">Patrimonio aproximado</div>
+        </div>
+        <div className="admin-stat">
+          <div className="admin-stat__value">{formatPrice(liquidity.efectivo)}</div>
+          <div className="admin-stat__label">Efectivo</div>
+        </div>
+        <div className="admin-stat">
+          <div className="admin-stat__value">{formatPrice(liquidity.cuentaBancaria)}</div>
+          <div className="admin-stat__label">Cuentas bancarias</div>
+        </div>
+        <div className="admin-stat">
+          <div className="admin-stat__value">{formatPrice(liquidity.tarjetaCredito)}</div>
+          <div className="admin-stat__label">Tarjetas de crédito</div>
+        </div>
+        <div className="admin-stat">
+          <div className="admin-stat__value">{formatPrice(liquidity.tarjetaDebito)}</div>
+          <div className="admin-stat__label">Tarjetas de débito</div>
+        </div>
+      </div>
+
+      <p className="h3" style={{ fontSize: "0.9375rem", marginBottom: 12 }}>
+        Resultado del período
+      </p>
 
       <form
         method="get"
@@ -101,12 +155,20 @@ export default async function FinancePage({
           <div className="admin-stat__label">Ganancia de ventas</div>
         </div>
         <div className="admin-stat">
+          <div className="admin-stat__value">{summary.margenPromedio.toFixed(1)}%</div>
+          <div className="admin-stat__label">Margen promedio</div>
+        </div>
+        <div className="admin-stat">
           <div className="admin-stat__value">{formatPrice(summary.ingresosOtros)}</div>
           <div className="admin-stat__label">Otros ingresos</div>
         </div>
         <div className="admin-stat">
           <div className="admin-stat__value">{formatPrice(summary.gastos)}</div>
           <div className="admin-stat__label">Gastos</div>
+        </div>
+        <div className="admin-stat">
+          <div className="admin-stat__value">{formatPrice(summary.comprasMercaderia)}</div>
+          <div className="admin-stat__label">Compras de mercadería</div>
         </div>
         <div className="admin-stat">
           <div className="admin-stat__value">{formatPrice(summary.importacion)}</div>
