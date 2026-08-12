@@ -2621,6 +2621,41 @@ textarea {
   transform: rotate(-90deg);
 }
 
+.inventory-sizes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.inventory-size-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.18s var(--ease);
+}
+
+.inventory-size-chip:hover {
+  border-color: var(--ink);
+}
+
+.inventory-size-chip--low {
+  border-color: #ffce7a;
+  background: #fff8ec;
+}
+
+.inventory-size-chip--out {
+  border-color: #b3132a;
+  background: #fdecec;
+  color: #b3132a;
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;
