@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
-import { IconClose, IconPlus, IconUpload } from "@/components/ui/Icons";
+import { IconArrow, IconClose, IconPlus, IconUpload } from "@/components/ui/Icons";
 
 type Props = {
   images: string[];
@@ -105,6 +105,14 @@ export function ImageUploader({ images, onChange, max = 6, label, folder }: Prop
     onChange(next);
   };
 
+  const moveBy = (idx: number, delta: number) => {
+    const target = idx + delta;
+    if (target < 0 || target >= images.length) return;
+    const next = [...images];
+    [next[idx], next[target]] = [next[target], next[idx]];
+    onChange(next);
+  };
+
   return (
     <div>
       {hasRoom ? (
@@ -183,27 +191,52 @@ export function ImageUploader({ images, onChange, max = 6, label, folder }: Prop
       {images.length > 0 ? (
         <div className="admin-uploads">
           {images.map((src, idx) => (
-            <div
-              key={src}
-              className={`admin-upload${max === 1 ? " admin-single-upload" : ""}`}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={src}
-                alt={`Imagen ${idx + 1}`}
-                onClick={() => moveToFront(idx)}
-                title={idx === 0 ? "Portada" : "Clic para hacer portada"}
-                style={{ cursor: max > 1 ? "pointer" : "default" }}
-              />
-              {idx === 0 ? <span className="admin-upload__cover">Portada</span> : null}
-              <button
-                type="button"
-                className="admin-upload__remove"
-                onClick={() => removeAt(idx)}
-                aria-label="Quitar imagen"
+            <div key={src} className="admin-upload-item">
+              <div
+                className={`admin-upload${max === 1 ? " admin-single-upload" : ""}`}
               >
-                <IconClose className="icon--sm" />
-              </button>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={src}
+                  alt={`Imagen ${idx + 1}`}
+                  onClick={() => moveToFront(idx)}
+                  title={idx === 0 ? "Portada" : "Clic para hacer portada"}
+                  style={{ cursor: max > 1 ? "pointer" : "default" }}
+                />
+                {idx === 0 ? <span className="admin-upload__cover">Portada</span> : null}
+                <button
+                  type="button"
+                  className="admin-upload__remove"
+                  onClick={() => removeAt(idx)}
+                  aria-label="Quitar imagen"
+                >
+                  <IconClose className="icon--sm" />
+                </button>
+              </div>
+              {max > 1 ? (
+                <div className="admin-upload__reorder">
+                  <button
+                    type="button"
+                    className="admin-icon-btn"
+                    onClick={() => moveBy(idx, -1)}
+                    disabled={idx === 0}
+                    aria-label="Mover a la izquierda"
+                    title="Mover a la izquierda"
+                  >
+                    <IconArrow className="icon--sm icon--rotate-180" />
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-icon-btn"
+                    onClick={() => moveBy(idx, 1)}
+                    disabled={idx === images.length - 1}
+                    aria-label="Mover a la derecha"
+                    title="Mover a la derecha"
+                  >
+                    <IconArrow className="icon--sm" />
+                  </button>
+                </div>
+              ) : null}
             </div>
           ))}
         </div>
