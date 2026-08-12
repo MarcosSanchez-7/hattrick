@@ -70,6 +70,11 @@ html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
   color-scheme: light;
+  /* Red de seguridad: si algo adentro se desborda un poco (texto largo,
+     chip, número sin espacios), que se recorte en vez de volver toda la
+     página deslizable de costado — eso es lo que hacía sentir "floja" o
+     "no fija" la pantalla al scrollear vertical en mobile. */
+  overflow-x: hidden;
 }
 
 body {
@@ -82,6 +87,7 @@ body {
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overflow-x: hidden;
 }
 
 body[data-scroll-locked='true'] {
@@ -3242,6 +3248,24 @@ textarea {
      líneas. */
   .row {
     flex-wrap: wrap;
+  }
+
+  /* Los formularios de filtro por fecha (Desde/Hasta/Filtrar/"Últimos X")
+     mezclan campos altos (con label arriba) y un botón corto: al solo
+     envolver, el botón quedaba centrado contra la altura del campo entero
+     y parecía "flotar" con espacio de sobra arriba y abajo. Apilar todo en
+     una sola columna, a ancho completo, se ve prolijo y sin ese salto. */
+  .admin-content .toolbar .row {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+  .admin-content .toolbar .row .admin-field,
+  .admin-content .toolbar .row .btn {
+    width: 100%;
+  }
+  .admin-content .toolbar .row > .link-underline {
+    text-align: center;
   }
 
   /* Las tablas del admin dejan de desbordar horizontalmente: cada fila
