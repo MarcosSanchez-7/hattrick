@@ -227,6 +227,13 @@ textarea {
   padding-block: var(--sp-7);
 }
 
+/* page-head ya termina con su propio padding-bottom + borde; sin esto, el
+   padding-top de section--tight se suma al de arriba y deja un hueco enorme
+   entre la descripción de la categoría y la barra de filtros. */
+.page-head + .section--tight {
+  padding-top: var(--sp-4);
+}
+
 .section--soft {
   background: var(--surface-soft);
 }
@@ -1211,6 +1218,21 @@ textarea {
   }
   .price--old {
     font-size: 0.75rem;
+  }
+  .card__badges {
+    max-width: calc(100% - var(--sp-3) * 2);
+  }
+  .badge {
+    height: 18px;
+    padding-inline: 6px;
+    font-size: 0.5rem;
+    letter-spacing: 0.04em;
+    max-width: 100%;
+  }
+  .badge--tag {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -2843,6 +2865,42 @@ textarea {
   color: #b3132a;
 }
 
+.admin-section-menu {
+  position: relative;
+}
+
+.admin-section-menu__backdrop {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  border: none;
+  padding: 0;
+  z-index: 60;
+}
+
+.admin-section-menu__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 61;
+  min-width: 200px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-section-menu__item {
+  padding: 10px 14px;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.admin-section-menu__item:hover {
+  background: var(--surface-soft);
+}
+
 .admin-row-actions {
   display: flex;
   gap: 6px;
@@ -2919,7 +2977,10 @@ textarea {
 .admin-field textarea {
   border: 1px solid var(--line);
   padding: 9px 12px;
-  font-size: 0.9375rem;
+  /* 16px es el mínimo para que Safari en iOS no haga zoom automático al
+     enfocar el campo — con menos, cualquier toque en un input "salta" la
+     pantalla. */
+  font-size: 1rem;
   font-family: inherit;
   background: var(--surface);
   width: 100%;
@@ -2993,7 +3054,7 @@ textarea {
   width: 110px;
   border: 1px solid var(--line);
   padding: 8px 10px;
-  font-size: 0.8125rem;
+  font-size: 1rem;
   font-family: inherit;
   background: var(--surface);
 }
@@ -3112,7 +3173,7 @@ textarea {
   min-width: 0;
   border: 1px solid var(--line);
   padding: 8px 10px;
-  font-size: 0.8125rem;
+  font-size: 1rem;
   font-family: inherit;
   background: var(--surface);
 }
@@ -3176,6 +3237,36 @@ textarea {
 .admin-single-upload {
   width: 160px;
   height: 190px;
+}
+
+.admin-upload-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.admin-upload__reorder {
+  display: flex;
+  gap: 4px;
+}
+
+.admin-upload__reorder .admin-icon-btn {
+  width: 26px;
+  height: 26px;
+}
+
+.admin-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.admin-icon-btn:disabled:hover {
+  border-color: var(--line);
+}
+
+.icon--rotate-180 {
+  transform: rotate(180deg);
 }
 
 .admin-auth-page {

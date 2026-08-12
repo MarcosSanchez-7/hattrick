@@ -6,6 +6,7 @@ import { formatPrice } from "@/lib/format";
 import { BarChart } from "@/components/admin/charts/BarChart";
 import { DonutChart } from "@/components/admin/charts/DonutChart";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { AdminSectionMenu } from "@/components/admin/AdminSectionMenu";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Finanzas" };
@@ -65,18 +66,14 @@ export default async function FinancePage({
           </p>
         </div>
         <div className="row gap-3">
-          <Link href="/gestion-ssjblue/finanzas/cuentas" className="btn btn--ghost btn--sm">
-            Cuentas y tarjetas
-          </Link>
-          <Link href="/gestion-ssjblue/finanzas/gastos" className="btn btn--ghost btn--sm">
-            Gastos
-          </Link>
-          <Link href="/gestion-ssjblue/finanzas/compras" className="btn btn--ghost btn--sm">
-            Compras de mercadería
-          </Link>
-          <Link href="/gestion-ssjblue/finanzas/importaciones" className="btn btn--ghost btn--sm">
-            Importaciones
-          </Link>
+          <AdminSectionMenu
+            links={[
+              { href: "/gestion-ssjblue/finanzas/cuentas", label: "Cuentas y tarjetas" },
+              { href: "/gestion-ssjblue/finanzas/gastos", label: "Gastos" },
+              { href: "/gestion-ssjblue/finanzas/compras", label: "Compras de mercadería" },
+              { href: "/gestion-ssjblue/finanzas/importaciones", label: "Importaciones" },
+            ]}
+          />
           <Link href="/gestion-ssjblue/finanzas/movimientos" className="btn btn--sm">
             Ver movimientos
           </Link>
