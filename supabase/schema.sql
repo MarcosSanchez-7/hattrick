@@ -648,3 +648,54 @@ create index if not exists admin_users_email_idx on admin_users (lower(email));
 
 alter table sale_items add column if not exists product_name_snapshot text;
 alter table sale_items add column if not exists size_snapshot text;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Administración financiera — /admin/finanzas, exclusivo de superadmin.
+-- Todo en guaraníes. Un solo ledger (finance_entries) para ingresos/gastos
+-- generales, capital propio aportado/retirado y costos de importación —
+-- mismo espíritu que inventory_movements: una tabla de movimientos, no
+-- cuatro, para que los totales del dashboard sean un query simple. Las
+-- ventas (tabla "sales") NO se duplican acá: el dashboard las suma en vivo
+-- y las combina con estos movimientos.
+--
+-- finance_accounts.balance es un saldo MANUAL (no reconciliado automático
+-- contra finance_entries): lo edita el propio dueño cuando cambia. Es una
+-- simplificación deliberada — no hay pedido de un motor de reconciliación
+-- bancaria, solo "cuánto tengo disponible ahora en tal tarjeta/cuenta".
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists finance_accounts (
+  id text primary key,
+  name text not null,
+  kind text not null check (kind in ('efectivo', 'cuenta_bancaria', 'tarjeta_credito', 'tarjeta_debito')),
+  balance numeric(12, 2) not null default 0,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table finance_accounts enable row level security;
+
+drop trigger if exists finance_accounts_set_updated_at on finance_accounts;
+create trigger finance_accounts_set_updated_at
+  before update on finance_accounts
+  for each row
+  execute function set_updated_at();
+
+create table if not exists finance_entries (
+  id text primary key,
+  type text not null check (type in ('ingreso', 'gasto', 'capital_aporte', 'capital_retiro', 'importacion')),
+  category text,
+  amount numeric(12, 2) not null check (amount > 0),
+  account_id text references finance_accounts (id) on delete set null,
+  note text,
+  occurred_at timestamptz not null default now(),
+  created_by text,
+  created_at timestamptz not null default now()
+);
+
+alter table finance_entries enable row level security;
+
+create index if not exists finance_entries_occurred_at_idx on finance_entries (occurred_at desc);
+create index if not exists finance_entries_type_idx on finance_entries (type);
+create index if not exists finance_entries_account_idx on finance_entries (account_id);

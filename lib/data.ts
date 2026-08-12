@@ -14,7 +14,13 @@ import type {
   StockMode,
   Tag,
 } from "@/lib/catalog";
-import { descendantSlugs, SIZES_ADULT, wouldCreateCycle } from "@/lib/catalog";
+import {
+  descendantSlugs,
+  lineProfit,
+  lineTotal,
+  SIZES_ADULT,
+  wouldCreateCycle,
+} from "@/lib/catalog";
 import { slugify, uniqueSlug } from "@/lib/slug";
 import type { SiteSettingsKey } from "@/lib/settings";
 import { supabaseAdmin } from "@/lib/supabase/server";
@@ -1332,6 +1338,400 @@ export async function importHistoricalSales(
   }
 
   return { imported, errors };
+}
+
+// ── Finanzas ────────────────────────────────────────────────────────────
+
+type FinanceAccountRow = {
+  id: string;
+  name: string;
+  kind: string;
+  balance: number | string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FinanceAccountKind =
+  | "efectivo"
+  | "cuenta_bancaria"
+  | "tarjeta_credito"
+  | "tarjeta_debito";
+
+export type FinanceAccount = {
+  id: string;
+  name: string;
+  kind: FinanceAccountKind;
+  balance: number;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+function rowToFinanceAccount(row: FinanceAccountRow): FinanceAccount {
+  return {
+    id: row.id,
+    name: row.name,
+    kind: row.kind as FinanceAccountKind,
+    balance: Number(row.balance),
+    notes: row.notes,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+const FINANCE_ACCOUNT_KINDS: FinanceAccountKind[] = [
+  "efectivo",
+  "cuenta_bancaria",
+  "tarjeta_credito",
+  "tarjeta_debito",
+];
+
+export async function getFinanceAccounts(): Promise<FinanceAccount[]> {
+  const { data, error } = await supabaseAdmin
+    .from("finance_accounts")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (error) fail(`No se pudieron cargar las cuentas: ${error.message}`);
+  return (data as FinanceAccountRow[]).map(rowToFinanceAccount);
+}
+
+export type FinanceAccountInput = {
+  name: string;
+  kind: FinanceAccountKind;
+  balance: number;
+  notes?: string | null;
+};
+
+function assertValidFinanceAccount(input: FinanceAccountInput) {
+  if (!input.name?.trim()) throw new DataError("El nombre es obligatorio.");
+  if (!FINANCE_ACCOUNT_KINDS.includes(input.kind)) {
+    throw new DataError("Selecciona un tipo de cuenta válido.");
+  }
+  if (!Number.isFinite(input.balance)) {
+    throw new DataError("El saldo no es válido.");
+  }
+}
+
+export async function createFinanceAccount(
+  input: FinanceAccountInput,
+): Promise<FinanceAccount> {
+  assertValidFinanceAccount(input);
+
+  const id = `acc-${randomUUID().slice(0, 8)}`;
+  const { data, error } = await supabaseAdmin
+    .from("finance_accounts")
+    .insert({
+      id,
+      name: input.name.trim(),
+      kind: input.kind,
+      balance: input.balance,
+      notes: input.notes?.trim() || null,
+    })
+    .select("*")
+    .single();
+
+  if (error) fail(`No se pudo crear la cuenta: ${error.message}`);
+  return rowToFinanceAccount(data as FinanceAccountRow);
+}
+
+export async function updateFinanceAccount(
+  id: string,
+  input: FinanceAccountInput,
+): Promise<FinanceAccount> {
+  assertValidFinanceAccount(input);
+
+  const { data, error } = await supabaseAdmin
+    .from("finance_accounts")
+    .update({
+      name: input.name.trim(),
+      kind: input.kind,
+      balance: input.balance,
+      notes: input.notes?.trim() || null,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) fail(`No se pudo actualizar la cuenta: ${error.message}`);
+  if (!data) throw new DataError("Cuenta no encontrada.", 404);
+  return rowToFinanceAccount(data as FinanceAccountRow);
+}
+
+export async function deleteFinanceAccount(id: string): Promise<void> {
+  const { data, error } = await supabaseAdmin
+    .from("finance_accounts")
+    .delete()
+    .eq("id", id)
+    .select("id");
+  if (error) fail(`No se pudo eliminar la cuenta: ${error.message}`);
+  if (!data || data.length === 0) throw new DataError("Cuenta no encontrada.", 404);
+}
+
+type FinanceEntryRow = {
+  id: string;
+  type: string;
+  category: string | null;
+  amount: number | string;
+  account_id: string | null;
+  note: string | null;
+  occurred_at: string;
+  created_by: string | null;
+  created_at: string;
+  finance_accounts: { name: string } | null;
+};
+
+export type FinanceEntryType =
+  | "ingreso"
+  | "gasto"
+  | "capital_aporte"
+  | "capital_retiro"
+  | "importacion";
+
+export type FinanceEntry = {
+  id: string;
+  type: FinanceEntryType;
+  category: string | null;
+  amount: number;
+  accountId: string | null;
+  accountName: string | null;
+  note: string | null;
+  occurredAt: string;
+  createdBy: string | null;
+  createdAt: string;
+};
+
+const FINANCE_ENTRY_SELECT =
+  "id, type, category, amount, account_id, note, occurred_at, created_by, created_at, finance_accounts(name)";
+
+const FINANCE_ENTRY_TYPES: FinanceEntryType[] = [
+  "ingreso",
+  "gasto",
+  "capital_aporte",
+  "capital_retiro",
+  "importacion",
+];
+
+function rowToFinanceEntry(row: FinanceEntryRow): FinanceEntry {
+  return {
+    id: row.id,
+    type: row.type as FinanceEntryType,
+    category: row.category,
+    amount: Number(row.amount),
+    accountId: row.account_id,
+    accountName: row.finance_accounts?.name ?? null,
+    note: row.note,
+    occurredAt: row.occurred_at,
+    createdBy: row.created_by,
+    createdAt: row.created_at,
+  };
+}
+
+export async function getFinanceEntries(range?: {
+  from?: string;
+  to?: string;
+}): Promise<FinanceEntry[]> {
+  let query = supabaseAdmin
+    .from("finance_entries")
+    .select(FINANCE_ENTRY_SELECT)
+    .order("occurred_at", { ascending: false });
+
+  if (range?.from) query = query.gte("occurred_at", range.from);
+  if (range?.to) query = query.lte("occurred_at", range.to);
+
+  const { data, error } = await query;
+  if (error) fail(`No se pudieron cargar los movimientos financieros: ${error.message}`);
+  return (data as unknown as FinanceEntryRow[]).map(rowToFinanceEntry);
+}
+
+export type FinanceEntryInput = {
+  type: FinanceEntryType;
+  category?: string | null;
+  amount: number;
+  accountId?: string | null;
+  note?: string | null;
+  occurredAt?: string;
+  adminName?: string | null;
+};
+
+function assertValidFinanceEntry(input: FinanceEntryInput) {
+  if (!FINANCE_ENTRY_TYPES.includes(input.type)) {
+    throw new DataError("Selecciona un tipo de movimiento válido.");
+  }
+  if (!Number.isFinite(input.amount) || input.amount <= 0) {
+    throw new DataError("El monto debe ser mayor que 0.");
+  }
+}
+
+export async function createFinanceEntry(
+  input: FinanceEntryInput,
+): Promise<FinanceEntry> {
+  assertValidFinanceEntry(input);
+
+  const id = `fin-${randomUUID().slice(0, 8)}`;
+  const { data, error } = await supabaseAdmin
+    .from("finance_entries")
+    .insert({
+      id,
+      type: input.type,
+      category: input.category?.trim() || null,
+      amount: input.amount,
+      account_id: input.accountId || null,
+      note: input.note?.trim() || null,
+      occurred_at: input.occurredAt ?? new Date().toISOString(),
+      created_by: input.adminName ?? null,
+    })
+    .select(FINANCE_ENTRY_SELECT)
+    .single();
+
+  if (error) fail(`No se pudo registrar el movimiento: ${error.message}`);
+  return rowToFinanceEntry(data as unknown as FinanceEntryRow);
+}
+
+export async function updateFinanceEntry(
+  id: string,
+  input: FinanceEntryInput,
+): Promise<FinanceEntry> {
+  assertValidFinanceEntry(input);
+
+  const { data, error } = await supabaseAdmin
+    .from("finance_entries")
+    .update({
+      type: input.type,
+      category: input.category?.trim() || null,
+      amount: input.amount,
+      account_id: input.accountId || null,
+      note: input.note?.trim() || null,
+      occurred_at: input.occurredAt ?? new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select(FINANCE_ENTRY_SELECT)
+    .single();
+
+  if (error) fail(`No se pudo actualizar el movimiento: ${error.message}`);
+  if (!data) throw new DataError("Movimiento no encontrado.", 404);
+  return rowToFinanceEntry(data as unknown as FinanceEntryRow);
+}
+
+export async function deleteFinanceEntry(id: string): Promise<void> {
+  const { data, error } = await supabaseAdmin
+    .from("finance_entries")
+    .delete()
+    .eq("id", id)
+    .select("id");
+  if (error) fail(`No se pudo eliminar el movimiento: ${error.message}`);
+  if (!data || data.length === 0) {
+    throw new DataError("Movimiento no encontrado.", 404);
+  }
+}
+
+export type FinanceSummary = {
+  ventasTotal: number;
+  ventasGanancia: number;
+  ingresosOtros: number;
+  gastos: number;
+  gastosPorCategoria: { category: string; amount: number }[];
+  importacion: number;
+  capitalNeto: number;
+  utilidadNeta: number;
+  serieMensual: { month: string; ingresos: number; gastos: number }[];
+};
+
+/**
+ * Junta todo lo necesario para el dashboard de Finanzas en un solo lugar:
+ * las ventas del rango (ingresos "de verdad", ya registrados en Ventas, no
+ * se duplican como finance_entries) más los movimientos financieros
+ * manuales (gastos, importación, capital, otros ingresos).
+ */
+export async function getFinanceSummary(range?: {
+  from?: string;
+  to?: string;
+}): Promise<FinanceSummary> {
+  const [sales, entries] = await Promise.all([
+    getSales(range),
+    getFinanceEntries(range),
+  ]);
+
+  const ventasTotal = sales.reduce(
+    (acc, s) => acc + s.items.reduce((a, i) => a + lineTotal(i), 0),
+    0,
+  );
+  const ventasGanancia = sales.reduce(
+    (acc, s) => acc + s.items.reduce((a, i) => a + lineProfit(i), 0),
+    0,
+  );
+
+  const mensual = new Map<string, { ingresos: number; gastos: number }>();
+  const addMonthly = (dateStr: string, field: "ingresos" | "gastos", amount: number) => {
+    const month = dateStr.slice(0, 7); // "YYYY-MM"
+    const current = mensual.get(month) ?? { ingresos: 0, gastos: 0 };
+    current[field] += amount;
+    mensual.set(month, current);
+  };
+  for (const s of sales) {
+    addMonthly(
+      s.soldAt,
+      "ingresos",
+      s.items.reduce((a, i) => a + lineTotal(i), 0),
+    );
+  }
+
+  let ingresosOtros = 0;
+  let gastos = 0;
+  let importacion = 0;
+  let capitalNeto = 0;
+  const gastosPorCategoriaMap = new Map<string, number>();
+
+  for (const e of entries) {
+    switch (e.type) {
+      case "ingreso":
+        ingresosOtros += e.amount;
+        addMonthly(e.occurredAt, "ingresos", e.amount);
+        break;
+      case "gasto": {
+        gastos += e.amount;
+        addMonthly(e.occurredAt, "gastos", e.amount);
+        const cat = e.category || "Sin categoría";
+        gastosPorCategoriaMap.set(cat, (gastosPorCategoriaMap.get(cat) ?? 0) + e.amount);
+        break;
+      }
+      case "importacion":
+        importacion += e.amount;
+        addMonthly(e.occurredAt, "gastos", e.amount);
+        break;
+      case "capital_aporte":
+        capitalNeto += e.amount;
+        break;
+      case "capital_retiro":
+        capitalNeto -= e.amount;
+        break;
+    }
+  }
+
+  // Ganancia de ventas (ya neta del costo del producto) + otros ingresos,
+  // menos gastos e importación. Los aportes/retiros de capital NO entran
+  // acá: son financiamiento, no resultado operativo del negocio.
+  const utilidadNeta = ventasGanancia + ingresosOtros - gastos - importacion;
+
+  const serieMensual = [...mensual.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([month, v]) => ({ month, ...v }));
+
+  const gastosPorCategoria = [...gastosPorCategoriaMap.entries()]
+    .map(([category, amount]) => ({ category, amount }))
+    .sort((a, b) => b.amount - a.amount);
+
+  return {
+    ventasTotal,
+    ventasGanancia,
+    ingresosOtros,
+    gastos,
+    gastosPorCategoria,
+    importacion,
+    capitalNeto,
+    utilidadNeta,
+    serieMensual,
+  };
 }
 
 // ── Configuración general del sitio ────────────────────────────────────────

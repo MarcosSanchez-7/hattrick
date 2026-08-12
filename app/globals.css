@@ -2560,6 +2560,48 @@ textarea {
   border: 1px solid var(--line);
 }
 
+.admin-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+}
+
+.admin-chart-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.admin-chart-legend__swatch {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  display: inline-block;
+}
+
+.admin-donut {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  flex-wrap: wrap;
+}
+
+.admin-donut__legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.8125rem;
+}
+
+.admin-donut__legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .admin-card__head {
   display: flex;
   align-items: center;
