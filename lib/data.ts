@@ -1234,6 +1234,36 @@ export async function recordSale(input: SaleInput): Promise<string> {
   return id;
 }
 
+/**
+ * Antes de borrar la venta, repone el stock que se descontó al registrarla
+ * (un movimiento "return" por cada línea con variant_id real) — si no, el
+ * stock quedaría descontado para siempre por una venta que ya no existe.
+ * Las líneas importadas desde CSV (variant_id null) no tenían stock
+ * descontado, así que no generan reposición.
+ */
+export async function deleteSale(id: string): Promise<void> {
+  const { data: items, error: itemsError } = await supabaseAdmin
+    .from("sale_items")
+    .select("variant_id, quantity")
+    .eq("sale_id", id);
+  if (itemsError) fail(`No se pudo leer la venta: ${itemsError.message}`);
+  if (!items || items.length === 0) throw new DataError("Venta no encontrada.", 404);
+
+  for (const item of items as { variant_id: string | null; quantity: number }[]) {
+    if (!item.variant_id) continue;
+    const { error } = await supabaseAdmin.from("inventory_movements").insert({
+      variant_id: item.variant_id,
+      movement_type: "return",
+      quantity_delta: item.quantity,
+      note: "Reposición de stock por eliminación de venta",
+    });
+    if (error) fail(`No se pudo reponer el stock: ${error.message}`);
+  }
+
+  const { error } = await supabaseAdmin.from("sales").delete().eq("id", id);
+  if (error) fail(`No se pudo eliminar la venta: ${error.message}`);
+}
+
 export type SaleImportRow = {
   soldAt: string;
   productName: string;
