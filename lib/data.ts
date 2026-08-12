@@ -1625,13 +1625,150 @@ export async function deleteFinanceEntry(id: string): Promise<void> {
   }
 }
 
+type MerchandisePurchaseRow = {
+  id: string;
+  product_name: string;
+  quantity: number;
+  unit_cost: number | string;
+  supplier: string | null;
+  note: string | null;
+  purchased_at: string;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type MerchandisePurchase = {
+  id: string;
+  productName: string;
+  quantity: number;
+  unitCost: number;
+  supplier: string | null;
+  note: string | null;
+  purchasedAt: string;
+  createdBy: string | null;
+  createdAt: string;
+};
+
+function rowToMerchandisePurchase(row: MerchandisePurchaseRow): MerchandisePurchase {
+  return {
+    id: row.id,
+    productName: row.product_name,
+    quantity: row.quantity,
+    unitCost: Number(row.unit_cost),
+    supplier: row.supplier,
+    note: row.note,
+    purchasedAt: row.purchased_at,
+    createdBy: row.created_by,
+    createdAt: row.created_at,
+  };
+}
+
+export async function getMerchandisePurchases(range?: {
+  from?: string;
+  to?: string;
+}): Promise<MerchandisePurchase[]> {
+  let query = supabaseAdmin
+    .from("merchandise_purchases")
+    .select("*")
+    .order("purchased_at", { ascending: false });
+
+  if (range?.from) query = query.gte("purchased_at", range.from);
+  if (range?.to) query = query.lte("purchased_at", range.to);
+
+  const { data, error } = await query;
+  if (error) fail(`No se pudieron cargar las compras: ${error.message}`);
+  return (data as MerchandisePurchaseRow[]).map(rowToMerchandisePurchase);
+}
+
+export type MerchandisePurchaseInput = {
+  productName: string;
+  quantity: number;
+  unitCost: number;
+  supplier?: string | null;
+  note?: string | null;
+  purchasedAt?: string;
+  adminName?: string | null;
+};
+
+function assertValidPurchase(input: MerchandisePurchaseInput) {
+  if (!input.productName?.trim()) throw new DataError("El producto es obligatorio.");
+  if (!Number.isFinite(input.quantity) || input.quantity <= 0) {
+    throw new DataError("La cantidad debe ser mayor que 0.");
+  }
+  if (!Number.isFinite(input.unitCost) || input.unitCost < 0) {
+    throw new DataError("El precio de compra no es válido.");
+  }
+}
+
+export async function createMerchandisePurchase(
+  input: MerchandisePurchaseInput,
+): Promise<MerchandisePurchase> {
+  assertValidPurchase(input);
+
+  const id = `pur-${randomUUID().slice(0, 8)}`;
+  const { data, error } = await supabaseAdmin
+    .from("merchandise_purchases")
+    .insert({
+      id,
+      product_name: input.productName.trim(),
+      quantity: input.quantity,
+      unit_cost: input.unitCost,
+      supplier: input.supplier?.trim() || null,
+      note: input.note?.trim() || null,
+      purchased_at: input.purchasedAt ?? new Date().toISOString(),
+      created_by: input.adminName ?? null,
+    })
+    .select("*")
+    .single();
+
+  if (error) fail(`No se pudo registrar la compra: ${error.message}`);
+  return rowToMerchandisePurchase(data as MerchandisePurchaseRow);
+}
+
+export async function updateMerchandisePurchase(
+  id: string,
+  input: MerchandisePurchaseInput,
+): Promise<MerchandisePurchase> {
+  assertValidPurchase(input);
+
+  const { data, error } = await supabaseAdmin
+    .from("merchandise_purchases")
+    .update({
+      product_name: input.productName.trim(),
+      quantity: input.quantity,
+      unit_cost: input.unitCost,
+      supplier: input.supplier?.trim() || null,
+      note: input.note?.trim() || null,
+      purchased_at: input.purchasedAt ?? new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) fail(`No se pudo actualizar la compra: ${error.message}`);
+  if (!data) throw new DataError("Compra no encontrada.", 404);
+  return rowToMerchandisePurchase(data as MerchandisePurchaseRow);
+}
+
+export async function deleteMerchandisePurchase(id: string): Promise<void> {
+  const { data, error } = await supabaseAdmin
+    .from("merchandise_purchases")
+    .delete()
+    .eq("id", id)
+    .select("id");
+  if (error) fail(`No se pudo eliminar la compra: ${error.message}`);
+  if (!data || data.length === 0) throw new DataError("Compra no encontrada.", 404);
+}
+
 export type FinanceSummary = {
   ventasTotal: number;
   ventasGanancia: number;
+  margenPromedio: number;
   ingresosOtros: number;
   gastos: number;
   gastosPorCategoria: { category: string; amount: number }[];
   importacion: number;
+  comprasMercaderia: number;
   capitalNeto: number;
   utilidadNeta: number;
   serieMensual: { month: string; ingresos: number; gastos: number }[];
@@ -1647,9 +1784,10 @@ export async function getFinanceSummary(range?: {
   from?: string;
   to?: string;
 }): Promise<FinanceSummary> {
-  const [sales, entries] = await Promise.all([
+  const [sales, entries, purchases] = await Promise.all([
     getSales(range),
     getFinanceEntries(range),
+    getMerchandisePurchases(range),
   ]);
 
   const ventasTotal = sales.reduce(
@@ -1658,6 +1796,12 @@ export async function getFinanceSummary(range?: {
   );
   const ventasGanancia = sales.reduce(
     (acc, s) => acc + s.items.reduce((a, i) => a + lineProfit(i), 0),
+    0,
+  );
+  const margenPromedio = ventasTotal > 0 ? (ventasGanancia / ventasTotal) * 100 : 0;
+
+  const comprasMercaderia = purchases.reduce(
+    (acc, p) => acc + p.unitCost * p.quantity,
     0,
   );
 
@@ -1710,7 +1854,11 @@ export async function getFinanceSummary(range?: {
 
   // Ganancia de ventas (ya neta del costo del producto) + otros ingresos,
   // menos gastos e importación. Los aportes/retiros de capital NO entran
-  // acá: son financiamiento, no resultado operativo del negocio.
+  // acá: son financiamiento, no resultado operativo del negocio. Las
+  // compras de mercadería TAMPOCO restan acá a propósito: su costo ya
+  // queda reflejado en la ganancia de cada venta (costPrice), restarlo de
+  // nuevo acá duplicaría el gasto. comprasMercaderia se muestra aparte,
+  // solo como referencia de flujo de caja ("cuánto salió a reponer stock").
   const utilidadNeta = ventasGanancia + ingresosOtros - gastos - importacion;
 
   const serieMensual = [...mensual.entries()]
@@ -1724,13 +1872,71 @@ export async function getFinanceSummary(range?: {
   return {
     ventasTotal,
     ventasGanancia,
+    margenPromedio,
     ingresosOtros,
     gastos,
     gastosPorCategoria,
     importacion,
+    comprasMercaderia,
     capitalNeto,
     utilidadNeta,
     serieMensual,
+  };
+}
+
+export type InventoryValuation = {
+  costValue: number;
+  retailValue: number;
+  totalUnits: number;
+};
+
+/** Cuánto vale el stock propio disponible ahora — a costo (lo que salió
+ * comprarlo) y a precio de venta (lo que facturaría si se vende todo). */
+export async function getInventoryValuation(): Promise<InventoryValuation> {
+  const products = await getAllProducts({ includeHidden: true });
+
+  let costValue = 0;
+  let retailValue = 0;
+  let totalUnits = 0;
+
+  for (const p of products) {
+    if (p.stockMode !== "propio" || !p.variants) continue;
+    const stock = p.variants.reduce((acc, v) => acc + v.stock, 0);
+    totalUnits += stock;
+    retailValue += p.price * stock;
+    if (p.costPrice != null) costValue += p.costPrice * stock;
+  }
+
+  return { costValue, retailValue, totalUnits };
+}
+
+export type LiquiditySummary = {
+  efectivo: number;
+  cuentaBancaria: number;
+  tarjetaCredito: number;
+  tarjetaDebito: number;
+  /** efectivo + cuenta bancaria + crédito disponible (no incluye débito, ya representa la misma plata que la cuenta bancaria). */
+  liquidezTotal: number;
+};
+
+export async function getLiquiditySummary(): Promise<LiquiditySummary> {
+  const accounts = await getFinanceAccounts();
+  const sumBy = (kind: FinanceAccountKind) =>
+    accounts
+      .filter((a) => a.kind === kind)
+      .reduce((acc, a) => acc + a.balance, 0);
+
+  const efectivo = sumBy("efectivo");
+  const cuentaBancaria = sumBy("cuenta_bancaria");
+  const tarjetaCredito = sumBy("tarjeta_credito");
+  const tarjetaDebito = sumBy("tarjeta_debito");
+
+  return {
+    efectivo,
+    cuentaBancaria,
+    tarjetaCredito,
+    tarjetaDebito,
+    liquidezTotal: efectivo + cuentaBancaria + tarjetaCredito,
   };
 }
 

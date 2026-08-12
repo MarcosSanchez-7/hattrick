@@ -699,3 +699,29 @@ alter table finance_entries enable row level security;
 create index if not exists finance_entries_occurred_at_idx on finance_entries (occurred_at desc);
 create index if not exists finance_entries_type_idx on finance_entries (type);
 create index if not exists finance_entries_account_idx on finance_entries (account_id);
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Compras de mercadería — /admin/finanzas/compras. Registro de cuándo y a
+-- qué precio se adquiere stock nuevo, separado de finance_entries porque
+-- tiene una forma distinta (producto + cantidad + costo unitario, no un
+-- monto suelto). product_name es texto libre a propósito: no toda compra
+-- corresponde a un producto ya cargado en el catálogo (puede ser mercadería
+-- que todavía no se subió, o un lote de varios artículos).
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists merchandise_purchases (
+  id text primary key,
+  product_name text not null,
+  quantity integer not null check (quantity > 0),
+  unit_cost numeric(12, 2) not null check (unit_cost >= 0),
+  supplier text,
+  note text,
+  purchased_at timestamptz not null default now(),
+  created_by text,
+  created_at timestamptz not null default now()
+);
+
+alter table merchandise_purchases enable row level security;
+
+create index if not exists merchandise_purchases_purchased_at_idx
+  on merchandise_purchases (purchased_at desc);
