@@ -16,10 +16,12 @@ import type {
 } from "@/lib/catalog";
 import {
   descendantSlugs,
+  importTotalGs,
   lineProfit,
   lineTotal,
   SIZES_ADULT,
   wouldCreateCycle,
+  type ImportCostInput,
 } from "@/lib/catalog";
 import { slugify, uniqueSlug } from "@/lib/slug";
 import type { SiteSettingsKey } from "@/lib/settings";
@@ -1474,12 +1476,15 @@ type FinanceEntryRow = {
   category: string | null;
   amount: number | string;
   account_id: string | null;
+  expense_kind: string | null;
   note: string | null;
   occurred_at: string;
   created_by: string | null;
   created_at: string;
   finance_accounts: { name: string } | null;
 };
+
+export type ExpenseKind = "fijo" | "variable";
 
 export type FinanceEntryType =
   | "ingreso"
@@ -1495,6 +1500,8 @@ export type FinanceEntry = {
   amount: number;
   accountId: string | null;
   accountName: string | null;
+  /** Solo tiene sentido cuando type === "gasto"; el resto queda null. */
+  expenseKind: ExpenseKind | null;
   note: string | null;
   occurredAt: string;
   createdBy: string | null;
@@ -1502,7 +1509,7 @@ export type FinanceEntry = {
 };
 
 const FINANCE_ENTRY_SELECT =
-  "id, type, category, amount, account_id, note, occurred_at, created_by, created_at, finance_accounts(name)";
+  "id, type, category, amount, account_id, expense_kind, note, occurred_at, created_by, created_at, finance_accounts(name)";
 
 const FINANCE_ENTRY_TYPES: FinanceEntryType[] = [
   "ingreso",
@@ -1520,6 +1527,7 @@ function rowToFinanceEntry(row: FinanceEntryRow): FinanceEntry {
     amount: Number(row.amount),
     accountId: row.account_id,
     accountName: row.finance_accounts?.name ?? null,
+    expenseKind: (row.expense_kind as ExpenseKind | null) ?? null,
     note: row.note,
     occurredAt: row.occurred_at,
     createdBy: row.created_by,
@@ -1527,10 +1535,10 @@ function rowToFinanceEntry(row: FinanceEntryRow): FinanceEntry {
   };
 }
 
-export async function getFinanceEntries(range?: {
-  from?: string;
-  to?: string;
-}): Promise<FinanceEntry[]> {
+export async function getFinanceEntries(
+  range?: { from?: string; to?: string },
+  type?: FinanceEntryType,
+): Promise<FinanceEntry[]> {
   let query = supabaseAdmin
     .from("finance_entries")
     .select(FINANCE_ENTRY_SELECT)
@@ -1538,6 +1546,7 @@ export async function getFinanceEntries(range?: {
 
   if (range?.from) query = query.gte("occurred_at", range.from);
   if (range?.to) query = query.lte("occurred_at", range.to);
+  if (type) query = query.eq("type", type);
 
   const { data, error } = await query;
   if (error) fail(`No se pudieron cargar los movimientos financieros: ${error.message}`);
@@ -1549,6 +1558,7 @@ export type FinanceEntryInput = {
   category?: string | null;
   amount: number;
   accountId?: string | null;
+  expenseKind?: ExpenseKind | null;
   note?: string | null;
   occurredAt?: string;
   adminName?: string | null;
@@ -1560,6 +1570,9 @@ function assertValidFinanceEntry(input: FinanceEntryInput) {
   }
   if (!Number.isFinite(input.amount) || input.amount <= 0) {
     throw new DataError("El monto debe ser mayor que 0.");
+  }
+  if (input.expenseKind && !["fijo", "variable"].includes(input.expenseKind)) {
+    throw new DataError("Selecciona si el gasto es fijo o variable.");
   }
 }
 
@@ -1577,6 +1590,7 @@ export async function createFinanceEntry(
       category: input.category?.trim() || null,
       amount: input.amount,
       account_id: input.accountId || null,
+      expense_kind: input.type === "gasto" ? input.expenseKind ?? null : null,
       note: input.note?.trim() || null,
       occurred_at: input.occurredAt ?? new Date().toISOString(),
       created_by: input.adminName ?? null,
@@ -1601,6 +1615,7 @@ export async function updateFinanceEntry(
       category: input.category?.trim() || null,
       amount: input.amount,
       account_id: input.accountId || null,
+      expense_kind: input.type === "gasto" ? input.expenseKind ?? null : null,
       note: input.note?.trim() || null,
       occurred_at: input.occurredAt ?? new Date().toISOString(),
     })
@@ -1769,6 +1784,7 @@ export type FinanceSummary = {
   gastosPorCategoria: { category: string; amount: number }[];
   importacion: number;
   comprasMercaderia: number;
+  importacionesChina: number;
   capitalNeto: number;
   utilidadNeta: number;
   serieMensual: { month: string; ingresos: number; gastos: number }[];
@@ -1784,10 +1800,11 @@ export async function getFinanceSummary(range?: {
   from?: string;
   to?: string;
 }): Promise<FinanceSummary> {
-  const [sales, entries, purchases] = await Promise.all([
+  const [sales, entries, purchases, importPurchases] = await Promise.all([
     getSales(range),
     getFinanceEntries(range),
     getMerchandisePurchases(range),
+    getImportPurchases(range),
   ]);
 
   const ventasTotal = sales.reduce(
@@ -1804,6 +1821,10 @@ export async function getFinanceSummary(range?: {
     (acc, p) => acc + p.unitCost * p.quantity,
     0,
   );
+
+  // Mismo criterio que comprasMercaderia: informativo, no resta de
+  // utilidadNeta (el costo ya queda reflejado en costPrice al vender).
+  const importacionesChina = importPurchases.reduce((acc, p) => acc + p.totalGs, 0);
 
   const mensual = new Map<string, { ingresos: number; gastos: number }>();
   const addMonthly = (dateStr: string, field: "ingresos" | "gastos", amount: number) => {
@@ -1878,6 +1899,7 @@ export async function getFinanceSummary(range?: {
     gastosPorCategoria,
     importacion,
     comprasMercaderia,
+    importacionesChina,
     capitalNeto,
     utilidadNeta,
     serieMensual,
@@ -1938,6 +1960,305 @@ export async function getLiquiditySummary(): Promise<LiquiditySummary> {
     tarjetaDebito,
     liquidezTotal: efectivo + cuentaBancaria + tarjetaCredito,
   };
+}
+
+// ── Importaciones (China) ──────────────────────────────────────────────
+
+type ImportCourierRow = {
+  id: string;
+  name: string;
+  cost_per_kg: number | string;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ImportCourier = {
+  id: string;
+  name: string;
+  costPerKg: number;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+function rowToImportCourier(row: ImportCourierRow): ImportCourier {
+  return {
+    id: row.id,
+    name: row.name,
+    costPerKg: Number(row.cost_per_kg),
+    note: row.note,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export async function getImportCouriers(): Promise<ImportCourier[]> {
+  const { data, error } = await supabaseAdmin
+    .from("import_couriers")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (error) fail(`No se pudieron cargar los couriers: ${error.message}`);
+  return (data as ImportCourierRow[]).map(rowToImportCourier);
+}
+
+export type ImportCourierInput = {
+  name: string;
+  costPerKg: number;
+  note?: string | null;
+};
+
+function assertValidImportCourier(input: ImportCourierInput) {
+  if (!input.name?.trim()) throw new DataError("El nombre es obligatorio.");
+  if (!Number.isFinite(input.costPerKg) || input.costPerKg < 0) {
+    throw new DataError("El costo por kilo no es válido.");
+  }
+}
+
+export async function createImportCourier(
+  input: ImportCourierInput,
+): Promise<ImportCourier> {
+  assertValidImportCourier(input);
+
+  const id = `cur-${randomUUID().slice(0, 8)}`;
+  const { data, error } = await supabaseAdmin
+    .from("import_couriers")
+    .insert({
+      id,
+      name: input.name.trim(),
+      cost_per_kg: input.costPerKg,
+      note: input.note?.trim() || null,
+    })
+    .select("*")
+    .single();
+
+  if (error) fail(`No se pudo crear el courier: ${error.message}`);
+  return rowToImportCourier(data as ImportCourierRow);
+}
+
+export async function updateImportCourier(
+  id: string,
+  input: ImportCourierInput,
+): Promise<ImportCourier> {
+  assertValidImportCourier(input);
+
+  const { data, error } = await supabaseAdmin
+    .from("import_couriers")
+    .update({
+      name: input.name.trim(),
+      cost_per_kg: input.costPerKg,
+      note: input.note?.trim() || null,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) fail(`No se pudo actualizar el courier: ${error.message}`);
+  if (!data) throw new DataError("Courier no encontrado.", 404);
+  return rowToImportCourier(data as ImportCourierRow);
+}
+
+export async function deleteImportCourier(id: string): Promise<void> {
+  const { data, error } = await supabaseAdmin
+    .from("import_couriers")
+    .delete()
+    .eq("id", id)
+    .select("id");
+  if (error) fail(`No se pudo eliminar el courier: ${error.message}`);
+  if (!data || data.length === 0) throw new DataError("Courier no encontrado.", 404);
+}
+
+type ImportPurchaseRow = {
+  id: string;
+  product_name: string;
+  cost_usd: number | string;
+  exchange_rate: number | string;
+  weight_kg: number | string;
+  courier_id: string | null;
+  courier_name_snapshot: string;
+  cost_per_kg_snapshot: number | string;
+  tax_rate: number | string;
+  note: string | null;
+  purchased_at: string;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type ImportPurchase = {
+  id: string;
+  productName: string;
+  costUsd: number;
+  exchangeRate: number;
+  weightKg: number;
+  courierId: string | null;
+  courierName: string;
+  costPerKg: number;
+  taxRate: number;
+  note: string | null;
+  purchasedAt: string;
+  createdBy: string | null;
+  createdAt: string;
+  // Calculado desde los valores crudos de arriba (ver lib/catalog.ts),
+  // nunca guardado, para que jamás se desincronice.
+  productCostGs: number;
+  shippingCostGs: number;
+  subtotalGs: number;
+  taxGs: number;
+  totalGs: number;
+};
+
+function rowToImportPurchase(row: ImportPurchaseRow): ImportPurchase {
+  const calcInput: ImportCostInput = {
+    costUsd: Number(row.cost_usd),
+    exchangeRate: Number(row.exchange_rate),
+    weightKg: Number(row.weight_kg),
+    costPerKg: Number(row.cost_per_kg_snapshot),
+    taxRate: Number(row.tax_rate),
+  };
+
+  return {
+    id: row.id,
+    productName: row.product_name,
+    costUsd: calcInput.costUsd,
+    exchangeRate: calcInput.exchangeRate,
+    weightKg: calcInput.weightKg,
+    courierId: row.courier_id,
+    courierName: row.courier_name_snapshot,
+    costPerKg: calcInput.costPerKg,
+    taxRate: calcInput.taxRate,
+    note: row.note,
+    purchasedAt: row.purchased_at,
+    createdBy: row.created_by,
+    createdAt: row.created_at,
+    productCostGs: calcInput.costUsd * calcInput.exchangeRate,
+    shippingCostGs: calcInput.weightKg * calcInput.costPerKg,
+    subtotalGs:
+      calcInput.costUsd * calcInput.exchangeRate + calcInput.weightKg * calcInput.costPerKg,
+    taxGs:
+      (calcInput.costUsd * calcInput.exchangeRate + calcInput.weightKg * calcInput.costPerKg) *
+      (calcInput.taxRate / 100),
+    totalGs: importTotalGs(calcInput),
+  };
+}
+
+export async function getImportPurchases(range?: {
+  from?: string;
+  to?: string;
+}): Promise<ImportPurchase[]> {
+  let query = supabaseAdmin
+    .from("import_purchases")
+    .select("*")
+    .order("purchased_at", { ascending: false });
+
+  if (range?.from) query = query.gte("purchased_at", range.from);
+  if (range?.to) query = query.lte("purchased_at", range.to);
+
+  const { data, error } = await query;
+  if (error) fail(`No se pudieron cargar las importaciones: ${error.message}`);
+  return (data as ImportPurchaseRow[]).map(rowToImportPurchase);
+}
+
+export type ImportPurchaseInput = {
+  productName: string;
+  costUsd: number;
+  exchangeRate: number;
+  weightKg: number;
+  courierId: string;
+  taxRate?: number;
+  note?: string | null;
+  purchasedAt?: string;
+  adminName?: string | null;
+};
+
+async function assertValidImportPurchase(
+  input: ImportPurchaseInput,
+): Promise<ImportCourier> {
+  if (!input.productName?.trim()) throw new DataError("El producto es obligatorio.");
+  if (!Number.isFinite(input.costUsd) || input.costUsd < 0) {
+    throw new DataError("El costo en dólares no es válido.");
+  }
+  if (!Number.isFinite(input.exchangeRate) || input.exchangeRate <= 0) {
+    throw new DataError("La cotización del dólar no es válida.");
+  }
+  if (!Number.isFinite(input.weightKg) || input.weightKg <= 0) {
+    throw new DataError("El peso debe ser mayor que 0.");
+  }
+  if (!input.courierId) throw new DataError("Selecciona un courier.");
+
+  const couriers = await getImportCouriers();
+  const courier = couriers.find((c) => c.id === input.courierId);
+  if (!courier) throw new DataError("El courier elegido no existe.", 404);
+  return courier;
+}
+
+export async function createImportPurchase(
+  input: ImportPurchaseInput,
+): Promise<ImportPurchase> {
+  const courier = await assertValidImportPurchase(input);
+
+  const id = `imp-${randomUUID().slice(0, 8)}`;
+  const { data, error } = await supabaseAdmin
+    .from("import_purchases")
+    .insert({
+      id,
+      product_name: input.productName.trim(),
+      cost_usd: input.costUsd,
+      exchange_rate: input.exchangeRate,
+      weight_kg: input.weightKg,
+      courier_id: courier.id,
+      courier_name_snapshot: courier.name,
+      cost_per_kg_snapshot: courier.costPerKg,
+      tax_rate: input.taxRate ?? 10,
+      note: input.note?.trim() || null,
+      purchased_at: input.purchasedAt ?? new Date().toISOString(),
+      created_by: input.adminName ?? null,
+    })
+    .select("*")
+    .single();
+
+  if (error) fail(`No se pudo registrar la importación: ${error.message}`);
+  return rowToImportPurchase(data as ImportPurchaseRow);
+}
+
+export async function updateImportPurchase(
+  id: string,
+  input: ImportPurchaseInput,
+): Promise<ImportPurchase> {
+  const courier = await assertValidImportPurchase(input);
+
+  const { data, error } = await supabaseAdmin
+    .from("import_purchases")
+    .update({
+      product_name: input.productName.trim(),
+      cost_usd: input.costUsd,
+      exchange_rate: input.exchangeRate,
+      weight_kg: input.weightKg,
+      courier_id: courier.id,
+      courier_name_snapshot: courier.name,
+      cost_per_kg_snapshot: courier.costPerKg,
+      tax_rate: input.taxRate ?? 10,
+      note: input.note?.trim() || null,
+      purchased_at: input.purchasedAt ?? new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) fail(`No se pudo actualizar la importación: ${error.message}`);
+  if (!data) throw new DataError("Importación no encontrada.", 404);
+  return rowToImportPurchase(data as ImportPurchaseRow);
+}
+
+export async function deleteImportPurchase(id: string): Promise<void> {
+  const { data, error } = await supabaseAdmin
+    .from("import_purchases")
+    .delete()
+    .eq("id", id)
+    .select("id");
+  if (error) fail(`No se pudo eliminar la importación: ${error.message}`);
+  if (!data || data.length === 0) {
+    throw new DataError("Importación no encontrada.", 404);
+  }
 }
 
 // ── Configuración general del sitio ────────────────────────────────────────

@@ -47,6 +47,7 @@ export function CategoryPathPicker({
           required={i === 0}
           value={path[i] ?? ""}
           onChange={(e) => onChange(e.target.value || path[i - 1] || "")}
+          style={{ width: "100%", maxWidth: "100%" }}
         >
           <option value="" disabled={i === 0}>
             {i === 0 ? "Selecciona una categoría" : "— Usar esta categoría (sin subdividir) —"}

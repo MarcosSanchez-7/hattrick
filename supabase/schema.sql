@@ -725,3 +725,68 @@ alter table merchandise_purchases enable row level security;
 
 create index if not exists merchandise_purchases_purchased_at_idx
   on merchandise_purchases (purchased_at desc);
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Gastos fijos/variables — mismo finance_entries (type = 'gasto'), solo se
+-- agrega de qué tipo de gasto se trata. Nullable porque solo aplica a
+-- gasto: el resto de los tipos (ingreso, capital, importación) lo dejan en
+-- null.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+alter table finance_entries add column if not exists expense_kind text
+  check (expense_kind in ('fijo', 'variable'));
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Importaciones desde China — /admin/finanzas/importaciones. Registra el
+-- costo en dólares (pagado por Paypal), la cotización del dólar de esa
+-- operación puntual, el peso del envío y el courier elegido, para calcular
+-- el costo real de traer la mercadería: producto (USD * cotización) + flete
+-- (kg * costo por kilo del courier) + 10% de impuesto sobre ese subtotal.
+-- El cálculo no se guarda — se recalcula siempre desde estos datos crudos
+-- (mismo criterio que lineTotal/lineProfit de ventas), así nunca se
+-- desincroniza. Igual que merchandise_purchases: es informativo, no genera
+-- movimiento de stock ni resta de la utilidad neta (el costo ya queda
+-- reflejado en el precio de costo de cada producto al momento de la venta).
+--
+-- courier_name_snapshot/cost_per_kg_snapshot: por si el courier cambia de
+-- tarifa después, o se borra — la compra ya hecha conserva los datos con
+-- los que se calculó en su momento.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists import_couriers (
+  id text primary key,
+  name text not null,
+  cost_per_kg numeric(12, 2) not null check (cost_per_kg >= 0),
+  note text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table import_couriers enable row level security;
+
+drop trigger if exists import_couriers_set_updated_at on import_couriers;
+create trigger import_couriers_set_updated_at
+  before update on import_couriers
+  for each row
+  execute function set_updated_at();
+
+create table if not exists import_purchases (
+  id text primary key,
+  product_name text not null,
+  cost_usd numeric(12, 2) not null check (cost_usd >= 0),
+  exchange_rate numeric(12, 2) not null check (exchange_rate > 0),
+  weight_kg numeric(10, 2) not null check (weight_kg > 0),
+  courier_id text references import_couriers (id) on delete set null,
+  courier_name_snapshot text not null,
+  cost_per_kg_snapshot numeric(12, 2) not null,
+  tax_rate numeric(5, 2) not null default 10,
+  note text,
+  purchased_at timestamptz not null default now(),
+  created_by text,
+  created_at timestamptz not null default now()
+);
+
+alter table import_purchases enable row level security;
+
+create index if not exists import_purchases_purchased_at_idx
+  on import_purchases (purchased_at desc);

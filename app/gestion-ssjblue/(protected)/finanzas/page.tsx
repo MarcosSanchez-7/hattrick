@@ -68,8 +68,14 @@ export default async function FinancePage({
           <Link href="/gestion-ssjblue/finanzas/cuentas" className="btn btn--ghost btn--sm">
             Cuentas y tarjetas
           </Link>
+          <Link href="/gestion-ssjblue/finanzas/gastos" className="btn btn--ghost btn--sm">
+            Gastos
+          </Link>
           <Link href="/gestion-ssjblue/finanzas/compras" className="btn btn--ghost btn--sm">
             Compras de mercadería
+          </Link>
+          <Link href="/gestion-ssjblue/finanzas/importaciones" className="btn btn--ghost btn--sm">
+            Importaciones
           </Link>
           <Link href="/gestion-ssjblue/finanzas/movimientos" className="btn btn--sm">
             Ver movimientos
@@ -171,8 +177,12 @@ export default async function FinancePage({
           <div className="admin-stat__label">Compras de mercadería</div>
         </div>
         <div className="admin-stat">
+          <div className="admin-stat__value">{formatPrice(summary.importacionesChina)}</div>
+          <div className="admin-stat__label">Importaciones (China)</div>
+        </div>
+        <div className="admin-stat">
           <div className="admin-stat__value">{formatPrice(summary.importacion)}</div>
-          <div className="admin-stat__label">Importación</div>
+          <div className="admin-stat__label">Importación (otros gastos)</div>
         </div>
         <div className="admin-stat">
           <div className="admin-stat__value">{formatPrice(summary.capitalNeto)}</div>

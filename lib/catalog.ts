@@ -127,6 +127,27 @@ export const saleTotal = (sale: Sale) =>
 export const saleProfit = (sale: Sale) =>
   sale.items.reduce((acc, l) => acc + lineProfit(l), 0);
 
+// ── Importaciones (China) ────────────────────────────────────────────────
+// Puro cálculo, sin acceso a datos: se recalcula siempre desde los valores
+// crudos guardados (nunca se persiste el resultado), así el preview en vivo
+// del formulario y lo que se ve después en la lista son exactamente el
+// mismo número.
+
+export type ImportCostInput = {
+  costUsd: number;
+  exchangeRate: number;
+  weightKg: number;
+  costPerKg: number;
+  taxRate: number;
+};
+
+export const importProductCostGs = (i: ImportCostInput) => i.costUsd * i.exchangeRate;
+export const importShippingCostGs = (i: ImportCostInput) => i.weightKg * i.costPerKg;
+export const importSubtotalGs = (i: ImportCostInput) =>
+  importProductCostGs(i) + importShippingCostGs(i);
+export const importTaxGs = (i: ImportCostInput) => importSubtotalGs(i) * (i.taxRate / 100);
+export const importTotalGs = (i: ImportCostInput) => importSubtotalGs(i) + importTaxGs(i);
+
 export const PATTERNS: { value: Pattern; label: string }[] = [
   { value: "solid", label: "Liso" },
   { value: "stripes", label: "Franjas verticales" },

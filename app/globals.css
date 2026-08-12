@@ -2897,6 +2897,11 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  /* Como ítem de grid/flex (.admin-form__grid, .row), sin esto no podía
+     angostarse por debajo del contenido de su hijo más ancho (ej. un
+     <select> sin ancho propio) — mismo bug clásico ya resuelto en
+     .admin-stat. */
+  min-width: 0;
 }
 
 .admin-field label {
@@ -3063,6 +3068,14 @@ textarea {
   font-size: 0.8125rem;
 }
 
+.admin-notice-warn {
+  background: #fff8ec;
+  border: 1px solid #ffce7a;
+  color: #7a5200;
+  padding: 10px 14px;
+  font-size: 0.8125rem;
+}
+
 /* Uploader de imágenes */
 .admin-dropzone {
   border: 1px dashed var(--line);
@@ -3089,6 +3102,7 @@ textarea {
 .admin-url-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--sp-2);
   margin-top: var(--sp-3);
 }
