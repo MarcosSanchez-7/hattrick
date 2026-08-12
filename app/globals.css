@@ -3163,6 +3163,13 @@ textarea {
   .admin-stats {
     grid-template-columns: repeat(2, 1fr);
   }
+  .admin-stat {
+    padding: var(--sp-3);
+    text-align: center;
+  }
+  .admin-stat__value {
+    font-size: 1.125rem;
+  }
   .admin-form__grid,
   .admin-form__grid--3 {
     grid-template-columns: 1fr;
