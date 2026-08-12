@@ -15,6 +15,9 @@ import {
   IconTrash,
 } from "@/components/ui/Icons";
 
+const totalStock = (p: Product) =>
+  p.variants?.reduce((acc, v) => acc + v.stock, 0) ?? 0;
+
 type RowActions = {
   pendingId: string | null;
   togglingId: string | null;
@@ -199,6 +202,7 @@ function ProductRowsTable({
             {hideCategoryColumn ? null : <th>Categoría</th>}
             <th>Precio</th>
             <th>Estado</th>
+            <th>Stock</th>
             <th aria-label="Acciones" />
           </tr>
         </thead>
@@ -241,6 +245,13 @@ function ProductRowsTable({
                   <span className="badge">Nuevo</span>
                 ) : (
                   <span className="meta">En stock</span>
+                )}
+              </td>
+              <td data-label="Stock">
+                {p.stockMode === "propio" ? (
+                  `${totalStock(p)} uds.`
+                ) : (
+                  <span className="meta">—</span>
                 )}
               </td>
               <td>
