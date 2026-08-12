@@ -35,9 +35,17 @@ export default async function VentasPage({
             descuenta el stock de la web automáticamente.
           </p>
         </div>
-        <Link href="/gestion-ssjblue/ventas/nueva" className="btn btn--sm">
-          Registrar venta
-        </Link>
+        <div className="row gap-3">
+          <Link
+            href={`/api/admin/sales/export?from=${fromDate}&to=${toDate}`}
+            className="btn btn--ghost btn--sm"
+          >
+            Descargar CSV
+          </Link>
+          <Link href="/gestion-ssjblue/ventas/nueva" className="btn btn--sm">
+            Registrar venta
+          </Link>
+        </div>
       </div>
 
       <form
