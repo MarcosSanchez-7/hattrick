@@ -3339,6 +3339,13 @@ textarea {
   .admin-topbar__label {
     display: none;
   }
+  /* En mobile la fila de botones se apila y el menú queda pegado al borde
+     izquierdo — anclar el panel a la derecha (como en desktop, donde el
+     botón está cerca del borde derecho) lo empuja fuera de la pantalla. */
+  .admin-section-menu__panel {
+    left: 0;
+    right: auto;
+  }
   .admin-card__head {
     flex-direction: column;
     align-items: stretch;
