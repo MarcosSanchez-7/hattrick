@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Nuevos ingresos",
   description:
     "Las últimas equipaciones que han entrado en el almacén: temporada 25/26 y Mundial 2026.",
+  alternates: { canonical: "/novedades" },
 };
 
 export const dynamic = "force-dynamic";

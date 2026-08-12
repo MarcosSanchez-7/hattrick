@@ -5,6 +5,7 @@ import { SearchPageClient } from "@/components/search/SearchPageClient";
 export const metadata: Metadata = {
   title: "Buscar",
   description: "Busca camisetas por equipo, liga, temporada o color.",
+  alternates: { canonical: "/buscar" },
 };
 
 export const dynamic = "force-dynamic";

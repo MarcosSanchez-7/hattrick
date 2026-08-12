@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { bestSellers, newArrivals } from "@/lib/catalog";
 import { getAllCategories, getAllProducts, getAllTags, getSetting } from "@/lib/data";
@@ -15,6 +16,10 @@ import { CustomBanner } from "@/components/home/CustomBanner";
 import { ProductGrid } from "@/components/product/ProductCard";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 export default async function HomePage() {
   const [

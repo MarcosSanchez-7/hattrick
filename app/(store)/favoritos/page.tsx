@@ -6,6 +6,7 @@ import { FavoritosView } from "@/components/wishlist/FavoritosView";
 export const metadata: Metadata = {
   title: "Favoritos",
   description: "Las camisetas que guardaste para más tarde.",
+  alternates: { canonical: "/favoritos" },
 };
 
 export const dynamic = "force-dynamic";

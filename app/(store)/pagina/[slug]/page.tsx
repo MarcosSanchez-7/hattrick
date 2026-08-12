@@ -16,7 +16,10 @@ export async function generateMetadata({
   const pages = await getAllPages();
   const page = pages.find((p) => p.slug === slug);
   if (!page) return { title: "Página no encontrada" };
-  return { title: page.title };
+  return {
+    title: page.title,
+    alternates: { canonical: `/pagina/${page.slug}` },
+  };
 }
 
 export default async function ContentPage({

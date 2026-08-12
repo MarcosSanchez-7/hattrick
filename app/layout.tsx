@@ -1,13 +1,18 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
+
+const TITLE_DEFAULT = "HATTRICK · Camisetas de fútbol oficiales";
+const DESCRIPTION =
+  "Tienda de camisetas de fútbol: equipaciones de clubes y selecciones, retro, entrenamiento y kits infantiles. Personalización oficial y envío en 48 h.";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "HATTRICK · Camisetas de fútbol oficiales",
+    default: TITLE_DEFAULT,
     template: "%s · HATTRICK",
   },
-  description:
-    "Tienda de camisetas de fútbol: equipaciones de clubes y selecciones, retro, entrenamiento y kits infantiles. Personalización oficial y envío en 48 h.",
+  description: DESCRIPTION,
   keywords: [
     "camisetas de fútbol",
     "equipaciones",
@@ -15,6 +20,19 @@ export const metadata: Metadata = {
     "selecciones",
     "personalización",
   ],
+  openGraph: {
+    type: "website",
+    locale: "es_PY",
+    siteName: SITE_NAME,
+    title: TITLE_DEFAULT,
+    description: DESCRIPTION,
+    url: SITE_URL,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE_DEFAULT,
+    description: DESCRIPTION,
+  },
 };
 
 export default function RootLayout({
