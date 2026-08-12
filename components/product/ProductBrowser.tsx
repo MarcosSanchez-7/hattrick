@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { isOnSale, type Product, type Tag } from "@/lib/catalog";
+import type { Product, Tag } from "@/lib/catalog";
 import { ProductGrid } from "@/components/product/ProductCard";
 
 type Sort = "destacados" | "precio-asc" | "precio-desc" | "novedad";
@@ -21,14 +21,10 @@ export function ProductBrowser({
   products: Product[];
   tags?: Tag[];
 }) {
-  const [onlySale, setOnlySale] = useState(false);
   const [sort, setSort] = useState<Sort>("destacados");
 
   const visible = useMemo(() => {
-    let list = products;
-    if (onlySale) list = list.filter(isOnSale);
-
-    const sorted = [...list];
+    const sorted = [...products];
     switch (sort) {
       case "precio-asc":
         sorted.sort((a, b) => a.price - b.price);
@@ -43,40 +39,27 @@ export function ProductBrowser({
         sorted.sort((a, b) => b.reviews - a.reviews);
     }
     return sorted;
-  }, [products, onlySale, sort]);
+  }, [products, sort]);
 
   return (
     <>
-      <div className="toolbar">
-        <div className="filters">
-          <button
-            type="button"
-            className="filter"
-            data-active={onlySale ? "true" : "false"}
-            onClick={() => setOnlySale((v) => !v)}
-          >
-            Sólo ofertas
-          </button>
-        </div>
-
-        <div className="row gap-4">
-          <span className="meta">{visible.length} artículos</span>
-          <label className="sr-only" htmlFor="sort">
-            Ordenar por
-          </label>
-          <select
-            id="sort"
-            className="select"
-            value={sort}
-            onChange={(e) => setSort(e.target.value as Sort)}
-          >
-            {SORTS.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="toolbar toolbar--simple">
+        <span className="meta">{visible.length} artículos</span>
+        <label className="sr-only" htmlFor="sort">
+          Ordenar por
+        </label>
+        <select
+          id="sort"
+          className="select"
+          value={sort}
+          onChange={(e) => setSort(e.target.value as Sort)}
+        >
+          {SORTS.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
       </div>
 
       {visible.length === 0 ? (

@@ -11,7 +11,6 @@ import {
 import type { Product } from "@/lib/catalog";
 
 export const FREE_SHIPPING_FROM = 640000;
-export const SHIPPING_COST = 40000;
 
 type StoredLine = { slug: string; size: string; qty: number };
 
@@ -25,7 +24,8 @@ type CartContextValue = {
   lines: CartLine[];
   count: number;
   subtotal: number;
-  shipping: number;
+  /** Envío gratis si el subtotal llega al mínimo; si no, el costo lo cierra el asesor por WhatsApp según la zona. */
+  freeShipping: boolean;
   total: number;
   hydrated: boolean;
   isOpen: boolean;
@@ -186,15 +186,17 @@ export function CartProvider({
 
   const subtotal = lines.reduce((acc, l) => acc + l.lineTotal, 0);
   const count = lines.reduce((acc, l) => acc + l.qty, 0);
-  const shipping =
-    subtotal === 0 || subtotal >= FREE_SHIPPING_FROM ? 0 : SHIPPING_COST;
+  const freeShipping = subtotal > 0 && subtotal >= FREE_SHIPPING_FROM;
 
   const value: CartContextValue = {
     lines,
     count,
     subtotal,
-    shipping,
-    total: subtotal + shipping,
+    freeShipping,
+    // El costo de envío todavía no está automatizado: si no llega al
+    // mínimo para envío gratis, el asesor lo cierra por WhatsApp según la
+    // zona — no se suma ningún monto fijo al total.
+    total: subtotal,
     hydrated,
     isOpen,
     openCart: () => setIsOpen(true),

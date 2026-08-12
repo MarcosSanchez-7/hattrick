@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/Icons";
 
 export function CartDrawer() {
-  const { isOpen, closeCart, lines, subtotal, shipping, total, count } =
+  const { isOpen, closeCart, lines, subtotal, freeShipping, total, count } =
     useCart();
 
   useEffect(() => {
@@ -99,7 +99,9 @@ export function CartDrawer() {
                 </div>
                 <div className="totals__row">
                   <span>Envío</span>
-                  <span>{shipping === 0 ? "Gratis" : formatPrice(shipping)}</span>
+                  <span>
+                    {freeShipping ? "Gratis" : "Costo adicional dependiendo la zona"}
+                  </span>
                 </div>
                 <div className="totals__row totals__row--total">
                   <span>Total</span>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { formatPrice } from "@/lib/format";
 import {
@@ -18,21 +19,38 @@ import {
   IconWhatsapp,
 } from "@/components/ui/Icons";
 
-function buildWhatsAppMessage(lines: CartLine[], total: number): string {
+type InvoiceInfo = {
+  wantsInvoice: boolean;
+  razonSocial: string;
+  ruc: string;
+};
+
+function buildWhatsAppMessage(
+  lines: CartLine[],
+  total: number,
+  freeShipping: boolean,
+  invoice: InvoiceInfo,
+): string {
   const items = lines
     .map(
       (l) =>
         `• ${l.product.name} (Talla ${l.size}) x${l.qty} — ${formatPrice(l.lineTotal)}`,
     )
     .join("\n");
-  return `¡Hola! Quiero comprar:\n${items}\n\nTotal: ${formatPrice(total)}`;
+  const shippingLine = freeShipping
+    ? "Envío: gratis"
+    : "Envío: a coordinar según la zona";
+  const invoiceLine = invoice.wantsInvoice
+    ? `\n\nFactura: sí\nRazón social: ${invoice.razonSocial}\nRUC: ${invoice.ruc}`
+    : "";
+  return `¡Hola! Quiero comprar:\n${items}\n\n${shippingLine}\nTotal: ${formatPrice(total)}${invoiceLine}`;
 }
 
 export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
   const {
     lines,
     subtotal,
-    shipping,
+    freeShipping,
     total,
     count,
     setQty,
@@ -41,9 +59,23 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
     hydrated,
   } = useCart();
 
-  const whatsappHref = whatsappNumber
-    ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(buildWhatsAppMessage(lines, total))}`
-    : null;
+  const [wantsInvoice, setWantsInvoice] = useState(false);
+  const [razonSocial, setRazonSocial] = useState("");
+  const [ruc, setRuc] = useState("");
+
+  const invoiceComplete = razonSocial.trim() !== "" && ruc.trim() !== "";
+  const canCheckout = !wantsInvoice || invoiceComplete;
+
+  const whatsappHref =
+    whatsappNumber && canCheckout
+      ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
+          buildWhatsAppMessage(lines, total, freeShipping, {
+            wantsInvoice,
+            razonSocial: razonSocial.trim(),
+            ruc: ruc.trim(),
+          }),
+        )}`
+      : null;
 
   return (
     <>
@@ -171,12 +203,50 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
               </div>
               <div className="totals__row">
                 <span>Envío</span>
-                <span>{shipping === 0 ? "Gratis" : formatPrice(shipping)}</span>
+                <span>
+                  {freeShipping ? "Gratis" : "Costo adicional dependiendo la zona"}
+                </span>
               </div>
               <div className="totals__row totals__row--total">
                 <span>Total</span>
                 <span>{formatPrice(total)}</span>
               </div>
+            </div>
+
+            <div className="invoice-toggle-row">
+              <label className="invoice-toggle">
+                <input
+                  type="checkbox"
+                  checked={wantsInvoice}
+                  onChange={(e) => setWantsInvoice(e.target.checked)}
+                />
+                ¿Deseas factura?
+              </label>
+
+              {wantsInvoice ? (
+                <div className="invoice-fields">
+                  <div>
+                    <label htmlFor="razonSocial">Razón social</label>
+                    <input
+                      id="razonSocial"
+                      type="text"
+                      value={razonSocial}
+                      onChange={(e) => setRazonSocial(e.target.value)}
+                      placeholder="Nombre de la empresa"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="ruc">Número de RUC</label>
+                    <input
+                      id="ruc"
+                      type="text"
+                      value={ruc}
+                      onChange={(e) => setRuc(e.target.value)}
+                      placeholder="80012345-6"
+                    />
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             {whatsappHref ? (
@@ -189,6 +259,10 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
                 <IconWhatsapp className="icon--sm" />
                 Continuar por WhatsApp
               </a>
+            ) : whatsappNumber && !canCheckout ? (
+              <p className="meta" style={{ textAlign: "center" }}>
+                Completá razón social y RUC para continuar.
+              </p>
             ) : (
               <p className="meta" style={{ textAlign: "center" }}>
                 Escribinos por WhatsApp para coordinar tu compra.
@@ -199,7 +273,9 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
               <div className="notice">
                 <IconTruck className="icon--sm" />
                 <span>
-                  Envío gratuito a partir de {formatPrice(FREE_SHIPPING_FROM)}
+                  {freeShipping
+                    ? `Envío gratuito a partir de ${formatPrice(FREE_SHIPPING_FROM)}`
+                    : `Envío gratis desde ${formatPrice(FREE_SHIPPING_FROM)}. Por debajo de ese monto, nuestro asesor coordina el costo por WhatsApp según tu zona.`}
                 </span>
               </div>
             </div>

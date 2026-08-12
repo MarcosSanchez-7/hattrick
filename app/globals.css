@@ -2015,7 +2015,7 @@ textarea {
 }
 
 @media (max-width: 640px) {
-  .toolbar {
+  .toolbar:not(.toolbar--simple) {
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -2023,6 +2023,11 @@ textarea {
   }
   .filters {
     justify-content: center;
+  }
+  /* Sin filtros, el toolbar queda con un solo renglón: cantidad de
+     artículos a la izquierda y el orden a la derecha, sin dejar hueco. */
+  .toolbar--simple {
+    padding-block: var(--sp-3);
   }
 }
 
@@ -2303,6 +2308,47 @@ textarea {
   border: 1px solid var(--line);
   font-size: 0.8125rem;
   color: var(--ink-soft);
+}
+
+.invoice-toggle-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.invoice-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.invoice-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.invoice-fields label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  margin-bottom: 4px;
+}
+
+.invoice-fields input {
+  width: 100%;
+  height: 42px;
+  padding-inline: var(--sp-3);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 1rem;
+}
+
+.invoice-fields input:focus {
+  outline: none;
+  border-color: var(--ink);
 }
 
 /* Utilidades */
