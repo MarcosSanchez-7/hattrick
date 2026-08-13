@@ -73,8 +73,13 @@ html {
   /* Red de seguridad: si algo adentro se desborda un poco (texto largo,
      chip, número sin espacios), que se recorte en vez de volver toda la
      página deslizable de costado — eso es lo que hacía sentir "floja" o
-     "no fija" la pantalla al scrollear vertical en mobile. */
-  overflow-x: hidden;
+     "no fija" la pantalla al scrollear vertical en mobile.
+     "clip" y no "hidden": cualquier valor de overflow-x distinto de
+     "visible"/"clip" fuerza a overflow-y a "auto" (regla del spec), lo que
+     convierte a html/body en su propio contenedor de scroll y rompe
+     position: sticky del navbar — con "clip" se sigue recortando el
+     desborde horizontal pero sin ese efecto secundario. */
+  overflow-x: clip;
 }
 
 body {
@@ -87,7 +92,7 @@ body {
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body[data-scroll-locked='true'] {
