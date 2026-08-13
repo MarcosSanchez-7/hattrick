@@ -7,6 +7,7 @@ import { BarChart } from "@/components/admin/charts/BarChart";
 import { DonutChart } from "@/components/admin/charts/DonutChart";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 import { AdminSectionMenu } from "@/components/admin/AdminSectionMenu";
+import { DateRangeFilter } from "@/components/admin/DateRangeFilter";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Finanzas" };
@@ -125,28 +126,13 @@ export default async function FinancePage({
         Resultado del período
       </p>
 
-      <form
-        method="get"
-        className="toolbar"
-        style={{ marginBottom: 24, alignItems: "flex-end" }}
-      >
-        <div className="row gap-3">
-          <div className="admin-field">
-            <label htmlFor="from">Desde</label>
-            <input id="from" type="date" name="from" defaultValue={fromDate} />
-          </div>
-          <div className="admin-field">
-            <label htmlFor="to">Hasta</label>
-            <input id="to" type="date" name="to" defaultValue={toDate} />
-          </div>
-          <button type="submit" className="btn btn--ghost btn--sm">
-            Filtrar
-          </button>
-          <Link href="/gestion-ssjblue/finanzas" className="meta link-underline">
-            Últimos 6 meses
-          </Link>
-        </div>
-      </form>
+      <DateRangeFilter
+        storageKey="finanzas-resumen"
+        defaultFrom={fromDate}
+        defaultTo={toDate}
+        resetHref="/gestion-ssjblue/finanzas"
+        resetLabel="Últimos 6 meses"
+      />
 
       <div className="admin-stats">
         <div className="admin-stat">

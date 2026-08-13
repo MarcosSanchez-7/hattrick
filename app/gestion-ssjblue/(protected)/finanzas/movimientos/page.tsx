@@ -4,6 +4,7 @@ import { getFinanceEntries } from "@/lib/data";
 import { getCurrentAdmin } from "@/lib/admin-session";
 import { FinanceEntriesTable } from "@/components/admin/FinanceEntriesTable";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { DateRangeFilter } from "@/components/admin/DateRangeFilter";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Movimientos financieros" };
@@ -52,28 +53,13 @@ export default async function FinanceEntriesPage({
         </Link>
       </div>
 
-      <form
-        method="get"
-        className="toolbar"
-        style={{ marginBottom: 24, alignItems: "flex-end" }}
-      >
-        <div className="row gap-3">
-          <div className="admin-field">
-            <label htmlFor="from">Desde</label>
-            <input id="from" type="date" name="from" defaultValue={fromDate} />
-          </div>
-          <div className="admin-field">
-            <label htmlFor="to">Hasta</label>
-            <input id="to" type="date" name="to" defaultValue={toDate} />
-          </div>
-          <button type="submit" className="btn btn--ghost btn--sm">
-            Filtrar
-          </button>
-          <Link href="/gestion-ssjblue/finanzas/movimientos" className="meta link-underline">
-            Últimos 30 días
-          </Link>
-        </div>
-      </form>
+      <DateRangeFilter
+        storageKey="finanzas-movimientos"
+        defaultFrom={fromDate}
+        defaultTo={toDate}
+        resetHref="/gestion-ssjblue/finanzas/movimientos"
+        resetLabel="Últimos 30 días"
+      />
 
       <FinanceEntriesTable entries={entries} />
     </>
