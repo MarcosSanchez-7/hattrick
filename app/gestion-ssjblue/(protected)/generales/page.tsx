@@ -55,6 +55,11 @@ const SECTIONS = [
     title: "Avisos del producto",
     description: "Avisos por defecto bajo \"Añadir al carrito\" (editables por categoría).",
   },
+  {
+    href: "/gestion-ssjblue/generales/detalles-producto",
+    title: "Detalles y envíos del producto",
+    description: "Las secciones \"Detalles y composición\" y \"Envíos y devoluciones\" de la ficha.",
+  },
 ];
 
 export default function GeneralesPage() {
