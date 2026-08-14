@@ -142,6 +142,26 @@ export const DEFAULT_PRODUCT_NOTICES: ProductNoticesSettings = {
   ],
 };
 
+export type ProductAttribute = { label: string; value: string };
+
+export type ProductInfoSettings = {
+  /**
+   * Filas de "Detalles y composición" en la ficha de producto, aparte de
+   * "Referencia" (sale del propio producto, no es editable acá).
+   */
+  attributes: ProductAttribute[];
+  /** Texto libre de "Envíos y devoluciones" en la ficha de producto. */
+  shippingText: string;
+};
+
+export const DEFAULT_PRODUCT_INFO: ProductInfoSettings = {
+  attributes: [
+    { label: "Material", value: "100 % poliéster reciclado" },
+    { label: "Corte", value: "Versión hincha, regular" },
+  ],
+  shippingText: `Envío estándar en 48 h laborables (gratuito a partir de ${formatPrice(650000)}) y express en 24 h por ${formatPrice(80000)}. Cambios de talla dentro de los 3 días de recibido el pedido (sin devolución de dinero: se cambia por otro artículo), salvo en artículos personalizados.`,
+};
+
 export type ValueProp = { icon: NoticeIcon; title: string; text: string };
 
 export type ValuePropsSettings = { items: ValueProp[] };
@@ -187,5 +207,6 @@ export type SiteSettingsKey =
   | "customBanner"
   | "home"
   | "productNotices"
+  | "productInfo"
   | "valueProps"
   | "branding";

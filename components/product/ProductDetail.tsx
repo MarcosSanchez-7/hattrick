@@ -11,7 +11,8 @@ import {
   type ProductNotice,
 } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
-import { FREE_SHIPPING_FROM, useCart } from "@/components/cart/CartProvider";
+import type { ProductInfoSettings } from "@/lib/settings";
+import { useCart } from "@/components/cart/CartProvider";
 import { useWishlist } from "@/components/wishlist/WishlistProvider";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import {
@@ -25,7 +26,6 @@ import {
 
 /** Nº de vistas generadas cuando el producto no tiene fotos reales. */
 const GENERATED_VIEWS = 3;
-const EXPRESS_SHIPPING_PRICE = 80000;
 
 const NOTICE_ICONS: Record<NoticeIcon, typeof IconTruck> = {
   truck: IconTruck,
@@ -37,9 +37,11 @@ const NOTICE_ICONS: Record<NoticeIcon, typeof IconTruck> = {
 export function ProductDetail({
   product,
   notices,
+  productInfo,
 }: {
   product: Product;
   notices: ProductNotice[];
+  productInfo: ProductInfoSettings;
 }) {
   const { add } = useCart();
   const { isSaved, toggle } = useWishlist();
@@ -229,14 +231,12 @@ export function ProductDetail({
                 <dt>Referencia</dt>
                 <dd>{product.id.toUpperCase()}</dd>
               </div>
-              <div>
-                <dt>Material</dt>
-                <dd>100 % poliéster reciclado</dd>
-              </div>
-              <div>
-                <dt>Corte</dt>
-                <dd>Versión hincha, regular</dd>
-              </div>
+              {productInfo.attributes.map((attr, i) => (
+                <div key={i}>
+                  <dt>{attr.label}</dt>
+                  <dd>{attr.value}</dd>
+                </div>
+              ))}
             </dl>
           </Accordion>
           <Accordion
@@ -245,11 +245,7 @@ export function ProductDetail({
             open={open}
             setOpen={setOpen}
           >
-            Envío estándar en 48 h laborables (gratuito a partir de{" "}
-            {formatPrice(FREE_SHIPPING_FROM)}) y express en 24 h por{" "}
-            {formatPrice(EXPRESS_SHIPPING_PRICE)}. Cambios de talla dentro de
-            los 3 días de recibido el pedido (sin devolución de dinero: se
-            cambia por otro artículo), salvo en artículos personalizados.
+            {productInfo.shippingText}
           </Accordion>
         </div>
       </div>

@@ -7,6 +7,7 @@ import {
   DEFAULT_HERO,
   DEFAULT_HOME,
   DEFAULT_NAVBAR,
+  DEFAULT_PRODUCT_INFO,
   DEFAULT_PRODUCT_NOTICES,
   DEFAULT_VALUE_PROPS,
   type SiteSettingsKey,
@@ -19,6 +20,7 @@ const DEFAULTS: Record<SiteSettingsKey, unknown> = {
   customBanner: DEFAULT_CUSTOM_BANNER,
   home: DEFAULT_HOME,
   productNotices: DEFAULT_PRODUCT_NOTICES,
+  productInfo: DEFAULT_PRODUCT_INFO,
   valueProps: DEFAULT_VALUE_PROPS,
   branding: DEFAULT_BRANDING,
 };

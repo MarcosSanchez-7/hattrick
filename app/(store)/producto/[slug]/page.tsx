@@ -11,7 +11,7 @@ import {
   resolveCategoryNotices,
 } from "@/lib/catalog";
 import { getAllCategories, getAllProducts, getAllTags, getSetting } from "@/lib/data";
-import { DEFAULT_PRODUCT_NOTICES } from "@/lib/settings";
+import { DEFAULT_PRODUCT_INFO, DEFAULT_PRODUCT_NOTICES } from "@/lib/settings";
 import { SITE_NAME, SITE_URL, buildBreadcrumbJsonLd } from "@/lib/site";
 import { ProductDetail } from "@/components/product/ProductDetail";
 import { ProductGrid } from "@/components/product/ProductCard";
@@ -51,11 +51,12 @@ export default async function ProductPage({
   params: Promise<Params>;
 }) {
   const { slug } = await params;
-  const [products, categories, tags, productNotices] = await Promise.all([
+  const [products, categories, tags, productNotices, productInfo] = await Promise.all([
     getAllProducts(),
     getAllCategories(),
     getAllTags(),
     getSetting("productNotices", DEFAULT_PRODUCT_NOTICES),
+    getSetting("productInfo", DEFAULT_PRODUCT_INFO),
   ]);
   const product = getProduct(products, slug);
   if (!product) notFound();
@@ -133,7 +134,7 @@ export default async function ProductPage({
         </nav>
       </div>
 
-      <ProductDetail product={product} notices={notices} />
+      <ProductDetail product={product} notices={notices} productInfo={productInfo} />
 
       {related.length > 0 ? (
         <section className="section section--soft">
