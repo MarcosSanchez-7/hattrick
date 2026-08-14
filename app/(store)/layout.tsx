@@ -1,5 +1,5 @@
 import { getAllCategories, getAllPages, getAllProducts, getSetting } from "@/lib/data";
-import { DEFAULT_FOOTER, DEFAULT_NAVBAR } from "@/lib/settings";
+import { DEFAULT_BRANDING, DEFAULT_FOOTER, DEFAULT_NAVBAR } from "@/lib/settings";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { CartDrawer } from "@/components/cart/CartDrawer";
@@ -16,13 +16,14 @@ export const dynamic = "force-dynamic";
 export default async function StoreLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [categories, products, pages, navbarSettings, footerSettings] =
+  const [categories, products, pages, navbarSettings, footerSettings, branding] =
     await Promise.all([
       getAllCategories(),
       getAllProducts(),
       getAllPages(),
       getSetting("navbar", DEFAULT_NAVBAR),
       getSetting("footer", DEFAULT_FOOTER),
+      getSetting("branding", DEFAULT_BRANDING),
     ]);
 
   const sameAs = [
@@ -38,6 +39,9 @@ export default async function StoreLayout({
     name: SITE_NAME,
     url: SITE_URL,
     description: footerSettings.brandDescription,
+    // Solo si ya subieron un logo real desde Generales -> Branding — el
+    // ícono genérico "H" no cuenta como logo de marca.
+    ...(branding.faviconUrl ? { logo: branding.faviconUrl } : {}),
     ...(sameAs.length > 0 ? { sameAs } : {}),
   };
 

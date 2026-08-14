@@ -72,6 +72,7 @@ export function ProductDetail({
             uid={`pdp-${view}`}
             number={!hasPhotos && view === 1 ? "10" : undefined}
             alt={alt}
+            priority
           />
           {thumbCount > 1 ? (
             <>

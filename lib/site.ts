@@ -9,3 +9,22 @@ export const SITE_URL = (
 ).replace(/\/$/, "");
 
 export const SITE_NAME = "HATTRICK";
+
+/**
+ * Arma un BreadcrumbList de schema.org a partir de la misma lista de
+ * migas que ya se usa para el breadcrumb visual — nunca se recalcula la
+ * ruta dos veces, solo se reempaqueta para JSON-LD. `url` es opcional en
+ * el último ítem (la página actual no necesita apuntar a otro lado).
+ */
+export function buildBreadcrumbJsonLd(items: { name: string; url?: string }[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      name: item.name,
+      ...(item.url ? { item: item.url } : {}),
+    })),
+  };
+}

@@ -12,7 +12,7 @@ import {
 } from "@/lib/catalog";
 import { getAllCategories, getAllProducts, getAllTags, getSetting } from "@/lib/data";
 import { DEFAULT_PRODUCT_NOTICES } from "@/lib/settings";
-import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { SITE_NAME, SITE_URL, buildBreadcrumbJsonLd } from "@/lib/site";
 import { ProductDetail } from "@/components/product/ProductDetail";
 import { ProductGrid } from "@/components/product/ProductCard";
 
@@ -91,6 +91,15 @@ export default async function ProductPage({
     },
   };
 
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd([
+    { name: "Inicio", url: SITE_URL },
+    ...path.map((c) => ({
+      name: c.name,
+      url: `${SITE_URL}/categoria/${categorySlugPath(categories, c.slug).join("/")}`,
+    })),
+    { name: product.name },
+  ]);
+
   return (
     <>
       <script
@@ -100,6 +109,12 @@ export default async function ProductPage({
         // pueda romper el tag.
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(productJsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbJsonLd).replace(/</g, "\\u003c"),
         }}
       />
       <div className="container" style={{ paddingTop: 24 }}>
