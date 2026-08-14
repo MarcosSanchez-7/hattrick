@@ -322,10 +322,29 @@ export const newArrivals = (products: Product[]) =>
 export const bestSellers = (products: Product[]) =>
   [...products].sort((a, b) => b.reviews - a.reviews).slice(0, 8);
 
-export const relatedTo = (products: Product[], product: Product, limit = 4) =>
-  products
-    .filter((p) => p.slug !== product.slug && p.category === product.category)
-    .slice(0, limit);
+/**
+ * Primero por misma categoría (más relevante: mismo equipo/torneo); si no
+ * alcanza el `limit`, completa con productos que compartan al menos una
+ * etiqueta, sin repetir ninguno ya elegido.
+ */
+export const relatedTo = (products: Product[], product: Product, limit = 4) => {
+  const sameCategory = products.filter(
+    (p) => p.slug !== product.slug && p.category === product.category,
+  );
+  if (sameCategory.length >= limit || product.tags.length === 0) {
+    return sameCategory.slice(0, limit);
+  }
+
+  const seen = new Set(sameCategory.map((p) => p.slug));
+  const byTag = products.filter(
+    (p) =>
+      p.slug !== product.slug &&
+      !seen.has(p.slug) &&
+      p.tags.some((t) => product.tags.includes(t)),
+  );
+
+  return [...sameCategory, ...byTag].slice(0, limit);
+};
 
 /** Búsqueda simple sobre nombre, categoría y etiquetas. */
 export function searchProducts(products: Product[], query: string): Product[] {

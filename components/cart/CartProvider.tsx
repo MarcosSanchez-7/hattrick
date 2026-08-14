@@ -10,7 +10,7 @@ import {
 } from "react";
 import type { Product } from "@/lib/catalog";
 
-export const FREE_SHIPPING_FROM = 640000;
+export const FREE_SHIPPING_FROM = 650000;
 
 type StoredLine = { slug: string; size: string; qty: number };
 

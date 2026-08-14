@@ -72,6 +72,7 @@ export function ProductDetail({
             uid={`pdp-${view}`}
             number={!hasPhotos && view === 1 ? "10" : undefined}
             alt={alt}
+            priority
           />
           {thumbCount > 1 ? (
             <>
@@ -246,9 +247,9 @@ export function ProductDetail({
           >
             Envío estándar en 48 h laborables (gratuito a partir de{" "}
             {formatPrice(FREE_SHIPPING_FROM)}) y express en 24 h por{" "}
-            {formatPrice(EXPRESS_SHIPPING_PRICE)}. Devoluciones y cambios de
-            talla gratuitos durante 30 días, salvo en artículos
-            personalizados.
+            {formatPrice(EXPRESS_SHIPPING_PRICE)}. Cambios de talla dentro de
+            los 3 días de recibido el pedido (sin devolución de dinero: se
+            cambia por otro artículo), salvo en artículos personalizados.
           </Accordion>
         </div>
       </div>

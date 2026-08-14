@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
-const TITLE_DEFAULT = "HATTRICK · Camisetas de fútbol oficiales";
+const TITLE_DEFAULT = "Camisetas de Fútbol en Paraguay | HATTRICK";
 const DESCRIPTION =
-  "Tienda de camisetas de fútbol: equipaciones de clubes y selecciones, retro, entrenamiento y kits infantiles. Personalización oficial y envío en 48 h.";
+  "Comprá camisetas de fútbol en Paraguay: Cerro Porteño, Olimpia, clubes europeos, selecciones y ediciones retro. Consultá talles y hacé tu pedido por WhatsApp con envío a todo el país.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

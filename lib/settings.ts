@@ -79,9 +79,9 @@ export type NavbarSettings = {
 
 export const DEFAULT_NAVBAR: NavbarSettings = {
   announcements: [
-    `Envío gratis desde ${formatPrice(640000)}`,
+    `Envío gratis desde ${formatPrice(650000)}`,
     "Personalización oficial en 24 h",
-    "Devoluciones gratuitas 30 días",
+    "Cambios de talla hasta 3 días",
   ],
   extraLinks: [],
 };
@@ -111,7 +111,7 @@ export const DEFAULT_CUSTOM_BANNER: CustomBannerSettings = {
   images: [],
   ctaLabel: "Personalizar ahora",
   ctaHref: "/personalizacion",
-  priceLabel: "Desde Gs. 120.000",
+  priceLabel: "Costo adicional: Gs. 50.000",
 };
 
 export type HomeSettings = {
@@ -132,13 +132,13 @@ export const DEFAULT_PRODUCT_NOTICES: ProductNoticesSettings = {
   defaultNotices: [
     {
       icon: "truck",
-      text: `Entrega estimada en 48 h · Gratis desde ${formatPrice(640000)}`,
+      text: `Entrega estimada en 48 h · Gratis desde ${formatPrice(650000)}`,
     },
     {
       icon: "print",
-      text: `Personalización oficial disponible desde ${formatPrice(120000)}`,
+      text: `Personalización oficial con un costo adicional de ${formatPrice(50000)}`,
     },
-    { icon: "return", text: "30 días para cambiar la talla sin coste" },
+    { icon: "return", text: "Cambios de talla hasta 3 días (sin devolución de dinero)" },
   ],
 };
 
@@ -151,7 +151,7 @@ export const DEFAULT_VALUE_PROPS: ValuePropsSettings = {
     {
       icon: "truck",
       title: "Envío en 48 h",
-      text: `Gratuito a partir de ${formatPrice(640000)}. Seguimiento en tiempo real.`,
+      text: `Gratuito a partir de ${formatPrice(650000)}. Seguimiento en tiempo real.`,
     },
     {
       icon: "print",
@@ -165,8 +165,8 @@ export const DEFAULT_VALUE_PROPS: ValuePropsSettings = {
     },
     {
       icon: "return",
-      title: "30 días de cambio",
-      text: "¿No es tu talla? La recogemos y la cambiamos sin coste.",
+      title: "Cambios hasta 3 días",
+      text: "¿No es tu talla? La cambiamos por otro artículo (sin devolución de dinero).",
     },
   ],
 };

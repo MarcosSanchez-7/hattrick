@@ -11,6 +11,7 @@ import {
   isCategoryVisible,
 } from "@/lib/catalog";
 import { getAllCategories, getAllProducts, getAllTags } from "@/lib/data";
+import { SITE_URL, buildBreadcrumbJsonLd } from "@/lib/site";
 import { ProductBrowser } from "@/components/product/ProductBrowser";
 
 type Params = { slug: string[] };
@@ -76,8 +77,23 @@ export default async function CategoryPage({
     isCategoryVisible(categories, c.slug),
   );
 
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd([
+    { name: "Inicio", url: SITE_URL },
+    ...ancestors.map((a) => ({
+      name: a.name,
+      url: `${SITE_URL}/categoria/${categorySlugPath(categories, a.slug).join("/")}`,
+    })),
+    { name: category.name, url: `${SITE_URL}/categoria/${canonicalPath.join("/")}` },
+  ]);
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbJsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
       <header className="page-head">
         <div className="container">
           <nav className="breadcrumbs" aria-label="Migas de pan">
