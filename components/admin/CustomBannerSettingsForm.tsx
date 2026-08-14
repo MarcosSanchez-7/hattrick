@@ -143,7 +143,7 @@ export function CustomBannerSettingsForm({
               type="text"
               value={form.priceLabel}
               onChange={(e) => update("priceLabel", e.target.value)}
-              placeholder="Desde Gs. 120.000"
+              placeholder="Costo adicional: Gs. 50.000"
             />
           </div>
         </div>
