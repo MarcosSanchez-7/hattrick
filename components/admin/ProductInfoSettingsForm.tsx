@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ProductInfoSettings } from "@/lib/settings";
-import { ProductAttributesEditor } from "@/components/admin/ProductAttributesEditor";
 
 export function ProductInfoSettingsForm({
   initial,
@@ -41,21 +40,6 @@ export function ProductInfoSettingsForm({
     <form className="admin-form" onSubmit={handleSubmit}>
       {error ? <p className="admin-error">{error}</p> : null}
       {saved ? <p className="admin-notice-ok">Cambios guardados.</p> : null}
-
-      <div className="admin-fieldset">
-        <p className="admin-fieldset__title">Detalles y composición</p>
-        <p className="admin-help">
-          Se muestran en la ficha de cualquier producto, debajo de
-          "Referencia" (que siempre sale del propio producto).
-        </p>
-        <ProductAttributesEditor
-          attributes={form.attributes}
-          onChange={(attributes) => {
-            setSaved(false);
-            setForm((f) => ({ ...f, attributes }));
-          }}
-        />
-      </div>
 
       <div className="admin-fieldset">
         <p className="admin-fieldset__title">Envíos y devoluciones</p>

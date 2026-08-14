@@ -221,25 +221,6 @@ export function ProductDetail({
             {product.description}
           </Accordion>
           <Accordion
-            id="detalles"
-            title="Detalles y composición"
-            open={open}
-            setOpen={setOpen}
-          >
-            <dl className="specs">
-              <div>
-                <dt>Referencia</dt>
-                <dd>{product.id.toUpperCase()}</dd>
-              </div>
-              {productInfo.attributes.map((attr, i) => (
-                <div key={i}>
-                  <dt>{attr.label}</dt>
-                  <dd>{attr.value}</dd>
-                </div>
-              ))}
-            </dl>
-          </Accordion>
-          <Accordion
             id="envios"
             title="Envíos y devoluciones"
             open={open}
