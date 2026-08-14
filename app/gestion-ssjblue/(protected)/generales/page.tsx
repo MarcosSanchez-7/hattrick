@@ -57,8 +57,8 @@ const SECTIONS = [
   },
   {
     href: "/gestion-ssjblue/generales/detalles-producto",
-    title: "Detalles y envíos del producto",
-    description: "Las secciones \"Detalles y composición\" y \"Envíos y devoluciones\" de la ficha.",
+    title: "Envíos del producto",
+    description: "El texto de \"Envíos y devoluciones\" en la ficha de cada producto.",
   },
 ];
 
