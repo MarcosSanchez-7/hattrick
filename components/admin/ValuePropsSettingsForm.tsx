@@ -118,7 +118,7 @@ export function ValuePropsSettingsForm({
               type="text"
               value={item.text}
               onChange={(e) => update(idx, { text: e.target.value })}
-              placeholder="Gratuito a partir de Gs. 640.000."
+              placeholder="Gratuito a partir de Gs. 650.000."
             />
           </div>
         </div>

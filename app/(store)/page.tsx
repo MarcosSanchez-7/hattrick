@@ -112,7 +112,7 @@ export default async function HomePage() {
           </p>
           <p className="lead" style={{ marginTop: 12 }}>
             Hacemos envíos a todo Paraguay, con entrega gratuita desde Gs.
-            640.000. Si tenés dudas sobre talles, stock o cómo hacer tu
+            650.000. Si tenés dudas sobre talles, stock o cómo hacer tu
             pedido, escribinos por WhatsApp y coordinamos todo directo con
             vos.
           </p>

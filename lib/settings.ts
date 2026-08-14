@@ -79,7 +79,7 @@ export type NavbarSettings = {
 
 export const DEFAULT_NAVBAR: NavbarSettings = {
   announcements: [
-    `Envío gratis desde ${formatPrice(640000)}`,
+    `Envío gratis desde ${formatPrice(650000)}`,
     "Personalización oficial en 24 h",
     "Devoluciones gratuitas 30 días",
   ],
@@ -132,7 +132,7 @@ export const DEFAULT_PRODUCT_NOTICES: ProductNoticesSettings = {
   defaultNotices: [
     {
       icon: "truck",
-      text: `Entrega estimada en 48 h · Gratis desde ${formatPrice(640000)}`,
+      text: `Entrega estimada en 48 h · Gratis desde ${formatPrice(650000)}`,
     },
     {
       icon: "print",
@@ -151,7 +151,7 @@ export const DEFAULT_VALUE_PROPS: ValuePropsSettings = {
     {
       icon: "truck",
       title: "Envío en 48 h",
-      text: `Gratuito a partir de ${formatPrice(640000)}. Seguimiento en tiempo real.`,
+      text: `Gratuito a partir de ${formatPrice(650000)}. Seguimiento en tiempo real.`,
     },
     {
       icon: "print",
