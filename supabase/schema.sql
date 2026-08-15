@@ -790,3 +790,80 @@ alter table import_purchases enable row level security;
 
 create index if not exists import_purchases_purchased_at_idx
   on import_purchases (purchased_at desc);
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Ventas de dropshipping (sin stock propio) + fecha editable al registrar
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- Las líneas de dropshipping no tienen variant_id (no hay stock propio que
+-- descontar): sin este guard, el trigger intentaba insertar en
+-- inventory_movements con variant_id null, que es NOT NULL ahí — rompía
+-- también la importación de CSV histórico, que ya insertaba con variant_id
+-- null desde antes.
+create or replace function create_sale_inventory_movement()
+returns trigger as $$
+declare
+  v_channel text;
+begin
+  if new.variant_id is null then
+    return new;
+  end if;
+
+  select channel into v_channel from sales where id = new.sale_id;
+  insert into inventory_movements (variant_id, movement_type, quantity_delta, sale_item_id)
+  values (
+    new.variant_id,
+    case when v_channel = 'web' then 'sale_online' else 'sale_in_store' end,
+    -new.quantity,
+    new.id
+  );
+  return new;
+end;
+$$ language plpgsql;
+
+-- record_sale ahora acepta líneas sin variant_id (dropshipping: se guardan
+-- con product_name_snapshot/size_snapshot, igual que la importación de CSV)
+-- y una fecha de venta opcional (p_sold_at) para poder registrar una venta
+-- atrasada sin que quede con la fecha de hoy. Se dropea la versión anterior
+-- porque agregar un parámetro nuevo cambia la firma de la función — sin
+-- esto quedarían dos versiones de record_sale coexistiendo (ambigüedad al
+-- llamarla por RPC).
+drop function if exists record_sale(text, text, text, text, jsonb);
+
+create or replace function record_sale(
+  p_id text,
+  p_channel text,
+  p_staff_name text,
+  p_customer_note text,
+  p_items jsonb, -- [{ "variant_id": "..."|null, "product_name_snapshot": "..."|null, "size_snapshot": "..."|null, "quantity": 1, "unit_price": 350000, "cost_price": 200000 }, ...]
+  p_sold_at timestamptz default null
+)
+returns text
+language plpgsql
+as $$
+declare
+  v_item jsonb;
+begin
+  insert into sales (id, channel, staff_name, customer_note, sold_at)
+  values (p_id, p_channel, p_staff_name, p_customer_note, coalesce(p_sold_at, now()));
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    insert into sale_items (
+      sale_id, variant_id, quantity, unit_price, cost_price,
+      product_name_snapshot, size_snapshot
+    )
+    values (
+      p_id,
+      nullif(v_item->>'variant_id', ''),
+      (v_item->>'quantity')::integer,
+      (v_item->>'unit_price')::numeric,
+      coalesce((v_item->>'cost_price')::numeric, 0),
+      v_item->>'product_name_snapshot',
+      v_item->>'size_snapshot'
+    );
+  end loop;
+
+  return p_id;
+end;
+$$;
