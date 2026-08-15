@@ -2,12 +2,21 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { SALE_CHANNELS, lineProfit, lineTotal, type Sale } from "@/lib/catalog";
+import {
+  SALE_CHANNELS,
+  SHIPPING_METHODS,
+  lineProfit,
+  lineTotal,
+  type Sale,
+} from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { IconTrash } from "@/components/ui/Icons";
 
 const channelLabel = (value: string) =>
   SALE_CHANNELS.find((c) => c.value === value)?.label ?? value;
+
+const shippingMethodLabel = (value: string) =>
+  SHIPPING_METHODS.find((m) => m.value === value)?.label ?? value;
 
 const dateTimeFormatter = new Intl.DateTimeFormat("es-PY", {
   day: "2-digit",
@@ -77,11 +86,18 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                 <th>Precio venta</th>
                 <th>Ganancia</th>
                 <th>Canal</th>
+                <th>Cliente</th>
                 <th aria-label="Acciones" />
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ sale, item }) => (
+              {rows.map(({ sale, item }) => {
+                const deliveryBits = [
+                  sale.customerPhone,
+                  sale.destinationCity,
+                  sale.shippingMethod ? shippingMethodLabel(sale.shippingMethod) : null,
+                ].filter(Boolean);
+                return (
                 <tr key={item.id}>
                   <td>
                     <div style={{ fontWeight: 600 }}>{item.name}</div>
@@ -96,6 +112,18 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                   <td data-label="Ganancia">{formatPrice(lineProfit(item))}</td>
                   <td data-label="Canal">
                     <span className="meta">{channelLabel(sale.channel)}</span>
+                  </td>
+                  <td data-label="Cliente">
+                    {sale.customerName || deliveryBits.length > 0 ? (
+                      <>
+                        {sale.customerName ? <div>{sale.customerName}</div> : null}
+                        {deliveryBits.length > 0 ? (
+                          <div className="meta">{deliveryBits.join(" · ")}</div>
+                        ) : null}
+                      </>
+                    ) : (
+                      <span className="meta">—</span>
+                    )}
                   </td>
                   <td>
                     <div className="admin-row-actions">
@@ -112,7 +140,8 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -11,6 +11,7 @@ import type {
   Sale,
   SaleChannel,
   SaleLine,
+  ShippingMethod,
   StockMode,
   Tag,
 } from "@/lib/catalog";
@@ -1132,12 +1133,16 @@ type SaleRow = {
   channel: SaleChannel;
   staff_name: string | null;
   customer_note: string | null;
+  customer_name: string | null;
+  customer_phone: string | null;
+  destination_city: string | null;
+  shipping_method: ShippingMethod | null;
   sold_at: string;
   sale_items: SaleItemRow[];
 };
 
 const SALE_SELECT =
-  "id, channel, staff_name, customer_note, sold_at, sale_items(id, quantity, unit_price, cost_price, product_name_snapshot, size_snapshot, product_variants(size, product_id, products(name)))";
+  "id, channel, staff_name, customer_note, customer_name, customer_phone, destination_city, shipping_method, sold_at, sale_items(id, quantity, unit_price, cost_price, product_name_snapshot, size_snapshot, product_variants(size, product_id, products(name)))";
 
 function rowToSale(row: SaleRow): Sale {
   // product_name_snapshot/size_snapshot solo existen en ventas importadas
@@ -1159,6 +1164,10 @@ function rowToSale(row: SaleRow): Sale {
     channel: row.channel,
     staffName: row.staff_name,
     customerNote: row.customer_note,
+    customerName: row.customer_name,
+    customerPhone: row.customer_phone,
+    destinationCity: row.destination_city,
+    shippingMethod: row.shipping_method,
     soldAt: row.sold_at,
     items,
   };
@@ -1195,6 +1204,10 @@ export type SaleInput = {
   channel: SaleChannel;
   staffName?: string | null;
   customerNote?: string | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  destinationCity?: string | null;
+  shippingMethod?: ShippingMethod | null;
   /** ISO datetime. Vacío/null = ahora mismo (default de la base). */
   soldAt?: string | null;
   items: SaleItemInput[];
@@ -1230,6 +1243,10 @@ export async function recordSale(input: SaleInput): Promise<string> {
     p_staff_name: input.staffName ?? null,
     p_customer_note: input.customerNote ?? null,
     p_sold_at: input.soldAt || null,
+    p_customer_name: input.customerName || null,
+    p_customer_phone: input.customerPhone || null,
+    p_destination_city: input.destinationCity || null,
+    p_shipping_method: input.shippingMethod || null,
     p_items: input.items.map((i) => ({
       variant_id: i.variantId ?? null,
       product_name_snapshot: i.variantId ? null : i.productName ?? null,
