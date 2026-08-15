@@ -27,6 +27,8 @@ type TicketLine = {
   quantity: number;
   unitPrice: string;
   costPrice: string;
+  /** Personalización, parches u otro detalle de este artículo puntual. */
+  itemNote: string;
 };
 
 function matches(product: Product, query: string) {
@@ -101,6 +103,7 @@ export function SaleForm({
   const [customerPhone, setCustomerPhone] = useState("");
   const [destinationCity, setDestinationCity] = useState("");
   const [shippingMethod, setShippingMethod] = useState<ShippingMethod | "">("");
+  const [shippingMethodDetail, setShippingMethodDetail] = useState("");
   const [soldAt, setSoldAt] = useState(todayStr());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -144,6 +147,7 @@ export function SaleForm({
           quantity: 1,
           unitPrice: String(product.price),
           costPrice: product.costPrice != null ? String(product.costPrice) : "0",
+          itemNote: "",
         },
       ];
     });
@@ -172,6 +176,7 @@ export function SaleForm({
           quantity: 1,
           unitPrice: String(product.price),
           costPrice: product.costPrice != null ? String(product.costPrice) : "0",
+          itemNote: "",
         },
       ];
     });
@@ -222,16 +227,20 @@ export function SaleForm({
           customerPhone: customerPhone.trim() || null,
           destinationCity: destinationCity.trim() || null,
           shippingMethod: shippingMethod || null,
+          shippingMethodDetail:
+            shippingMethod === "otro" ? shippingMethodDetail.trim() || null : null,
           // Si no se tocó la fecha, no se manda: la venta queda con la hora
           // exacta de ahora en vez de quedar fija al mediodía.
           soldAt: soldAt === todayStr() ? null : `${soldAt}T12:00:00`,
           items: lines.map((l) => ({
             variantId: l.variantId,
+            productId: l.productId,
             productName: l.variantId ? null : l.name,
             size: l.variantId ? null : l.size,
             quantity: l.quantity,
             unitPrice: Number(l.unitPrice) || 0,
             costPrice: Number(l.costPrice) || 0,
+            itemNote: l.itemNote.trim() || null,
           })),
         }),
       });
@@ -338,6 +347,7 @@ export function SaleForm({
               <thead>
                 <tr>
                   <th>Artículo</th>
+                  <th>Detalle</th>
                   <th>Cant.</th>
                   <th>Precio venta</th>
                   <th>Precio costo</th>
@@ -358,6 +368,16 @@ export function SaleForm({
                           Talla {l.size}
                           {l.variantId === null ? " · Dropshipping" : ""}
                         </div>
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          value={l.itemNote}
+                          className="admin-variant-qty"
+                          style={{ width: 140 }}
+                          placeholder="Personalizado, parches…"
+                          onChange={(e) => updateLine(l.key, "itemNote", e.target.value)}
+                        />
                       </td>
                       <td>
                         <input
@@ -545,6 +565,16 @@ export function SaleForm({
                 </option>
               ))}
             </select>
+            {shippingMethod === "otro" ? (
+              <input
+                type="text"
+                value={shippingMethodDetail}
+                onChange={(e) => setShippingMethodDetail(e.target.value)}
+                placeholder="Ej: envío directo desde el proveedor en China"
+                style={{ marginTop: 8 }}
+                aria-label="Aclaración del método de envío"
+              />
+            ) : null}
           </div>
         </div>
       </div>

@@ -1026,3 +1026,84 @@ begin
   return p_id;
 end;
 $$;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Ventas: producto vinculado en dropshipping (para poder mostrar su imagen),
+-- detalle por artículo (personalización, parches, etc.) y aclaración libre
+-- cuando el método de envío es "otro".
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- Hasta ahora una línea de dropshipping solo guardaba el nombre como texto
+-- (product_name_snapshot), sin ninguna referencia al producto real — aunque
+-- sí se elige de la lista del catálogo. Con esto se puede mostrar la foto
+-- del producto en Ventas/Clientes sin tener que duplicar la imagen ahí.
+alter table sale_items add column if not exists product_id_snapshot text
+  references products (id) on delete set null;
+
+-- Detalle libre por artículo: "Personalizado: Messi #10", "Con parches
+-- Champions", etc. — para saber después, en la ficha del cliente, qué
+-- compró exactamente.
+alter table sale_items add column if not exists item_note text;
+
+-- Aclaración cuando el método de envío es "otro" (p.ej. de dónde sale el
+-- paquete en un pedido de dropshipping).
+alter table sales add column if not exists shipping_method_detail text;
+
+drop function if exists record_sale(
+  text, text, text, text, jsonb, timestamptz, text, text, text, text, text
+);
+
+create or replace function record_sale(
+  p_id text,
+  p_channel text,
+  p_staff_name text,
+  p_customer_note text,
+  p_items jsonb, -- suma: product_id_snapshot, item_note
+  p_sold_at timestamptz default null,
+  p_customer_name text default null,
+  p_customer_phone text default null,
+  p_destination_city text default null,
+  p_shipping_method text default null,
+  p_customer_id text default null,
+  p_shipping_method_detail text default null
+)
+returns text
+language plpgsql
+as $$
+declare
+  v_item jsonb;
+begin
+  insert into sales (
+    id, channel, staff_name, customer_note, sold_at,
+    customer_name, customer_phone, destination_city, shipping_method,
+    customer_id, shipping_method_detail
+  )
+  values (
+    p_id, p_channel, p_staff_name, p_customer_note, coalesce(p_sold_at, now()),
+    p_customer_name, p_customer_phone, p_destination_city, p_shipping_method,
+    p_customer_id, p_shipping_method_detail
+  );
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    insert into sale_items (
+      sale_id, variant_id, quantity, unit_price, cost_price,
+      product_name_snapshot, size_snapshot, product_id_snapshot, item_note
+    )
+    values (
+      p_id,
+      nullif(v_item->>'variant_id', ''),
+      (v_item->>'quantity')::integer,
+      (v_item->>'unit_price')::numeric,
+      coalesce((v_item->>'cost_price')::numeric, 0),
+      v_item->>'product_name_snapshot',
+      v_item->>'size_snapshot',
+      nullif(v_item->>'product_id_snapshot', ''),
+      v_item->>'item_note'
+    );
+  end loop;
+
+  return p_id;
+end;
+$$;

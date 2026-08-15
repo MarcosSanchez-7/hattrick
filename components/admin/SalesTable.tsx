@@ -96,13 +96,39 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                 const deliveryBits = [
                   sale.customerPhone,
                   sale.destinationCity,
-                  sale.shippingMethod ? shippingMethodLabel(sale.shippingMethod) : null,
+                  sale.shippingMethod === "otro" && sale.shippingMethodDetail
+                    ? sale.shippingMethodDetail
+                    : sale.shippingMethod
+                      ? shippingMethodLabel(sale.shippingMethod)
+                      : null,
                 ].filter(Boolean);
                 return (
                 <tr key={item.id}>
                   <td>
-                    <div style={{ fontWeight: 600 }}>{item.name}</div>
-                    <div className="meta">Talla {item.size}</div>
+                    <div className="row gap-2" style={{ alignItems: "center" }}>
+                      {item.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          loading="lazy"
+                          style={{
+                            width: 36,
+                            height: 44,
+                            objectFit: "cover",
+                            flexShrink: 0,
+                            border: "1px solid var(--line)",
+                          }}
+                        />
+                      ) : null}
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{item.name}</div>
+                        <div className="meta">
+                          Talla {item.size}
+                          {item.note ? ` · ${item.note}` : ""}
+                        </div>
+                      </div>
+                    </div>
                   </td>
                   <td className="meta" data-label="Fecha">
                     {dateTimeFormatter.format(new Date(sale.soldAt))}

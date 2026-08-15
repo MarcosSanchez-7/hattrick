@@ -39,8 +39,30 @@ export function CustomerPurchaseHistory({ sales }: { sales: Sale[] }) {
               </td>
               <td data-label="Artículos">
                 {sale.items.map((item) => (
-                  <div key={item.id}>
-                    {item.name} · Talla {item.size} × {item.quantity}
+                  <div
+                    key={item.id}
+                    className="row gap-2"
+                    style={{ alignItems: "center", marginBottom: 4 }}
+                  >
+                    {item.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        loading="lazy"
+                        style={{
+                          width: 28,
+                          height: 34,
+                          objectFit: "cover",
+                          flexShrink: 0,
+                          border: "1px solid var(--line)",
+                        }}
+                      />
+                    ) : null}
+                    <span>
+                      {item.name} · Talla {item.size} × {item.quantity}
+                      {item.note ? ` · ${item.note}` : ""}
+                    </span>
                   </div>
                 ))}
               </td>
