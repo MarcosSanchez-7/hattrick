@@ -110,6 +110,13 @@ export type SaleLine = {
   costPrice: number;
 };
 
+/** Solo dígitos, últimos 9 — para matchear teléfonos sin pelear con
+ * espacios, guiones o el 0/+595 inicial que cada quien escribe distinto.
+ * Compartido entre server (lib/data.ts) y client (SaleForm.tsx). */
+export function normalizePhone(raw: string): string {
+  return raw.replace(/\D/g, "").slice(-9);
+}
+
 export type ShippingMethod = "bolt" | "delivery_propio" | "retiro" | "otro";
 
 export const SHIPPING_METHODS: { value: ShippingMethod; label: string }[] = [
@@ -128,6 +135,8 @@ export type Sale = {
   customerPhone?: string | null;
   destinationCity?: string | null;
   shippingMethod?: ShippingMethod | null;
+  /** Cliente vinculado (CRM ligero) — null = venta ocasional/anónima. */
+  customerId?: string | null;
   soldAt: string;
   items: SaleLine[];
 };

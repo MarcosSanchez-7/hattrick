@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   SALE_CHANNELS,
@@ -116,7 +117,18 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                   <td data-label="Cliente">
                     {sale.customerName || deliveryBits.length > 0 ? (
                       <>
-                        {sale.customerName ? <div>{sale.customerName}</div> : null}
+                        {sale.customerName ? (
+                          sale.customerId ? (
+                            <Link
+                              href={`/gestion-ssjblue/clientes/${sale.customerId}`}
+                              className="link-underline"
+                            >
+                              {sale.customerName}
+                            </Link>
+                          ) : (
+                            <div>{sale.customerName}</div>
+                          )
+                        ) : null}
                         {deliveryBits.length > 0 ? (
                           <div className="meta">{deliveryBits.join(" · ")}</div>
                         ) : null}

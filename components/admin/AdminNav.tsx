@@ -29,6 +29,7 @@ const ITEMS: NavItem[] = [
   { href: "/gestion-ssjblue/categorias", label: "Categorías", icon: IconTag },
   { href: "/gestion-ssjblue/paginas", label: "Páginas", icon: IconDocument },
   { href: "/gestion-ssjblue/ventas", label: "Ventas", icon: IconReceipt },
+  { href: "/gestion-ssjblue/clientes", label: "Clientes", icon: IconUser },
   { href: "/gestion-ssjblue/generales", label: "Generales", icon: IconSettings },
 ];
 
