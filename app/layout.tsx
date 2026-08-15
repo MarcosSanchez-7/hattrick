@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
@@ -33,6 +33,15 @@ export const metadata: Metadata = {
     title: TITLE_DEFAULT,
     description: DESCRIPTION,
   },
+};
+
+// Sin esto, Android Chrome puede aplicar su "tema oscuro forzado" a la
+// página (el sitio no tiene modo oscuro real) y desarma colores puntuales
+// como el texto de los botones de talla en el selector rápido del home,
+// dejándolo invisible sobre el fondo. La propiedad CSS color-scheme en
+// globals.css no alcanza sola — hace falta también esta <meta> en el head.
+export const viewport: Viewport = {
+  colorScheme: "light",
 };
 
 export default function RootLayout({
