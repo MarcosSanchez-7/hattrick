@@ -3,12 +3,14 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  normalizePhone,
   SALE_CHANNELS,
   SHIPPING_METHODS,
   type Product,
   type SaleChannel,
   type ShippingMethod,
 } from "@/lib/catalog";
+import type { Customer } from "@/lib/data";
 import { formatPrice } from "@/lib/format";
 import { IconClose, IconPlus, IconSearch } from "@/components/ui/Icons";
 
@@ -82,7 +84,13 @@ function DropshippingSizeInput({ onAdd }: { onAdd: (size: string) => void }) {
   );
 }
 
-export function SaleForm({ products }: { products: Product[] }) {
+export function SaleForm({
+  products,
+  customers,
+}: {
+  products: Product[];
+  customers: Customer[];
+}) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [lines, setLines] = useState<TicketLine[]>([]);
@@ -101,6 +109,17 @@ export function SaleForm({ products }: { products: Product[] }) {
     if (!query.trim()) return [];
     return products.filter((p) => matches(p, query)).slice(0, 8);
   }, [products, query]);
+
+  // Solo informativo: el aviso ayuda a confirmar que la venta se va a
+  // vincular al cliente correcto. La resolución real (crear o vincular)
+  // la hace el servidor al registrar, con la misma normalización.
+  const matchedCustomer = useMemo(() => {
+    const normalized = normalizePhone(customerPhone);
+    if (!normalized) return null;
+    return (
+      customers.find((c) => c.phone && normalizePhone(c.phone) === normalized) ?? null
+    );
+  }, [customers, customerPhone]);
 
   const addLine = (product: Product, variant: NonNullable<Product["variants"]>[number]) => {
     if (variant.stock <= 0) return;
@@ -491,6 +510,16 @@ export function SaleForm({ products }: { products: Product[] }) {
               onChange={(e) => setCustomerPhone(e.target.value)}
               placeholder="09xx xxx xxx"
             />
+            {matchedCustomer ? (
+              <p className="admin-help" style={{ color: "var(--ink)" }}>
+                Cliente ya cargado: {matchedCustomer.name}. Esta venta se
+                suma a su historial.
+              </p>
+            ) : customerPhone.trim() ? (
+              <p className="admin-help">
+                Cliente nuevo — se crea solo al registrar la venta.
+              </p>
+            ) : null}
           </div>
           <div className="admin-field">
             <label htmlFor="destinationCity">Ciudad de destino</label>

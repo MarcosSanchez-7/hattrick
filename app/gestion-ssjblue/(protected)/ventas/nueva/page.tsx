@@ -1,4 +1,4 @@
-import { getAllProducts } from "@/lib/data";
+import { getAllCustomers, getAllProducts } from "@/lib/data";
 import { SaleForm } from "@/components/admin/SaleForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
@@ -6,7 +6,10 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Registrar venta" };
 
 export default async function NuevaVentaPage() {
-  const products = await getAllProducts({ includeHidden: true });
+  const [products, customers] = await Promise.all([
+    getAllProducts({ includeHidden: true }),
+    getAllCustomers(),
+  ]);
 
   return (
     <>
@@ -18,7 +21,7 @@ export default async function NuevaVentaPage() {
       <h1 className="h1" style={{ marginBottom: 24 }}>
         Registrar venta
       </h1>
-      <SaleForm products={products} />
+      <SaleForm products={products} customers={customers} />
     </>
   );
 }

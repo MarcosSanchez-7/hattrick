@@ -20,6 +20,8 @@ import {
   importTotalGs,
   lineProfit,
   lineTotal,
+  normalizePhone,
+  saleTotal,
   SIZES_ADULT,
   wouldCreateCycle,
   type ImportCostInput,
@@ -1137,12 +1139,13 @@ type SaleRow = {
   customer_phone: string | null;
   destination_city: string | null;
   shipping_method: ShippingMethod | null;
+  customer_id: string | null;
   sold_at: string;
   sale_items: SaleItemRow[];
 };
 
 const SALE_SELECT =
-  "id, channel, staff_name, customer_note, customer_name, customer_phone, destination_city, shipping_method, sold_at, sale_items(id, quantity, unit_price, cost_price, product_name_snapshot, size_snapshot, product_variants(size, product_id, products(name)))";
+  "id, channel, staff_name, customer_note, customer_name, customer_phone, destination_city, shipping_method, customer_id, sold_at, sale_items(id, quantity, unit_price, cost_price, product_name_snapshot, size_snapshot, product_variants(size, product_id, products(name)))";
 
 function rowToSale(row: SaleRow): Sale {
   // product_name_snapshot/size_snapshot solo existen en ventas importadas
@@ -1168,6 +1171,7 @@ function rowToSale(row: SaleRow): Sale {
     customerPhone: row.customer_phone,
     destinationCity: row.destination_city,
     shippingMethod: row.shipping_method,
+    customerId: row.customer_id,
     soldAt: row.sold_at,
     items,
   };
@@ -1236,6 +1240,15 @@ function assertValidSale(input: SaleInput) {
 export async function recordSale(input: SaleInput): Promise<string> {
   assertValidSale(input);
 
+  // CRM ligero: si hay teléfono, vincula a un cliente existente (por
+  // teléfono normalizado) o crea uno nuevo — sin esto, cada venta queda
+  // aislada y no se puede ver historial/gasto total por persona.
+  const customerId = await findOrCreateCustomerByPhone(
+    input.customerName ?? null,
+    input.customerPhone ?? null,
+    input.destinationCity ?? null,
+  );
+
   const id = `s-${randomUUID().slice(0, 8)}`;
   const { error } = await supabaseAdmin.rpc("record_sale", {
     p_id: id,
@@ -1247,6 +1260,7 @@ export async function recordSale(input: SaleInput): Promise<string> {
     p_customer_phone: input.customerPhone || null,
     p_destination_city: input.destinationCity || null,
     p_shipping_method: input.shippingMethod || null,
+    p_customer_id: customerId,
     p_items: input.items.map((i) => ({
       variant_id: i.variantId ?? null,
       product_name_snapshot: i.variantId ? null : i.productName ?? null,
@@ -1367,6 +1381,203 @@ export async function importHistoricalSales(
   }
 
   return { imported, errors };
+}
+
+// ── Clientes (CRM ligero) ───────────────────────────────────────────────
+// Entidad propia para poder ver historial de compras y gasto total por
+// persona. Vive en la tabla crm_customers (no "customers": ese nombre ya
+// lo ocupa el login de clientes descartado, 1:1 con auth.users).
+
+type CustomerRow = {
+  id: string;
+  name: string;
+  phone: string | null;
+  city: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Customer = {
+  id: string;
+  name: string;
+  phone: string | null;
+  city: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+const CUSTOMER_SELECT = "id, name, phone, city, notes, created_at, updated_at";
+
+function rowToCustomer(row: CustomerRow): Customer {
+  return {
+    id: row.id,
+    name: row.name,
+    phone: row.phone,
+    city: row.city,
+    notes: row.notes,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export async function getAllCustomers(): Promise<Customer[]> {
+  const { data, error } = await supabaseAdmin
+    .from("crm_customers")
+    .select(CUSTOMER_SELECT)
+    .order("created_at", { ascending: true });
+  if (error) fail(`No se pudieron cargar los clientes: ${error.message}`);
+  return (data as CustomerRow[]).map(rowToCustomer);
+}
+
+export type CustomerInput = {
+  name: string;
+  phone?: string | null;
+  city?: string | null;
+  notes?: string | null;
+};
+
+function assertValidCustomer(input: CustomerInput) {
+  if (!input.name?.trim()) throw new DataError("El nombre es obligatorio.");
+}
+
+export async function createCustomer(input: CustomerInput): Promise<Customer> {
+  assertValidCustomer(input);
+
+  const id = `cli-${randomUUID().slice(0, 8)}`;
+  const phone = input.phone?.trim() || null;
+  const { data, error } = await supabaseAdmin
+    .from("crm_customers")
+    .insert({
+      id,
+      name: input.name.trim(),
+      phone,
+      phone_normalized: phone ? normalizePhone(phone) : null,
+      city: input.city?.trim() || null,
+      notes: input.notes?.trim() || null,
+    })
+    .select(CUSTOMER_SELECT)
+    .single();
+
+  if (error) fail(`No se pudo crear el cliente: ${error.message}`);
+  return rowToCustomer(data as CustomerRow);
+}
+
+export async function updateCustomer(
+  id: string,
+  input: CustomerInput,
+): Promise<Customer> {
+  assertValidCustomer(input);
+
+  const phone = input.phone?.trim() || null;
+  const { data, error } = await supabaseAdmin
+    .from("crm_customers")
+    .update({
+      name: input.name.trim(),
+      phone,
+      phone_normalized: phone ? normalizePhone(phone) : null,
+      city: input.city?.trim() || null,
+      notes: input.notes?.trim() || null,
+    })
+    .eq("id", id)
+    .select(CUSTOMER_SELECT)
+    .single();
+
+  if (error) fail(`No se pudo actualizar el cliente: ${error.message}`);
+  if (!data) throw new DataError("Cliente no encontrado.", 404);
+  return rowToCustomer(data as CustomerRow);
+}
+
+export async function deleteCustomer(id: string): Promise<void> {
+  const { data, error } = await supabaseAdmin
+    .from("crm_customers")
+    .delete()
+    .eq("id", id)
+    .select("id");
+  if (error) fail(`No se pudo eliminar el cliente: ${error.message}`);
+  if (!data || data.length === 0) {
+    throw new DataError("Cliente no encontrado.", 404);
+  }
+}
+
+/**
+ * Vincula la venta a un cliente existente (por teléfono normalizado) o
+ * crea uno nuevo. Sin teléfono, devuelve null — la venta queda como
+ * ocasional/anónima, igual que antes de tener esta tabla. No sobreescribe
+ * nombre/ciudad de un cliente ya existente: un typo puntual en una venta
+ * no debe arruinar el registro canónico (el admin lo corrige a mano desde
+ * Clientes si hace falta).
+ */
+async function findOrCreateCustomerByPhone(
+  name: string | null,
+  phone: string | null,
+  city: string | null,
+): Promise<string | null> {
+  const trimmedPhone = phone?.trim();
+  if (!trimmedPhone) return null;
+  const normalized = normalizePhone(trimmedPhone);
+  if (!normalized) return null;
+
+  const { data: existing, error: findError } = await supabaseAdmin
+    .from("crm_customers")
+    .select("id")
+    .eq("phone_normalized", normalized)
+    .maybeSingle();
+  if (findError) {
+    fail(`No se pudo buscar el cliente: ${findError.message}`);
+  }
+  if (existing) return (existing as { id: string }).id;
+
+  const created = await createCustomer({
+    name: name?.trim() || "Cliente sin nombre",
+    phone: trimmedPhone,
+    city,
+  });
+  return created.id;
+}
+
+export type CustomerWithStats = Customer & {
+  orderCount: number;
+  totalSpent: number;
+  lastPurchaseAt: string | null;
+};
+
+export async function getCustomersWithStats(): Promise<CustomerWithStats[]> {
+  const [customers, sales] = await Promise.all([getAllCustomers(), getSales()]);
+
+  const statsByCustomer = new Map<
+    string,
+    { orderCount: number; totalSpent: number; lastPurchaseAt: string | null }
+  >();
+  for (const sale of sales) {
+    if (!sale.customerId) continue;
+    const prev = statsByCustomer.get(sale.customerId) ?? {
+      orderCount: 0,
+      totalSpent: 0,
+      lastPurchaseAt: null as string | null,
+    };
+    prev.orderCount += 1;
+    prev.totalSpent += saleTotal(sale);
+    if (!prev.lastPurchaseAt || sale.soldAt > prev.lastPurchaseAt) {
+      prev.lastPurchaseAt = sale.soldAt;
+    }
+    statsByCustomer.set(sale.customerId, prev);
+  }
+
+  return customers.map((customer) => ({
+    ...customer,
+    ...(statsByCustomer.get(customer.id) ?? {
+      orderCount: 0,
+      totalSpent: 0,
+      lastPurchaseAt: null,
+    }),
+  }));
+}
+
+export async function getCustomerSales(customerId: string): Promise<Sale[]> {
+  const sales = await getSales();
+  return sales.filter((s) => s.customerId === customerId);
 }
 
 // ── Finanzas ────────────────────────────────────────────────────────────

@@ -934,3 +934,95 @@ begin
   return p_id;
 end;
 $$;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Clientes (CRM ligero): entidad propia, para poder ver historial de compras
+-- y gasto total por persona en vez de solo texto suelto repetido en cada
+-- venta. NO tiene relación con la tabla "customers" de más arriba (esa es
+-- de un login de clientes descartado, 1:1 con auth.users) — esta es nueva,
+-- de uso exclusivo del admin, por eso el nombre distinto (crm_customers).
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists crm_customers (
+  id text primary key,
+  name text not null,
+  phone text,
+  -- Solo dígitos, para poder buscar por teléfono sin pelear con espacios,
+  -- guiones o el 0/+595 inicial que cada quien escribe distinto.
+  phone_normalized text,
+  city text,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table crm_customers enable row level security;
+
+create trigger crm_customers_set_updated_at
+  before update on crm_customers
+  for each row
+  execute function set_updated_at();
+
+create index if not exists crm_customers_phone_normalized_idx
+  on crm_customers (phone_normalized);
+
+alter table sales add column if not exists customer_id text
+  references crm_customers (id) on delete set null;
+
+-- record_sale ahora también guarda el customer_id ya resuelto (find-or-create
+-- por teléfono, hecho en lib/data.ts antes de llamar a este RPC).
+drop function if exists record_sale(
+  text, text, text, text, jsonb, timestamptz, text, text, text, text
+);
+
+create or replace function record_sale(
+  p_id text,
+  p_channel text,
+  p_staff_name text,
+  p_customer_note text,
+  p_items jsonb,
+  p_sold_at timestamptz default null,
+  p_customer_name text default null,
+  p_customer_phone text default null,
+  p_destination_city text default null,
+  p_shipping_method text default null,
+  p_customer_id text default null
+)
+returns text
+language plpgsql
+as $$
+declare
+  v_item jsonb;
+begin
+  insert into sales (
+    id, channel, staff_name, customer_note, sold_at,
+    customer_name, customer_phone, destination_city, shipping_method,
+    customer_id
+  )
+  values (
+    p_id, p_channel, p_staff_name, p_customer_note, coalesce(p_sold_at, now()),
+    p_customer_name, p_customer_phone, p_destination_city, p_shipping_method,
+    p_customer_id
+  );
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    insert into sale_items (
+      sale_id, variant_id, quantity, unit_price, cost_price,
+      product_name_snapshot, size_snapshot
+    )
+    values (
+      p_id,
+      nullif(v_item->>'variant_id', ''),
+      (v_item->>'quantity')::integer,
+      (v_item->>'unit_price')::numeric,
+      coalesce((v_item->>'cost_price')::numeric, 0),
+      v_item->>'product_name_snapshot',
+      v_item->>'size_snapshot'
+    );
+  end loop;
+
+  return p_id;
+end;
+$$;
