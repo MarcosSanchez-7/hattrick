@@ -2,9 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { SALE_CHANNELS, type Product, type SaleChannel } from "@/lib/catalog";
+import {
+  SALE_CHANNELS,
+  SHIPPING_METHODS,
+  type Product,
+  type SaleChannel,
+  type ShippingMethod,
+} from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
-import { IconClose, IconSearch } from "@/components/ui/Icons";
+import { IconClose, IconPlus, IconSearch } from "@/components/ui/Icons";
 
 type TicketLine = {
   /** Clave única de la línea: el id de la variante para stock propio, o un id generado para dropshipping. */
@@ -31,6 +37,51 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
+/**
+ * Los productos dropshipping (ajeno/importado) no tienen `sizes` cargado —
+ * se calcula solo desde product_variants, que no existen para ellos (no
+ * llevamos stock por talla). Por eso acá se escribe la talla a mano en vez
+ * de elegirla de una lista, a diferencia del flujo de stock propio.
+ */
+function DropshippingSizeInput({ onAdd }: { onAdd: (size: string) => void }) {
+  const [size, setSize] = useState("");
+
+  const submit = () => {
+    const trimmed = size.trim();
+    if (!trimmed) return;
+    onAdd(trimmed);
+    setSize("");
+  };
+
+  return (
+    <div className="row gap-2" style={{ alignItems: "center" }}>
+      <input
+        type="text"
+        value={size}
+        onChange={(e) => setSize(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            submit();
+          }
+        }}
+        placeholder="Talla (ej. M)"
+        aria-label="Talla"
+        style={{ width: 120 }}
+      />
+      <button
+        type="button"
+        className="admin-icon-btn"
+        aria-label="Agregar artículo"
+        title="Agregar artículo"
+        onClick={submit}
+      >
+        <IconPlus className="icon--sm" />
+      </button>
+    </div>
+  );
+}
+
 export function SaleForm({ products }: { products: Product[] }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -38,6 +89,10 @@ export function SaleForm({ products }: { products: Product[] }) {
   const [channel, setChannel] = useState<SaleChannel>("store");
   const [staffName, setStaffName] = useState("");
   const [customerNote, setCustomerNote] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [destinationCity, setDestinationCity] = useState("");
+  const [shippingMethod, setShippingMethod] = useState<ShippingMethod | "">("");
   const [soldAt, setSoldAt] = useState(todayStr());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -144,6 +199,10 @@ export function SaleForm({ products }: { products: Product[] }) {
           channel,
           staffName: staffName.trim() || null,
           customerNote: customerNote.trim() || null,
+          customerName: customerName.trim() || null,
+          customerPhone: customerPhone.trim() || null,
+          destinationCity: destinationCity.trim() || null,
+          shippingMethod: shippingMethod || null,
           // Si no se tocó la fecha, no se manda: la venta queda con la hora
           // exacta de ahora en vez de quedar fija al mediodía.
           soldAt: soldAt === todayStr() ? null : `${soldAt}T12:00:00`,
@@ -211,35 +270,29 @@ export function SaleForm({ products }: { products: Product[] }) {
                       {isDropshipping ? " · Dropshipping, sin stock propio" : ""}
                     </div>
                   </div>
-                  <div className="admin-checklist">
-                    {isDropshipping
-                      ? product.sizes.map((size) => (
-                          <button
-                            key={size}
-                            type="button"
-                            className="admin-check"
-                            onClick={() => addDropshippingLine(product, size)}
-                            title={`Agregar talla ${size}`}
-                          >
-                            {size}
-                          </button>
-                        ))
-                      : (product.variants ?? []).map((variant) => (
-                          <button
-                            key={variant.id}
-                            type="button"
-                            className="admin-check"
-                            disabled={variant.stock <= 0}
-                            onClick={() => addLine(product, variant)}
-                            title={
-                              variant.stock <= 0
-                                ? "Sin stock"
-                                : `Agregar talla ${variant.size}`
-                            }
-                          >
-                            {variant.size} ({variant.stock})
-                          </button>
-                        ))}
+                  <div className={isDropshipping ? undefined : "admin-checklist"}>
+                    {isDropshipping ? (
+                      <DropshippingSizeInput
+                        onAdd={(size) => addDropshippingLine(product, size)}
+                      />
+                    ) : (
+                      (product.variants ?? []).map((variant) => (
+                        <button
+                          key={variant.id}
+                          type="button"
+                          className="admin-check"
+                          disabled={variant.stock <= 0}
+                          onClick={() => addLine(product, variant)}
+                          title={
+                            variant.stock <= 0
+                              ? "Sin stock"
+                              : `Agregar talla ${variant.size}`
+                          }
+                        >
+                          {variant.size} ({variant.stock})
+                        </button>
+                      ))
+                    )}
                   </div>
                 </div>
               );
@@ -406,8 +459,63 @@ export function SaleForm({ products }: { products: Product[] }) {
               type="text"
               value={customerNote}
               onChange={(e) => setCustomerNote(e.target.value)}
-              placeholder="Cliente, referencia, etc."
+              placeholder="Referencia, aclaración, etc."
             />
+          </div>
+        </div>
+      </div>
+
+      <div className="admin-fieldset">
+        <p className="admin-fieldset__title">Entrega (opcional)</p>
+        <p className="admin-help">
+          Para tener panorama de cómo se mueven los artículos: quién lo pidió,
+          adónde y por qué medio.
+        </p>
+        <div className="admin-form__grid admin-form__grid--3">
+          <div className="admin-field">
+            <label htmlFor="customerName">Nombre del cliente</label>
+            <input
+              id="customerName"
+              type="text"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              placeholder="Nombre y apellido"
+            />
+          </div>
+          <div className="admin-field">
+            <label htmlFor="customerPhone">Teléfono del cliente</label>
+            <input
+              id="customerPhone"
+              type="text"
+              value={customerPhone}
+              onChange={(e) => setCustomerPhone(e.target.value)}
+              placeholder="09xx xxx xxx"
+            />
+          </div>
+          <div className="admin-field">
+            <label htmlFor="destinationCity">Ciudad de destino</label>
+            <input
+              id="destinationCity"
+              type="text"
+              value={destinationCity}
+              onChange={(e) => setDestinationCity(e.target.value)}
+              placeholder="Asunción, Ciudad del Este, etc."
+            />
+          </div>
+          <div className="admin-field">
+            <label htmlFor="shippingMethod">Método de envío</label>
+            <select
+              id="shippingMethod"
+              value={shippingMethod}
+              onChange={(e) => setShippingMethod(e.target.value as ShippingMethod | "")}
+            >
+              <option value="">Sin especificar</option>
+              {SHIPPING_METHODS.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>

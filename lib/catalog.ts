@@ -110,11 +110,24 @@ export type SaleLine = {
   costPrice: number;
 };
 
+export type ShippingMethod = "bolt" | "delivery_propio" | "retiro" | "otro";
+
+export const SHIPPING_METHODS: { value: ShippingMethod; label: string }[] = [
+  { value: "bolt", label: "Bolt" },
+  { value: "delivery_propio", label: "Delivery propio" },
+  { value: "retiro", label: "Retiro en tienda" },
+  { value: "otro", label: "Otro" },
+];
+
 export type Sale = {
   id: string;
   channel: SaleChannel;
   staffName?: string | null;
   customerNote?: string | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  destinationCity?: string | null;
+  shippingMethod?: ShippingMethod | null;
   soldAt: string;
   items: SaleLine[];
 };
