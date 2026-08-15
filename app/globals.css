@@ -2295,6 +2295,13 @@ textarea {
   align-items: start;
 }
 
+/* Sin esto, un hijo que no puede achicarse (ej. el botón de WhatsApp, que
+   nunca hace salto de línea) impone su propio ancho mínimo a la columna del
+   grid y la desborda más allá del viewport en pantallas angostas. */
+.cart-page > * {
+  min-width: 0;
+}
+
 .summary {
   border: 1px solid var(--line);
   padding: var(--sp-5);
@@ -2303,6 +2310,11 @@ textarea {
   gap: var(--sp-4);
   position: sticky;
   top: calc(var(--nav-h) + var(--sp-5));
+}
+
+.summary .btn--block {
+  white-space: normal;
+  text-align: center;
 }
 
 @media (max-width: 900px) {
