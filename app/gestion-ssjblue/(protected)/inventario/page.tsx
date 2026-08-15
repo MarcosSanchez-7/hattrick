@@ -19,13 +19,19 @@ export default async function AdminInventoryPage() {
         <div>
           <h1 className="h1">Inventario</h1>
           <p className="lead" style={{ marginTop: 8, fontSize: "0.9375rem" }}>
-            Stock actual por talla de los productos de stock propio. Los de
-            stock ajeno/importado no llevan cantidad, así que no aparecen acá.
+            Crea, edita y elimina productos, y controlá el stock por talla de
+            los de stock propio. Los de stock ajeno/importado no llevan
+            cantidad, así que no tienen detalle de stock.
           </p>
         </div>
-        <Link href="/gestion-ssjblue/inventario/movimientos" className="btn btn--ghost btn--sm">
-          Ver movimientos
-        </Link>
+        <div className="row gap-3">
+          <Link href="/gestion-ssjblue/inventario/movimientos" className="btn btn--ghost btn--sm">
+            Ver movimientos
+          </Link>
+          <Link href="/gestion-ssjblue/productos/nuevo" className="btn btn--sm">
+            Nuevo producto
+          </Link>
+        </div>
       </div>
 
       <InventoryTable products={products} categories={categories} />

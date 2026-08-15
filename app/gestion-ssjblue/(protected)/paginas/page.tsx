@@ -11,7 +11,7 @@ export default async function AdminPagesPage() {
 
   return (
     <>
-      <AdminBackLink href="/gestion-ssjblue" label="Panel" />
+      <AdminBackLink href="/gestion-ssjblue/generales" label="Generales" />
       <div className="admin-page-head">
         <div>
           <h1 className="h1">Páginas</h1>

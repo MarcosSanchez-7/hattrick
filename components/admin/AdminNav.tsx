@@ -5,8 +5,6 @@ import { usePathname } from "next/navigation";
 import type { AdminRole } from "@/lib/admin-auth";
 import {
   IconBox,
-  IconDocument,
-  IconGrid,
   IconLayout,
   IconReceipt,
   IconSettings,
@@ -20,14 +18,19 @@ type NavItem = {
   label: string;
   icon: (props: { className?: string }) => React.ReactElement;
   exact?: boolean;
+  /** Prefijos extra que también marcan este ítem como activo (rutas hijas fuera de `href`). */
+  activePrefixes?: string[];
 };
 
 const ITEMS: NavItem[] = [
   { href: "/gestion-ssjblue", label: "Panel", icon: IconLayout, exact: true },
-  { href: "/gestion-ssjblue/productos", label: "Productos", icon: IconGrid },
-  { href: "/gestion-ssjblue/inventario", label: "Inventario", icon: IconBox },
+  {
+    href: "/gestion-ssjblue/inventario",
+    label: "Inventario",
+    icon: IconBox,
+    activePrefixes: ["/gestion-ssjblue/productos"],
+  },
   { href: "/gestion-ssjblue/categorias", label: "Categorías", icon: IconTag },
-  { href: "/gestion-ssjblue/paginas", label: "Páginas", icon: IconDocument },
   { href: "/gestion-ssjblue/ventas", label: "Ventas", icon: IconReceipt },
   { href: "/gestion-ssjblue/clientes", label: "Clientes", icon: IconUser },
   { href: "/gestion-ssjblue/generales", label: "Generales", icon: IconSettings },
@@ -44,8 +47,11 @@ export function AdminNav({ role }: { role: AdminRole }) {
 
   return (
     <nav className="admin-nav" aria-label="Navegación del panel">
-      {items.map(({ href, label, icon: Icon, exact }) => {
-        const active = exact ? pathname === href : pathname.startsWith(href);
+      {items.map(({ href, label, icon: Icon, exact, activePrefixes }) => {
+        const active = exact
+          ? pathname === href
+          : pathname.startsWith(href) ||
+            (activePrefixes?.some((p) => pathname.startsWith(p)) ?? false);
         return (
           <Link key={href} href={href} data-active={active ? "true" : "false"}>
             <Icon className="icon--sm" />

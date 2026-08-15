@@ -2837,6 +2837,37 @@ textarea {
   color: #b3132a;
 }
 
+.inventory-stock-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inventory-stock-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.inventory-stock-toggle .icon {
+  transition: transform 0.22s var(--ease);
+}
+
+.inventory-stock-toggle[aria-expanded='false'] .icon {
+  transform: rotate(-90deg);
+}
+
+.inventory-stock-detail {
+  width: 100%;
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;
@@ -3467,6 +3498,7 @@ textarea {
   }
   .admin-table td[data-label] {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: baseline;
     gap: var(--sp-3);
