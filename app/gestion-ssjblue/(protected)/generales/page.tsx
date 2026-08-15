@@ -46,6 +46,11 @@ const SECTIONS = [
     description: "Crear, editar y eliminar categorías del catálogo.",
   },
   {
+    href: "/gestion-ssjblue/paginas",
+    title: "Páginas",
+    description: "Términos, privacidad, envíos, contacto y demás textos del footer.",
+  },
+  {
     href: "/gestion-ssjblue/generales/etiquetas",
     title: "Etiquetas",
     description: "Etiquetas estandarizadas con color para los productos.",

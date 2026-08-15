@@ -26,7 +26,7 @@ export default async function EditProductPage({
   return (
     <>
       <nav className="breadcrumbs" aria-label="Migas de pan" style={{ marginBottom: 16 }}>
-        <AdminBackLink href="/gestion-ssjblue/productos" label="Productos" />
+        <AdminBackLink href="/gestion-ssjblue/inventario" label="Inventario" />
         <span>/</span>
         <span>{product.name}</span>
       </nav>
