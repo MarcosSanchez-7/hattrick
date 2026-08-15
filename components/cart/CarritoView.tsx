@@ -10,6 +10,7 @@ import {
   type CartLine,
 } from "@/components/cart/CartProvider";
 import { ProductVisual } from "@/components/product/ProductVisual";
+import { DebugOverflow } from "@/components/cart/DebugOverflow";
 import {
   IconBag,
   IconMinus,
@@ -79,6 +80,7 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
 
   return (
     <>
+      <DebugOverflow />
       <header className="page-head">
         <div className="container">
           <nav className="breadcrumbs" aria-label="Migas de pan">
