@@ -1854,6 +1854,14 @@ textarea {
   border-bottom: 1px solid var(--line);
 }
 
+/* Sin esto, una foto real (a diferencia del SVG generado) puede imponer su
+   tamaño intrínseco como ancho mínimo automático de la celda del grid —
+   "empuja" la columna de 80/110px más allá de lo declarado y desborda toda
+   la fila hacia la derecha, aunque el <img> ya tenga max-width: 100%. */
+.line-item > * {
+  min-width: 0;
+}
+
 .line-item__art {
   background: var(--surface-soft);
   aspect-ratio: 4 / 5;
@@ -1873,6 +1881,8 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  row-gap: 6px;
   margin-top: var(--sp-3);
 }
 
@@ -2302,6 +2312,14 @@ textarea {
   .summary {
     position: static;
   }
+}
+
+.cart-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--sp-2) var(--sp-5);
+  margin-top: 24px;
 }
 
 .notice {
