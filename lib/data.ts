@@ -1123,10 +1123,12 @@ type SaleItemRow = {
   cost_price: number | string;
   product_name_snapshot: string | null;
   size_snapshot: string | null;
+  product_id_snapshot: string | null;
+  item_note: string | null;
   product_variants: {
     size: string;
     product_id: string;
-    products: { name: string } | null;
+    products: { name: string; images: string[] | null } | null;
   } | null;
 };
 
@@ -1139,27 +1141,33 @@ type SaleRow = {
   customer_phone: string | null;
   destination_city: string | null;
   shipping_method: ShippingMethod | null;
+  shipping_method_detail: string | null;
   customer_id: string | null;
   sold_at: string;
   sale_items: SaleItemRow[];
 };
 
 const SALE_SELECT =
-  "id, channel, staff_name, customer_note, customer_name, customer_phone, destination_city, shipping_method, customer_id, sold_at, sale_items(id, quantity, unit_price, cost_price, product_name_snapshot, size_snapshot, product_variants(size, product_id, products(name)))";
+  "id, channel, staff_name, customer_note, customer_name, customer_phone, destination_city, shipping_method, shipping_method_detail, customer_id, sold_at, sale_items(id, quantity, unit_price, cost_price, product_name_snapshot, size_snapshot, product_id_snapshot, item_note, product_variants(size, product_id, products(name, images)))";
 
 function rowToSale(row: SaleRow): Sale {
   // product_name_snapshot/size_snapshot solo existen en ventas importadas
-  // desde CSV (sin variant_id, para no tocar el stock actual): ahí no hay
-  // join a product_variants, así que el nombre/talla se leen de ese texto
-  // guardado al importar en vez de la relación.
+  // desde CSV o dropshipping (sin variant_id, para no tocar el stock
+  // actual): ahí no hay join a product_variants, así que el nombre/talla
+  // se leen de ese texto guardado al vender en vez de la relación. La
+  // imagen para esas líneas se resuelve aparte en getSales() a partir de
+  // product_id_snapshot (dropshipping sí referencia un producto real,
+  // a diferencia de una importación de CSV histórico).
   const items: SaleLine[] = (row.sale_items ?? []).map((si) => ({
     id: si.id,
-    productId: si.product_variants?.product_id ?? "",
+    productId: si.product_variants?.product_id ?? si.product_id_snapshot ?? "",
     name: si.product_variants?.products?.name ?? si.product_name_snapshot ?? "—",
     size: si.product_variants?.size ?? si.size_snapshot ?? "—",
     quantity: si.quantity,
     unitPrice: Number(si.unit_price),
     costPrice: Number(si.cost_price),
+    imageUrl: si.product_variants?.products?.images?.[0] ?? null,
+    note: si.item_note,
   }));
 
   return {
@@ -1171,6 +1179,7 @@ function rowToSale(row: SaleRow): Sale {
     customerPhone: row.customer_phone,
     destinationCity: row.destination_city,
     shippingMethod: row.shipping_method,
+    shippingMethodDetail: row.shipping_method_detail,
     customerId: row.customer_id,
     soldAt: row.sold_at,
     items,
@@ -1191,17 +1200,52 @@ export async function getSales(range?: {
 
   const { data, error } = await query;
   if (error) fail(`No se pudieron cargar las ventas: ${error.message}`);
-  return (data as unknown as SaleRow[]).map(rowToSale);
+  const sales = (data as unknown as SaleRow[]).map(rowToSale);
+
+  // Las líneas de dropshipping no tienen join a product_variants (no
+  // llevan stock), así que su imagen no salió resuelta arriba — se busca
+  // en una sola consulta aparte por product_id_snapshot.
+  const missingProductIds = new Set<string>();
+  for (const sale of sales) {
+    for (const item of sale.items) {
+      if (!item.imageUrl && item.productId) missingProductIds.add(item.productId);
+    }
+  }
+  if (missingProductIds.size > 0) {
+    const { data: productRows } = await supabaseAdmin
+      .from("products")
+      .select("id, images")
+      .in("id", Array.from(missingProductIds));
+    const imageById = new Map(
+      (productRows ?? []).map((p) => [
+        p.id as string,
+        ((p.images as string[] | null) ?? [])[0] ?? null,
+      ]),
+    );
+    for (const sale of sales) {
+      for (const item of sale.items) {
+        if (!item.imageUrl && item.productId) {
+          item.imageUrl = imageById.get(item.productId) ?? null;
+        }
+      }
+    }
+  }
+
+  return sales;
 }
 
 export type SaleItemInput = {
   /** Presente = descuenta stock propio. Ausente = dropshipping (usa productName/size). */
   variantId?: string | null;
+  /** Id real del producto elegido (propio o dropshipping) — para poder mostrar su imagen después. */
+  productId?: string | null;
   productName?: string | null;
   size?: string | null;
   quantity: number;
   unitPrice: number;
   costPrice: number;
+  /** Detalle del artículo: personalización, parches, etc. */
+  itemNote?: string | null;
 };
 
 export type SaleInput = {
@@ -1212,6 +1256,7 @@ export type SaleInput = {
   customerPhone?: string | null;
   destinationCity?: string | null;
   shippingMethod?: ShippingMethod | null;
+  shippingMethodDetail?: string | null;
   /** ISO datetime. Vacío/null = ahora mismo (default de la base). */
   soldAt?: string | null;
   items: SaleItemInput[];
@@ -1260,14 +1305,17 @@ export async function recordSale(input: SaleInput): Promise<string> {
     p_customer_phone: input.customerPhone || null,
     p_destination_city: input.destinationCity || null,
     p_shipping_method: input.shippingMethod || null,
+    p_shipping_method_detail: input.shippingMethodDetail || null,
     p_customer_id: customerId,
     p_items: input.items.map((i) => ({
       variant_id: i.variantId ?? null,
+      product_id_snapshot: i.productId ?? null,
       product_name_snapshot: i.variantId ? null : i.productName ?? null,
       size_snapshot: i.variantId ? null : i.size ?? null,
       quantity: i.quantity,
       unit_price: i.unitPrice,
       cost_price: i.costPrice,
+      item_note: i.itemNote?.trim() || null,
     })),
   });
 

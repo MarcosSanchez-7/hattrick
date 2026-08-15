@@ -108,6 +108,10 @@ export type SaleLine = {
   quantity: number;
   unitPrice: number;
   costPrice: number;
+  /** Primera imagen del producto (resuelta en vivo desde el catálogo actual). */
+  imageUrl: string | null;
+  /** Detalle del artículo: personalización, parches, etc. */
+  note: string | null;
 };
 
 /** Solo dígitos, últimos 9 — para matchear teléfonos sin pelear con
@@ -135,6 +139,8 @@ export type Sale = {
   customerPhone?: string | null;
   destinationCity?: string | null;
   shippingMethod?: ShippingMethod | null;
+  /** Solo cuando shippingMethod === "otro": aclaración libre (ej. de dónde sale el paquete en un dropshipping). */
+  shippingMethodDetail?: string | null;
   /** Cliente vinculado (CRM ligero) — null = venta ocasional/anónima. */
   customerId?: string | null;
   soldAt: string;
