@@ -7,11 +7,15 @@ import { formatPrice } from "@/lib/format";
 import { IconClose, IconSearch } from "@/components/ui/Icons";
 
 type TicketLine = {
-  variantId: string;
+  /** Clave única de la línea: el id de la variante para stock propio, o un id generado para dropshipping. */
+  key: string;
+  /** Presente = stock propio (descuenta del inventario). Ausente = dropshipping. */
+  variantId: string | null;
   productId: string;
   name: string;
   size: string;
-  maxStock: number;
+  /** null = sin tope (dropshipping, no hay stock que controlar). */
+  maxStock: number | null;
   quantity: number;
   unitPrice: string;
   costPrice: string;
@@ -23,6 +27,10 @@ function matches(product: Product, query: string) {
   return product.name.toLowerCase().includes(q);
 }
 
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export function SaleForm({ products }: { products: Product[] }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -30,6 +38,7 @@ export function SaleForm({ products }: { products: Product[] }) {
   const [channel, setChannel] = useState<SaleChannel>("store");
   const [staffName, setStaffName] = useState("");
   const [customerNote, setCustomerNote] = useState("");
+  const [soldAt, setSoldAt] = useState(todayStr());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,6 +61,7 @@ export function SaleForm({ products }: { products: Product[] }) {
       return [
         ...prev,
         {
+          key: variant.id,
           variantId: variant.id,
           productId: product.id,
           name: product.name,
@@ -66,18 +76,44 @@ export function SaleForm({ products }: { products: Product[] }) {
     setQuery("");
   };
 
-  const updateLine = <K extends keyof TicketLine>(
-    variantId: string,
-    key: K,
-    value: TicketLine[K],
-  ) => {
-    setLines((prev) =>
-      prev.map((l) => (l.variantId === variantId ? { ...l, [key]: value } : l)),
-    );
+  const addDropshippingLine = (product: Product, size: string) => {
+    setLines((prev) => {
+      const idx = prev.findIndex(
+        (l) => l.variantId === null && l.productId === product.id && l.size === size,
+      );
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = { ...next[idx], quantity: next[idx].quantity + 1 };
+        return next;
+      }
+      return [
+        ...prev,
+        {
+          key: crypto.randomUUID(),
+          variantId: null,
+          productId: product.id,
+          name: product.name,
+          size,
+          maxStock: null,
+          quantity: 1,
+          unitPrice: String(product.price),
+          costPrice: product.costPrice != null ? String(product.costPrice) : "0",
+        },
+      ];
+    });
+    setQuery("");
   };
 
-  const removeLine = (variantId: string) => {
-    setLines((prev) => prev.filter((l) => l.variantId !== variantId));
+  const updateLine = <K extends keyof TicketLine>(
+    key: string,
+    field: K,
+    value: TicketLine[K],
+  ) => {
+    setLines((prev) => prev.map((l) => (l.key === key ? { ...l, [field]: value } : l)));
+  };
+
+  const removeLine = (key: string) => {
+    setLines((prev) => prev.filter((l) => l.key !== key));
   };
 
   const total = lines.reduce(
@@ -108,8 +144,13 @@ export function SaleForm({ products }: { products: Product[] }) {
           channel,
           staffName: staffName.trim() || null,
           customerNote: customerNote.trim() || null,
+          // Si no se tocó la fecha, no se manda: la venta queda con la hora
+          // exacta de ahora en vez de quedar fija al mediodía.
+          soldAt: soldAt === todayStr() ? null : `${soldAt}T12:00:00`,
           items: lines.map((l) => ({
             variantId: l.variantId,
+            productName: l.variantId ? null : l.name,
+            size: l.variantId ? null : l.size,
             quantity: l.quantity,
             unitPrice: Number(l.unitPrice) || 0,
             costPrice: Number(l.costPrice) || 0,
@@ -159,38 +200,58 @@ export function SaleForm({ products }: { products: Product[] }) {
 
         {results.length > 0 ? (
           <div className="admin-sale-results">
-            {results.map((product) => (
-              <div key={product.id} className="admin-sale-result">
-                <div>
-                  <div style={{ fontWeight: 600 }}>{product.name}</div>
-                  <div className="meta">{formatPrice(product.price)}</div>
+            {results.map((product) => {
+              const isDropshipping = product.stockMode !== "propio";
+              return (
+                <div key={product.id} className="admin-sale-result">
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{product.name}</div>
+                    <div className="meta">
+                      {formatPrice(product.price)}
+                      {isDropshipping ? " · Dropshipping, sin stock propio" : ""}
+                    </div>
+                  </div>
+                  <div className="admin-checklist">
+                    {isDropshipping
+                      ? product.sizes.map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            className="admin-check"
+                            onClick={() => addDropshippingLine(product, size)}
+                            title={`Agregar talla ${size}`}
+                          >
+                            {size}
+                          </button>
+                        ))
+                      : (product.variants ?? []).map((variant) => (
+                          <button
+                            key={variant.id}
+                            type="button"
+                            className="admin-check"
+                            disabled={variant.stock <= 0}
+                            onClick={() => addLine(product, variant)}
+                            title={
+                              variant.stock <= 0
+                                ? "Sin stock"
+                                : `Agregar talla ${variant.size}`
+                            }
+                          >
+                            {variant.size} ({variant.stock})
+                          </button>
+                        ))}
+                  </div>
                 </div>
-                <div className="admin-checklist">
-                  {(product.variants ?? []).map((variant) => (
-                    <button
-                      key={variant.id}
-                      type="button"
-                      className="admin-check"
-                      disabled={variant.stock <= 0}
-                      onClick={() => addLine(product, variant)}
-                      title={
-                        variant.stock <= 0
-                          ? "Sin stock"
-                          : `Agregar talla ${variant.size}`
-                      }
-                    >
-                      {variant.size} ({variant.stock})
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : query.trim() ? (
           <p className="admin-help">Sin resultados para «{query}».</p>
         ) : (
           <p className="admin-help">
-            Solo aparecen productos con stock propio cargado.
+            Los productos de stock propio muestran las tallas con cantidad
+            disponible. Los de dropshipping no descuentan stock, solo suman
+            la ganancia.
           </p>
         )}
       </div>
@@ -218,29 +279,30 @@ export function SaleForm({ products }: { products: Product[] }) {
                     ((Number(l.unitPrice) || 0) - (Number(l.costPrice) || 0)) *
                     l.quantity;
                   return (
-                    <tr key={l.variantId}>
+                    <tr key={l.key}>
                       <td>
                         <div style={{ fontWeight: 600 }}>{l.name}</div>
-                        <div className="meta">Talla {l.size}</div>
+                        <div className="meta">
+                          Talla {l.size}
+                          {l.variantId === null ? " · Dropshipping" : ""}
+                        </div>
                       </td>
                       <td>
                         <input
                           type="number"
                           min={1}
-                          max={l.maxStock}
+                          max={l.maxStock ?? undefined}
                           value={l.quantity}
                           className="admin-variant-qty"
                           style={{ width: 70 }}
-                          onChange={(e) =>
-                            updateLine(
-                              l.variantId,
-                              "quantity",
-                              Math.max(
-                                1,
-                                Math.min(l.maxStock, Number(e.target.value) || 1),
-                              ),
-                            )
-                          }
+                          onChange={(e) => {
+                            const raw = Number(e.target.value) || 1;
+                            const quantity =
+                              l.maxStock != null
+                                ? Math.max(1, Math.min(l.maxStock, raw))
+                                : Math.max(1, raw);
+                            updateLine(l.key, "quantity", quantity);
+                          }}
                         />
                       </td>
                       <td>
@@ -251,7 +313,7 @@ export function SaleForm({ products }: { products: Product[] }) {
                           value={l.unitPrice}
                           className="admin-variant-qty"
                           onChange={(e) =>
-                            updateLine(l.variantId, "unitPrice", e.target.value)
+                            updateLine(l.key, "unitPrice", e.target.value)
                           }
                         />
                       </td>
@@ -263,7 +325,7 @@ export function SaleForm({ products }: { products: Product[] }) {
                           value={l.costPrice}
                           className="admin-variant-qty"
                           onChange={(e) =>
-                            updateLine(l.variantId, "costPrice", e.target.value)
+                            updateLine(l.key, "costPrice", e.target.value)
                           }
                         />
                       </td>
@@ -273,7 +335,7 @@ export function SaleForm({ products }: { products: Product[] }) {
                           type="button"
                           className="admin-icon-btn"
                           aria-label="Quitar artículo"
-                          onClick={() => removeLine(l.variantId)}
+                          onClick={() => removeLine(l.key)}
                         >
                           <IconClose className="icon--sm" />
                         </button>
@@ -316,6 +378,16 @@ export function SaleForm({ products }: { products: Product[] }) {
                 </option>
               ))}
             </select>
+          </div>
+          <div className="admin-field">
+            <label htmlFor="soldAt">Fecha de venta</label>
+            <input
+              id="soldAt"
+              type="date"
+              value={soldAt}
+              max={todayStr()}
+              onChange={(e) => setSoldAt(e.target.value || todayStr())}
+            />
           </div>
           <div className="admin-field">
             <label htmlFor="staffName">Vendedor/a (opcional)</label>

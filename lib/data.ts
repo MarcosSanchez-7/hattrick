@@ -1182,7 +1182,10 @@ export async function getSales(range?: {
 }
 
 export type SaleItemInput = {
-  variantId: string;
+  /** Presente = descuenta stock propio. Ausente = dropshipping (usa productName/size). */
+  variantId?: string | null;
+  productName?: string | null;
+  size?: string | null;
   quantity: number;
   unitPrice: number;
   costPrice: number;
@@ -1192,6 +1195,8 @@ export type SaleInput = {
   channel: SaleChannel;
   staffName?: string | null;
   customerNote?: string | null;
+  /** ISO datetime. Vacío/null = ahora mismo (default de la base). */
+  soldAt?: string | null;
   items: SaleItemInput[];
 };
 
@@ -1200,7 +1205,9 @@ function assertValidSale(input: SaleInput) {
     throw new DataError("Agrega al menos un artículo a la venta.");
   }
   for (const item of input.items) {
-    if (!item.variantId) throw new DataError("Falta seleccionar una talla.");
+    if (!item.variantId && (!item.productName || !item.size)) {
+      throw new DataError("Falta seleccionar el producto y la talla.");
+    }
     if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
       throw new DataError("La cantidad debe ser mayor que 0.");
     }
@@ -1222,8 +1229,11 @@ export async function recordSale(input: SaleInput): Promise<string> {
     p_channel: input.channel,
     p_staff_name: input.staffName ?? null,
     p_customer_note: input.customerNote ?? null,
+    p_sold_at: input.soldAt || null,
     p_items: input.items.map((i) => ({
-      variant_id: i.variantId,
+      variant_id: i.variantId ?? null,
+      product_name_snapshot: i.variantId ? null : i.productName ?? null,
+      size_snapshot: i.variantId ? null : i.size ?? null,
       quantity: i.quantity,
       unit_price: i.unitPrice,
       cost_price: i.costPrice,

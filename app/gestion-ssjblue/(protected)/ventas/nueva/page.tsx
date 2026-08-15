@@ -7,7 +7,6 @@ export const metadata = { title: "Registrar venta" };
 
 export default async function NuevaVentaPage() {
   const products = await getAllProducts({ includeHidden: true });
-  const sellable = products.filter((p) => p.stockMode === "propio");
 
   return (
     <>
@@ -19,7 +18,7 @@ export default async function NuevaVentaPage() {
       <h1 className="h1" style={{ marginBottom: 24 }}>
         Registrar venta
       </h1>
-      <SaleForm products={sellable} />
+      <SaleForm products={products} />
     </>
   );
 }
