@@ -183,7 +183,7 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
             })}
 
             {lines.length > 0 ? (
-              <div className="row" style={{ justifyContent: "space-between", marginTop: 24 }}>
+              <div className="cart-actions-row">
                 <Link href="/novedades" className="link-underline meta">
                   Seguir comprando
                 </Link>
