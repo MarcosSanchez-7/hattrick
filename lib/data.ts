@@ -65,6 +65,7 @@ type ProductRow = {
   price: number | string;
   compare_at: number | string | null;
   cost_price: number | string | null;
+  wholesale_price: number | string | null;
   is_new: boolean;
   rating: number | string;
   reviews: number;
@@ -122,6 +123,7 @@ function rowToProduct(row: ProductRow, variantRows: VariantRow[]): Product {
     price: Number(row.price),
     compareAt: row.compare_at != null ? Number(row.compare_at) : null,
     costPrice: row.cost_price != null ? Number(row.cost_price) : null,
+    wholesalePrice: row.wholesale_price != null ? Number(row.wholesale_price) : null,
     isVisible: row.is_visible,
     isNew: row.is_new,
     rating: Number(row.rating),
@@ -513,6 +515,7 @@ function productToRow(input: ProductInput) {
     price: input.price,
     compare_at: input.compareAt ?? null,
     cost_price: input.costPrice ?? null,
+    wholesale_price: input.wholesalePrice ?? null,
     is_visible: input.isVisible ?? true,
     is_new: Boolean(input.isNew),
     rating: Number.isFinite(input.rating) ? input.rating : 5,

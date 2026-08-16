@@ -14,6 +14,11 @@ export default async function AdminInventoryPage() {
     getCurrentAdmin(),
   ]);
   const readOnly = admin?.role === "vendedor";
+  // No alcanza con esconderlo en la UI: si es vendedor, el costo ni siquiera
+  // viaja al navegador (no queda en el payload de la página para inspeccionar).
+  const visibleProducts = readOnly
+    ? products.map((p) => ({ ...p, costPrice: null }))
+    : products;
 
   return (
     <>
@@ -39,7 +44,7 @@ export default async function AdminInventoryPage() {
         )}
       </div>
 
-      <InventoryTable products={products} categories={categories} readOnly={readOnly} />
+      <InventoryTable products={visibleProducts} categories={categories} readOnly={readOnly} />
     </>
   );
 }

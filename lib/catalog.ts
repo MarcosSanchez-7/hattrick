@@ -34,6 +34,8 @@ export type Product = {
   compareAt?: number | null;
   /** Costo del producto, para calcular ganancia en Ventas. Opcional. */
   costPrice?: number | null;
+  /** Precio al que se le vende al vendedor para revender. Opcional. */
+  wholesalePrice?: number | null;
   /** false = oculto: no aparece en ningún listado ni ficha pública. */
   isVisible: boolean;
   isNew?: boolean;

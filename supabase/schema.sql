@@ -1193,3 +1193,10 @@ alter table admin_users
   check (role in ('superadmin', 'editor', 'viewer', 'vendedor'));
 
 alter table admin_users add column if not exists last_seen_at timestamptz;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Precio mayorista: lo que le vendemos al vendedor para que revenda. Igual
+-- que cost_price, es opcional y no interviene en las cuentas de Ventas.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+alter table products add column if not exists wholesale_price numeric;
