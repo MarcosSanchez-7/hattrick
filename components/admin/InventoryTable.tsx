@@ -254,7 +254,7 @@ function ProductRowsTable({
           <tr>
             <th>Producto</th>
             {hideCategoryColumn ? null : <th>Categoría</th>}
-            <th>Precio</th>
+            <th>{readOnly ? "Precio mayorista" : "Precio"}</th>
             <th>Estado</th>
             <th>Stock</th>
             <th aria-label="Acciones" />
@@ -284,13 +284,23 @@ function ProductRowsTable({
                 {hideCategoryColumn ? null : (
                   <td data-label="Categoría">{categoryName(p.category)}</td>
                 )}
-                <td data-label="Precio">
-                  {formatPrice(p.price)}
-                  {isOnSale(p) ? (
-                    <span className="meta" style={{ marginLeft: 6 }}>
-                      −{discountPercent(p)}%
-                    </span>
-                  ) : null}
+                <td data-label={readOnly ? "Precio mayorista" : "Precio"}>
+                  {readOnly ? (
+                    p.wholesalePrice != null ? (
+                      formatPrice(p.wholesalePrice)
+                    ) : (
+                      <span className="meta">—</span>
+                    )
+                  ) : (
+                    <>
+                      {formatPrice(p.price)}
+                      {isOnSale(p) ? (
+                        <span className="meta" style={{ marginLeft: 6 }}>
+                          −{discountPercent(p)}%
+                        </span>
+                      ) : null}
+                    </>
+                  )}
                 </td>
                 <td data-label="Estado">
                   {!p.isVisible ? (
@@ -355,7 +365,7 @@ function ProductRowsTable({
                               );
                             })}
                           </div>
-                          {invested != null ? (
+                          {!readOnly && invested != null ? (
                             <p className="meta" style={{ marginTop: 6 }}>
                               Invertido: {formatPrice(invested)}
                             </p>

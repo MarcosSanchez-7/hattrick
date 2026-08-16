@@ -41,6 +41,8 @@ type FormState = {
   /** Precio de oferta, vacío = sin oferta. Debe ser menor al precio normal. */
   offerPrice: string;
   costPrice: string;
+  /** Precio al que se le vende al vendedor para revender — es lo único de precio que ve su usuario en Inventario. */
+  wholesalePrice: string;
   isNew: boolean;
   isVisible: boolean;
   rating: string;
@@ -75,6 +77,7 @@ function toFormState(product?: Product): FormState {
     regularPrice: product ? String(onSale ? product.compareAt : product.price) : "",
     offerPrice: onSale ? String(product!.price) : "",
     costPrice: product?.costPrice != null ? String(product.costPrice) : "",
+    wholesalePrice: product?.wholesalePrice != null ? String(product.wholesalePrice) : "",
     isNew: product?.isNew ?? false,
     isVisible: product?.isVisible ?? true,
     rating: product ? String(product.rating) : "5",
@@ -169,6 +172,7 @@ export function ProductForm({
       price: offerPrice ?? regularPrice,
       compareAt: offerPrice != null ? regularPrice : null,
       costPrice: form.costPrice.trim() ? Number(form.costPrice) : null,
+      wholesalePrice: form.wholesalePrice.trim() ? Number(form.wholesalePrice) : null,
       isNew: form.isNew,
       isVisible: form.isVisible,
       rating: Number(form.rating) || 5,
@@ -302,6 +306,21 @@ export function ProductForm({
               onChange={(e) => update("costPrice", e.target.value)}
               placeholder="Para calcular ganancia en Ventas"
             />
+          </div>
+          <div className="admin-field">
+            <label htmlFor="wholesalePrice">Precio mayorista (Gs., opcional)</label>
+            <input
+              id="wholesalePrice"
+              type="number"
+              step="1000"
+              min="0"
+              value={form.wholesalePrice}
+              onChange={(e) => update("wholesalePrice", e.target.value)}
+              placeholder="Lo que le vendemos al vendedor para revender"
+            />
+            <p className="admin-help">
+              Es el único precio que ve el usuario con rol Vendedor en Inventario.
+            </p>
           </div>
           <div className="admin-field admin-field--checkbox">
             <input
