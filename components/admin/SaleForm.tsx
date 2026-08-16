@@ -13,6 +13,7 @@ import {
 import type { Customer } from "@/lib/data";
 import { formatPrice } from "@/lib/format";
 import { IconClose, IconPlus, IconSearch } from "@/components/ui/Icons";
+import { LocationPicker, type LatLng } from "@/components/admin/LocationPicker";
 
 type TicketLine = {
   /** Clave única de la línea: el id de la variante para stock propio, o un id generado para dropshipping. */
@@ -102,8 +103,10 @@ export function SaleForm({
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [destinationCity, setDestinationCity] = useState("");
+  const [destinationNeighborhood, setDestinationNeighborhood] = useState("");
   const [shippingMethod, setShippingMethod] = useState<ShippingMethod | "">("");
   const [shippingMethodDetail, setShippingMethodDetail] = useState("");
+  const [location, setLocation] = useState<LatLng | null>(null);
   const [soldAt, setSoldAt] = useState(todayStr());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -226,9 +229,12 @@ export function SaleForm({
           customerName: customerName.trim() || null,
           customerPhone: customerPhone.trim() || null,
           destinationCity: destinationCity.trim() || null,
+          destinationNeighborhood: destinationNeighborhood.trim() || null,
           shippingMethod: shippingMethod || null,
           shippingMethodDetail:
             shippingMethod === "otro" ? shippingMethodDetail.trim() || null : null,
+          customerLat: location?.lat ?? null,
+          customerLng: location?.lng ?? null,
           // Si no se tocó la fecha, no se manda: la venta queda con la hora
           // exacta de ahora en vez de quedar fija al mediodía.
           soldAt: soldAt === todayStr() ? null : `${soldAt}T12:00:00`,
@@ -552,6 +558,16 @@ export function SaleForm({
             />
           </div>
           <div className="admin-field">
+            <label htmlFor="destinationNeighborhood">Barrio</label>
+            <input
+              id="destinationNeighborhood"
+              type="text"
+              value={destinationNeighborhood}
+              onChange={(e) => setDestinationNeighborhood(e.target.value)}
+              placeholder="Barrio Obrero, San Vicente, etc."
+            />
+          </div>
+          <div className="admin-field">
             <label htmlFor="shippingMethod">Método de envío</label>
             <select
               id="shippingMethod"
@@ -577,6 +593,17 @@ export function SaleForm({
             ) : null}
           </div>
         </div>
+
+        {customerPhone.trim() ? (
+          <div className="admin-field" style={{ marginTop: 16 }}>
+            <label>Ubicación de entrega (opcional)</label>
+            <p className="admin-help" style={{ marginTop: 0 }}>
+              Si marcás un punto acá, queda guardado en la ficha del cliente
+              para futuras ventas.
+            </p>
+            <LocationPicker value={location} onChange={setLocation} height={200} />
+          </div>
+        ) : null}
       </div>
 
       <div className="admin-actions">

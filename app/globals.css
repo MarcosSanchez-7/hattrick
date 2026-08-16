@@ -3839,6 +3839,42 @@ button[aria-pressed='true'] .wishlist-heart-icon {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Mapa de clientes / selector de ubicación
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.location-picker {
+  border: 1px solid var(--line);
+}
+
+.location-picker__loading {
+  height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-muted);
+  font-size: 0.8125rem;
+  background: var(--surface-soft);
+}
+
+.location-picker__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-top: 1px solid var(--line);
+}
+
+/* Leaflet trae su propio z-index alto para controles; lo bajamos para que
+   no quede por encima del menú/drawer del admin cuando se scrollea. */
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 5;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

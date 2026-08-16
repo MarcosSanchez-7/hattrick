@@ -138,6 +138,7 @@ export type Sale = {
   customerName?: string | null;
   customerPhone?: string | null;
   destinationCity?: string | null;
+  destinationNeighborhood?: string | null;
   shippingMethod?: ShippingMethod | null;
   /** Solo cuando shippingMethod === "otro": aclaración libre (ej. de dónde sale el paquete en un dropshipping). */
   shippingMethodDetail?: string | null;

@@ -20,9 +20,14 @@ export default async function ClientesPage() {
             historial de compras y gasto total por persona.
           </p>
         </div>
-        <Link href="/gestion-ssjblue/clientes/nueva" className="btn btn--sm">
-          Nuevo cliente
-        </Link>
+        <div className="row gap-3">
+          <Link href="/gestion-ssjblue/clientes/mapa" className="btn btn--ghost btn--sm">
+            Ver mapa
+          </Link>
+          <Link href="/gestion-ssjblue/clientes/nueva" className="btn btn--sm">
+            Nuevo cliente
+          </Link>
+        </div>
       </div>
 
       <CustomersTable customers={customers} />

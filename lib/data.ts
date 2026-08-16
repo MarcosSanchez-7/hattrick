@@ -1140,6 +1140,7 @@ type SaleRow = {
   customer_name: string | null;
   customer_phone: string | null;
   destination_city: string | null;
+  destination_neighborhood: string | null;
   shipping_method: ShippingMethod | null;
   shipping_method_detail: string | null;
   customer_id: string | null;
@@ -1148,7 +1149,7 @@ type SaleRow = {
 };
 
 const SALE_SELECT =
-  "id, channel, staff_name, customer_note, customer_name, customer_phone, destination_city, shipping_method, shipping_method_detail, customer_id, sold_at, sale_items(id, quantity, unit_price, cost_price, product_name_snapshot, size_snapshot, product_id_snapshot, item_note, product_variants(size, product_id, products(name, images)))";
+  "id, channel, staff_name, customer_note, customer_name, customer_phone, destination_city, destination_neighborhood, shipping_method, shipping_method_detail, customer_id, sold_at, sale_items(id, quantity, unit_price, cost_price, product_name_snapshot, size_snapshot, product_id_snapshot, item_note, product_variants(size, product_id, products(name, images)))";
 
 function rowToSale(row: SaleRow): Sale {
   // product_name_snapshot/size_snapshot solo existen en ventas importadas
@@ -1178,6 +1179,7 @@ function rowToSale(row: SaleRow): Sale {
     customerName: row.customer_name,
     customerPhone: row.customer_phone,
     destinationCity: row.destination_city,
+    destinationNeighborhood: row.destination_neighborhood,
     shippingMethod: row.shipping_method,
     shippingMethodDetail: row.shipping_method_detail,
     customerId: row.customer_id,
@@ -1255,10 +1257,16 @@ export type SaleInput = {
   customerName?: string | null;
   customerPhone?: string | null;
   destinationCity?: string | null;
+  destinationNeighborhood?: string | null;
   shippingMethod?: ShippingMethod | null;
   shippingMethodDetail?: string | null;
   /** ISO datetime. Vacío/null = ahora mismo (default de la base). */
   soldAt?: string | null;
+  /** Ubicación marcada a mano en el mapa al registrar la venta — se guarda
+   * en el cliente (crm_customers), no en la venta. Solo si el admin tocó el
+   * mapa; si no, la ubicación existente del cliente queda intacta. */
+  customerLat?: number | null;
+  customerLng?: number | null;
   items: SaleItemInput[];
 };
 
@@ -1292,6 +1300,8 @@ export async function recordSale(input: SaleInput): Promise<string> {
     input.customerName ?? null,
     input.customerPhone ?? null,
     input.destinationCity ?? null,
+    input.customerLat ?? null,
+    input.customerLng ?? null,
   );
 
   const id = `s-${randomUUID().slice(0, 8)}`;
@@ -1304,6 +1314,7 @@ export async function recordSale(input: SaleInput): Promise<string> {
     p_customer_name: input.customerName || null,
     p_customer_phone: input.customerPhone || null,
     p_destination_city: input.destinationCity || null,
+    p_destination_neighborhood: input.destinationNeighborhood || null,
     p_shipping_method: input.shippingMethod || null,
     p_shipping_method_detail: input.shippingMethodDetail || null,
     p_customer_id: customerId,
@@ -1441,6 +1452,9 @@ type CustomerRow = {
   name: string;
   phone: string | null;
   city: string | null;
+  neighborhood: string | null;
+  latitude: number | null;
+  longitude: number | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -1451,12 +1465,16 @@ export type Customer = {
   name: string;
   phone: string | null;
   city: string | null;
+  neighborhood: string | null;
+  latitude: number | null;
+  longitude: number | null;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
 };
 
-const CUSTOMER_SELECT = "id, name, phone, city, notes, created_at, updated_at";
+const CUSTOMER_SELECT =
+  "id, name, phone, city, neighborhood, latitude, longitude, notes, created_at, updated_at";
 
 function rowToCustomer(row: CustomerRow): Customer {
   return {
@@ -1464,6 +1482,9 @@ function rowToCustomer(row: CustomerRow): Customer {
     name: row.name,
     phone: row.phone,
     city: row.city,
+    neighborhood: row.neighborhood,
+    latitude: row.latitude,
+    longitude: row.longitude,
     notes: row.notes,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -1483,11 +1504,20 @@ export type CustomerInput = {
   name: string;
   phone?: string | null;
   city?: string | null;
+  neighborhood?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   notes?: string | null;
 };
 
 function assertValidCustomer(input: CustomerInput) {
   if (!input.name?.trim()) throw new DataError("El nombre es obligatorio.");
+  if (input.latitude != null && (input.latitude < -90 || input.latitude > 90)) {
+    throw new DataError("La latitud no es válida.");
+  }
+  if (input.longitude != null && (input.longitude < -180 || input.longitude > 180)) {
+    throw new DataError("La longitud no es válida.");
+  }
 }
 
 export async function createCustomer(input: CustomerInput): Promise<Customer> {
@@ -1503,6 +1533,9 @@ export async function createCustomer(input: CustomerInput): Promise<Customer> {
       phone,
       phone_normalized: phone ? normalizePhone(phone) : null,
       city: input.city?.trim() || null,
+      neighborhood: input.neighborhood?.trim() || null,
+      latitude: input.latitude ?? null,
+      longitude: input.longitude ?? null,
       notes: input.notes?.trim() || null,
     })
     .select(CUSTOMER_SELECT)
@@ -1526,6 +1559,9 @@ export async function updateCustomer(
       phone,
       phone_normalized: phone ? normalizePhone(phone) : null,
       city: input.city?.trim() || null,
+      neighborhood: input.neighborhood?.trim() || null,
+      latitude: input.latitude ?? null,
+      longitude: input.longitude ?? null,
       notes: input.notes?.trim() || null,
     })
     .eq("id", id)
@@ -1556,11 +1592,19 @@ export async function deleteCustomer(id: string): Promise<void> {
  * nombre/ciudad de un cliente ya existente: un typo puntual en una venta
  * no debe arruinar el registro canónico (el admin lo corrige a mano desde
  * Clientes si hace falta).
+ *
+ * La ubicación (lat/lng) es distinta: si el admin marcó un pin al
+ * registrar esta venta, es una acción deliberada (no texto libre propenso
+ * a typos), así que sí actualiza la ubicación del cliente existente. Si
+ * no se marcó nada (lat/lng null), la ubicación previa del cliente queda
+ * intacta.
  */
 async function findOrCreateCustomerByPhone(
   name: string | null,
   phone: string | null,
   city: string | null,
+  lat?: number | null,
+  lng?: number | null,
 ): Promise<string | null> {
   const trimmedPhone = phone?.trim();
   if (!trimmedPhone) return null;
@@ -1575,12 +1619,26 @@ async function findOrCreateCustomerByPhone(
   if (findError) {
     fail(`No se pudo buscar el cliente: ${findError.message}`);
   }
-  if (existing) return (existing as { id: string }).id;
+  if (existing) {
+    const existingId = (existing as { id: string }).id;
+    if (lat != null && lng != null) {
+      const { error: updateError } = await supabaseAdmin
+        .from("crm_customers")
+        .update({ latitude: lat, longitude: lng })
+        .eq("id", existingId);
+      if (updateError) {
+        fail(`No se pudo actualizar la ubicación del cliente: ${updateError.message}`);
+      }
+    }
+    return existingId;
+  }
 
   const created = await createCustomer({
     name: name?.trim() || "Cliente sin nombre",
     phone: trimmedPhone,
     city,
+    latitude: lat ?? null,
+    longitude: lng ?? null,
   });
   return created.id;
 }

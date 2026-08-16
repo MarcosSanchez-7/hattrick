@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Customer } from "@/lib/data";
+import { LocationPicker, type LatLng } from "@/components/admin/LocationPicker";
 
 export function CustomerForm({ customer }: { customer?: Customer }) {
   const router = useRouter();
@@ -11,6 +12,12 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
   const [name, setName] = useState(customer?.name ?? "");
   const [phone, setPhone] = useState(customer?.phone ?? "");
   const [city, setCity] = useState(customer?.city ?? "");
+  const [neighborhood, setNeighborhood] = useState(customer?.neighborhood ?? "");
+  const [location, setLocation] = useState<LatLng | null>(
+    customer?.latitude != null && customer?.longitude != null
+      ? { lat: customer.latitude, lng: customer.longitude }
+      : null,
+  );
   const [notes, setNotes] = useState(customer?.notes ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +42,9 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
             name: name.trim(),
             phone: phone.trim() || undefined,
             city: city.trim() || undefined,
+            neighborhood: neighborhood.trim() || undefined,
+            latitude: location?.lat ?? null,
+            longitude: location?.lng ?? null,
             notes: notes.trim() || undefined,
           }),
         },
@@ -88,6 +98,16 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
               placeholder="Asunción, Ciudad del Este, etc."
             />
           </div>
+          <div className="admin-field">
+            <label htmlFor="neighborhood">Barrio</label>
+            <input
+              id="neighborhood"
+              type="text"
+              value={neighborhood}
+              onChange={(e) => setNeighborhood(e.target.value)}
+              placeholder="Barrio Obrero, San Vicente, etc."
+            />
+          </div>
         </div>
 
         <div className="admin-field">
@@ -100,6 +120,15 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
             placeholder="Preferencias, referencias, etc."
           />
         </div>
+      </div>
+
+      <div className="admin-fieldset">
+        <p className="admin-fieldset__title">Ubicación de entrega</p>
+        <p className="admin-help">
+          Tocá el mapa para marcar dónde entregar los pedidos de este
+          cliente. Queda guardado y se reusa en futuras ventas.
+        </p>
+        <LocationPicker value={location} onChange={setLocation} />
       </div>
 
       <div className="admin-actions">
