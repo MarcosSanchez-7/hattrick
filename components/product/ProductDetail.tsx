@@ -38,10 +38,13 @@ export function ProductDetail({
   product,
   notices,
   productInfo,
+  personalizationPrice,
 }: {
   product: Product;
   notices: ProductNotice[];
   productInfo: ProductInfoSettings;
+  /** Precio único de personalización para todo el catálogo (Gs.). */
+  personalizationPrice: number;
 }) {
   const { add } = useCart();
   const { isSaved, toggle } = useWishlist();
@@ -55,12 +58,41 @@ export function ProductDetail({
   const [view, setView] = useState(0);
   const [open, setOpen] = useState<string | null>("descripcion");
 
+  const [customized, setCustomized] = useState(false);
+  const [customName, setCustomName] = useState("");
+  const [customNumber, setCustomNumber] = useState("");
+  const [selectedPatchIds, setSelectedPatchIds] = useState<string[]>([]);
+
   const sale = isOnSale(product);
   const hasPhotos = (product.images?.length ?? 0) > 0;
   const thumbCount = hasPhotos ? product.images!.length : GENERATED_VIEWS;
   const alt = product.name;
 
   const goTo = (i: number) => setView((i + thumbCount) % thumbCount);
+
+  const availablePatches = product.patches?.filter((p) => p.isVisible) ?? [];
+  const togglePatch = (id: string) => {
+    setSelectedPatchIds((prev) =>
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
+    );
+  };
+  const selectedPatches = availablePatches.filter((p) => selectedPatchIds.includes(p.id));
+  const addOnsTotal =
+    (customized ? personalizationPrice : 0) +
+    selectedPatches.reduce((acc, p) => acc + p.price, 0);
+  const unitTotal = product.price + addOnsTotal;
+  const customizationComplete =
+    !customized || (customName.trim() !== "" && customNumber.trim() !== "");
+  const canAdd = Boolean(size) && customizationComplete;
+
+  const handleAdd = () => {
+    if (!size || !customizationComplete) return;
+    add(product, size, 1, {
+      note: customized ? `${customName.trim()} #${customNumber.trim()}` : null,
+      patches: selectedPatches.map((p) => ({ name: p.name, price: p.price })),
+      addOnsPerUnit: addOnsTotal,
+    });
+  };
 
   return (
     <div className="container pdp">
@@ -177,14 +209,72 @@ export function ProductDetail({
           )}
         </div>
 
+        {product.isCustomizable || availablePatches.length > 0 ? (
+          <div className="stack gap-2" style={{ borderTop: "1px solid var(--line)", paddingTop: 16 }}>
+            {product.isCustomizable ? (
+              <div>
+                <label className="row gap-2" style={{ alignItems: "center", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={customized}
+                    onChange={(e) => setCustomized(e.target.checked)}
+                  />
+                  <span style={{ fontWeight: 600 }}>
+                    PERSONALIZADO · +{formatPrice(personalizationPrice)}
+                  </span>
+                </label>
+                {customized ? (
+                  <div className="row gap-2" style={{ marginTop: 8 }}>
+                    <input
+                      type="text"
+                      value={customName}
+                      onChange={(e) => setCustomName(e.target.value)}
+                      placeholder="Nombre"
+                      aria-label="Nombre a estampar"
+                      style={{ flex: 1 }}
+                    />
+                    <input
+                      type="text"
+                      value={customNumber}
+                      onChange={(e) => setCustomNumber(e.target.value)}
+                      placeholder="Número"
+                      aria-label="Número a estampar"
+                      style={{ width: 90 }}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {availablePatches.length > 0 ? (
+              <div>
+                <span className="label">Parches</span>
+                <div className="sizes" style={{ marginTop: 8 }}>
+                  {availablePatches.map((patch) => (
+                    <button
+                      key={patch.id}
+                      type="button"
+                      className="size"
+                      data-selected={selectedPatchIds.includes(patch.id) ? "true" : "false"}
+                      onClick={() => togglePatch(patch.id)}
+                    >
+                      {patch.name} · +{formatPrice(patch.price)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="stack gap-2">
           <button
             type="button"
             className="btn btn--block"
-            disabled={!size}
-            onClick={() => size && add(product, size)}
+            disabled={!canAdd}
+            onClick={handleAdd}
           >
-            {size ? `Añadir al carrito · ${formatPrice(product.price)}` : "Selecciona una talla"}
+            {size ? `Añadir al carrito · ${formatPrice(unitTotal)}` : "Selecciona una talla"}
           </button>
           <button
             type="button"

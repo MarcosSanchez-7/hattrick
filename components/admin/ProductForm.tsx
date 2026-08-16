@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import {
   SIZES_ADULT,
   type Category,
+  type Patch,
   type Pattern,
   type Product,
   type StockMode,
   type Tag,
 } from "@/lib/catalog";
 import { slugify } from "@/lib/slug";
+import { formatPrice } from "@/lib/format";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 import { CategoryPathPicker } from "@/components/admin/CategoryPathPicker";
 import { TagPicker } from "@/components/admin/TagPicker";
@@ -45,6 +47,10 @@ type FormState = {
   wholesalePrice: string;
   isNew: boolean;
   isVisible: boolean;
+  /** Habilita la casilla "Personalizado" (nombre y número) en la ficha pública. */
+  isCustomizable: boolean;
+  /** Ids de los parches que se le pueden poner a este producto. */
+  patchIds: string[];
   rating: string;
   reviews: string;
   stockMode: StockMode;
@@ -80,6 +86,8 @@ function toFormState(product?: Product): FormState {
     wholesalePrice: product?.wholesalePrice != null ? String(product.wholesalePrice) : "",
     isNew: product?.isNew ?? false,
     isVisible: product?.isVisible ?? true,
+    isCustomizable: product?.isCustomizable ?? false,
+    patchIds: product?.patches?.map((p) => p.id) ?? [],
     rating: product ? String(product.rating) : "5",
     reviews: product ? String(product.reviews) : "0",
     stockMode: product?.stockMode ?? "propio",
@@ -98,10 +106,12 @@ function toFormState(product?: Product): FormState {
 export function ProductForm({
   categories,
   tags,
+  patches,
   product,
 }: {
   categories: Category[];
   tags: Tag[];
+  patches: Patch[];
   product?: Product;
 }) {
   const router = useRouter();
@@ -133,6 +143,15 @@ export function ProductForm({
     setForm((f) => ({
       ...f,
       variantQuantities: { ...f.variantQuantities, [size]: value },
+    }));
+  };
+
+  const togglePatch = (patchId: string) => {
+    setForm((f) => ({
+      ...f,
+      patchIds: f.patchIds.includes(patchId)
+        ? f.patchIds.filter((id) => id !== patchId)
+        : [...f.patchIds, patchId],
     }));
   };
 
@@ -175,6 +194,8 @@ export function ProductForm({
       wholesalePrice: form.wholesalePrice.trim() ? Number(form.wholesalePrice) : null,
       isNew: form.isNew,
       isVisible: form.isVisible,
+      isCustomizable: form.isCustomizable,
+      patchIds: form.patchIds,
       rating: Number(form.rating) || 5,
       reviews: Number(form.reviews) || 0,
       stockMode: form.stockMode,
@@ -344,7 +365,24 @@ export function ProductForm({
               Visible en la tienda
             </label>
           </div>
+          <div className="admin-field admin-field--checkbox">
+            <input
+              id="isCustomizable"
+              type="checkbox"
+              checked={form.isCustomizable}
+              onChange={(e) => update("isCustomizable", e.target.checked)}
+            />
+            <label htmlFor="isCustomizable" style={{ marginBottom: 0 }}>
+              Admite personalización (nombre y número)
+            </label>
+          </div>
         </div>
+        {form.isCustomizable ? (
+          <p className="admin-help">
+            El precio de personalización es único para todo el catálogo — se
+            configura en Generales → Banner de personalización.
+          </p>
+        ) : null}
       </div>
 
       <div className="admin-fieldset">
@@ -408,6 +446,48 @@ export function ProductForm({
             Este producto mostrará &quot;Consultar talle&quot; en la tienda en vez
             de un selector de talla con stock.
           </p>
+        )}
+      </div>
+
+      <div className="admin-fieldset">
+        <p className="admin-fieldset__title">Parches disponibles</p>
+        {patches.length === 0 ? (
+          <p className="admin-help">
+            Todavía no cargaste ningún parche — se crean desde Generales →
+            Parches.
+          </p>
+        ) : (
+          <>
+            <p className="admin-help" style={{ marginTop: 0 }}>
+              Marcá cuáles de estos parches se le pueden poner a este producto.
+            </p>
+            <div className="admin-checklist">
+              {patches
+                .filter((p) => p.isVisible || form.patchIds.includes(p.id))
+                .map((p) => (
+                  <label
+                    key={p.id}
+                    className="admin-check"
+                    data-checked={form.patchIds.includes(p.id) ? "true" : "false"}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={form.patchIds.includes(p.id)}
+                      onChange={() => togglePatch(p.id)}
+                    />
+                    {p.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={p.image}
+                        alt=""
+                        style={{ width: 20, height: 20, objectFit: "contain", marginRight: 4 }}
+                      />
+                    ) : null}
+                    {p.name} · {formatPrice(p.price)}
+                  </label>
+                ))}
+            </div>
+          </>
         )}
       </div>
 

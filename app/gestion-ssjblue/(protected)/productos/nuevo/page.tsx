@@ -1,4 +1,4 @@
-import { getAllCategories, getAllTags } from "@/lib/data";
+import { getAllCategories, getAllPatches, getAllTags } from "@/lib/data";
 import { ProductForm } from "@/components/admin/ProductForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
@@ -6,9 +6,10 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Nuevo producto" };
 
 export default async function NewProductPage() {
-  const [categories, tags] = await Promise.all([
+  const [categories, tags, patches] = await Promise.all([
     getAllCategories({ includeHidden: true }),
     getAllTags(),
+    getAllPatches(),
   ]);
 
   return (
@@ -21,7 +22,7 @@ export default async function NewProductPage() {
       <h1 className="h1" style={{ marginBottom: 24 }}>
         Nuevo producto
       </h1>
-      <ProductForm categories={categories} tags={tags} />
+      <ProductForm categories={categories} tags={tags} patches={patches} />
     </>
   );
 }

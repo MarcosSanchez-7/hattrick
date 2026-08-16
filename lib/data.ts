@@ -5,6 +5,7 @@ import type {
   Category,
   Page,
   PagePlacement,
+  Patch,
   Product,
   ProductNotice,
   ProductVariant,
@@ -78,6 +79,7 @@ type ProductRow = {
   images: string[] | null;
   stock_mode: StockMode;
   is_visible: boolean;
+  is_customizable: boolean;
 };
 
 type VariantRow = {
@@ -104,7 +106,11 @@ function sizeRank(size: string): number {
   return i === -1 ? SIZES_ADULT.length : i;
 }
 
-function rowToProduct(row: ProductRow, variantRows: VariantRow[]): Product {
+function rowToProduct(
+  row: ProductRow,
+  variantRows: VariantRow[],
+  patches: Patch[] = [],
+): Product {
   const isPropio = row.stock_mode === "propio";
   const orderedVariantRows = [...variantRows].sort(
     (a, b) => sizeRank(a.size) - sizeRank(b.size),
@@ -143,6 +149,8 @@ function rowToProduct(row: ProductRow, variantRows: VariantRow[]): Product {
     description: row.description,
     tags: row.tags ?? [],
     images: row.images ?? [],
+    isCustomizable: row.is_customizable,
+    patches,
   };
 }
 
@@ -185,6 +193,50 @@ async function fetchVariantsByProduct(
   return map;
 }
 
+type PatchRow = {
+  id: string;
+  name: string;
+  image: string | null;
+  price: number | string;
+  is_visible: boolean;
+};
+
+function rowToPatch(row: PatchRow): Patch {
+  return {
+    id: row.id,
+    name: row.name,
+    image: row.image,
+    price: Number(row.price),
+    isVisible: row.is_visible,
+  };
+}
+
+async function fetchPatchesByProduct(
+  productIds: string[],
+): Promise<Map<string, Patch[]>> {
+  const map = new Map<string, Patch[]>();
+  if (productIds.length === 0) return map;
+
+  const { data, error } = await supabaseAdmin
+    .from("product_patches")
+    .select("product_id, patches(*)")
+    .in("product_id", productIds);
+  if (error) fail(`No se pudieron cargar los parches del producto: ${error.message}`);
+
+  const rows = data as unknown as {
+    product_id: string;
+    patches: PatchRow | PatchRow[] | null;
+  }[];
+  for (const row of rows) {
+    if (!row.patches) continue;
+    const patchRows = Array.isArray(row.patches) ? row.patches : [row.patches];
+    const list = map.get(row.product_id) ?? [];
+    for (const patchRow of patchRows) list.push(rowToPatch(patchRow));
+    map.set(row.product_id, list);
+  }
+  return map;
+}
+
 async function fetchProductWithVariants(id: string): Promise<Product> {
   const { data, error } = await supabaseAdmin
     .from("products")
@@ -194,10 +246,11 @@ async function fetchProductWithVariants(id: string): Promise<Product> {
   if (error) fail(`No se pudo releer el producto: ${error.message}`);
 
   const row = data as ProductRow;
-  const variantMap = await fetchVariantsByProduct(
-    row.stock_mode === "propio" ? [row.id] : [],
-  );
-  return rowToProduct(row, variantMap.get(row.id) ?? []);
+  const [variantMap, patchMap] = await Promise.all([
+    fetchVariantsByProduct(row.stock_mode === "propio" ? [row.id] : []),
+    fetchPatchesByProduct([row.id]),
+  ]);
+  return rowToProduct(row, variantMap.get(row.id) ?? [], patchMap.get(row.id) ?? []);
 }
 
 // ── Lecturas ────────────────────────────────────────────────────────────
@@ -236,9 +289,15 @@ export async function getAllProducts(
   }
 
   const propioIds = rows.filter((r) => r.stock_mode === "propio").map((r) => r.id);
-  const variantMap = await fetchVariantsByProduct(propioIds);
+  const allIds = rows.map((r) => r.id);
+  const [variantMap, patchMap] = await Promise.all([
+    fetchVariantsByProduct(propioIds),
+    fetchPatchesByProduct(allIds),
+  ]);
 
-  return rows.map((row) => rowToProduct(row, variantMap.get(row.id) ?? []));
+  return rows.map((row) =>
+    rowToProduct(row, variantMap.get(row.id) ?? [], patchMap.get(row.id) ?? []),
+  );
 }
 
 export async function getAllCategories(
@@ -476,11 +535,13 @@ export async function getInventoryMovements(
 
 export type ProductInput = Omit<
   Product,
-  "id" | "slug" | "variants" | "sizes" | "soldOut"
+  "id" | "slug" | "variants" | "sizes" | "soldOut" | "patches"
 > & {
   slug?: string;
   /** Cantidad por talla. Sólo se usa (y se exige) cuando stockMode === "propio". */
   variantQuantities?: Record<string, number>;
+  /** Ids de los parches que se le pueden poner a este producto. */
+  patchIds?: string[];
 };
 
 function assertValidProduct(input: ProductInput) {
@@ -528,7 +589,29 @@ function productToRow(input: ProductInput) {
     tags: input.tags ?? [],
     images: input.images ?? [],
     stock_mode: input.stockMode,
+    is_customizable: Boolean(input.isCustomizable),
   };
+}
+
+/** Reemplazo completo (no diff): sin cantidad ni ledger que preservar, a
+ * diferencia de syncProductVariants — se borra todo y se inserta de nuevo. */
+async function syncProductPatches(productId: string, patchIds: string[]): Promise<void> {
+  const { error: deleteError } = await supabaseAdmin
+    .from("product_patches")
+    .delete()
+    .eq("product_id", productId);
+  if (deleteError) {
+    fail(`No se pudieron actualizar los parches del producto: ${deleteError.message}`);
+  }
+
+  if (patchIds.length === 0) return;
+
+  const { error: insertError } = await supabaseAdmin
+    .from("product_patches")
+    .insert(patchIds.map((patchId) => ({ product_id: productId, patch_id: patchId })));
+  if (insertError) {
+    fail(`No se pudieron actualizar los parches del producto: ${insertError.message}`);
+  }
 }
 
 export async function createProduct(input: ProductInput): Promise<Product> {
@@ -558,6 +641,7 @@ export async function createProduct(input: ProductInput): Promise<Product> {
   if (input.stockMode === "propio") {
     await syncProductVariants(id, input.variantQuantities ?? {});
   }
+  await syncProductPatches(id, input.patchIds ?? []);
 
   return fetchProductWithVariants(id);
 }
@@ -599,6 +683,7 @@ export async function updateProduct(
     id,
     input.stockMode === "propio" ? input.variantQuantities ?? {} : {},
   );
+  await syncProductPatches(id, input.patchIds ?? []);
 
   return fetchProductWithVariants(id);
 }
@@ -2749,6 +2834,81 @@ export async function recordQrScan(slug: string): Promise<boolean> {
     return false;
   }
   return Boolean(data);
+}
+
+// ── Catálogo de parches ─────────────────────────────────────────────────
+
+export async function getAllPatches(): Promise<Patch[]> {
+  const { data, error } = await supabaseAdmin
+    .from("patches")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (error) fail(`No se pudieron cargar los parches: ${error.message}`);
+  return (data as PatchRow[]).map(rowToPatch);
+}
+
+export type PatchInput = {
+  name: string;
+  image?: string | null;
+  price: number;
+  isVisible?: boolean;
+};
+
+function assertValidPatch(input: PatchInput) {
+  if (!input.name?.trim()) throw new DataError("El nombre es obligatorio.");
+  if (!Number.isFinite(input.price) || input.price < 0) {
+    throw new DataError("El precio no es válido.");
+  }
+}
+
+export async function createPatch(input: PatchInput): Promise<Patch> {
+  assertValidPatch(input);
+
+  const id = `patch-${randomUUID().slice(0, 8)}`;
+  const { data, error } = await supabaseAdmin
+    .from("patches")
+    .insert({
+      id,
+      name: input.name.trim(),
+      image: input.image ?? null,
+      price: input.price,
+      is_visible: input.isVisible ?? true,
+    })
+    .select("*")
+    .single();
+
+  if (error) fail(`No se pudo crear el parche: ${error.message}`);
+  return rowToPatch(data as PatchRow);
+}
+
+export async function updatePatch(id: string, input: PatchInput): Promise<Patch> {
+  assertValidPatch(input);
+
+  const { data, error } = await supabaseAdmin
+    .from("patches")
+    .update({
+      name: input.name.trim(),
+      image: input.image ?? null,
+      price: input.price,
+      is_visible: input.isVisible ?? true,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) fail(`No se pudo actualizar el parche: ${error.message}`);
+  if (!data) throw new DataError("Parche no encontrado.", 404);
+  return rowToPatch(data as PatchRow);
+}
+
+export async function deletePatch(id: string): Promise<void> {
+  const { data, error } = await supabaseAdmin
+    .from("patches")
+    .delete()
+    .eq("id", id)
+    .select("id");
+  if (error) fail(`No se pudo eliminar el parche: ${error.message}`);
+  if (!data || data.length === 0) throw new DataError("Parche no encontrado.", 404);
 }
 
 export { slugify };

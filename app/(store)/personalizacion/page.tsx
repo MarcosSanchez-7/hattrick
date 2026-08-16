@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getSetting } from "@/lib/data";
-import { DEFAULT_CUSTOM_BANNER } from "@/lib/settings";
+import { DEFAULT_CUSTOM_BANNER, DEFAULT_PERSONALIZATION_GALLERY } from "@/lib/settings";
 import { CustomBanner } from "@/components/home/CustomBanner";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,10 @@ export const metadata: Metadata = {
 };
 
 export default async function PersonalizacionPage() {
-  const settings = await getSetting("customBanner", DEFAULT_CUSTOM_BANNER);
+  const [settings, gallery] = await Promise.all([
+    getSetting("customBanner", DEFAULT_CUSTOM_BANNER),
+    getSetting("personalizationGallery", DEFAULT_PERSONALIZATION_GALLERY),
+  ]);
 
   return (
     <>
@@ -28,6 +31,32 @@ export default async function PersonalizacionPage() {
       </header>
 
       <CustomBanner settings={settings} />
+
+      {gallery.posts.length > 0 ? (
+        <section className="section section--soft">
+          <div className="container">
+            <div className="section-head">
+              <div>
+                <span className="label section-head__eyebrow">
+                  Trabajos realizados
+                </span>
+                <h2 className="h1">Personalizaciones ya entregadas</h2>
+              </div>
+            </div>
+            <div className="photo-grid">
+              {gallery.posts.map((post) => (
+                <div key={post.id} className="photo-grid__item">
+                  <div className="photo-grid__media">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={post.image} alt={post.caption || "Personalización HATTRICK"} />
+                  </div>
+                  {post.caption ? <p className="meta">{post.caption}</p> : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
     </>
   );
 }

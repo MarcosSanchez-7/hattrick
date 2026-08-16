@@ -96,6 +96,10 @@ export type CustomBannerSettings = {
   priceLabel: string;
   /** Fotos de ejemplos de personalización. Vacío = se usa la ilustración genérica. */
   images: string[];
+  /** Precio real de personalización (Gs.), único para todo el catálogo —
+   * usado en el carrito/PDP, a diferencia de priceLabel que es solo texto
+   * de marketing en este mismo banner. */
+  price: number;
 };
 
 export const DEFAULT_CUSTOM_BANNER: CustomBannerSettings = {
@@ -112,6 +116,39 @@ export const DEFAULT_CUSTOM_BANNER: CustomBannerSettings = {
   ctaLabel: "Personalizar ahora",
   ctaHref: "/personalizacion",
   priceLabel: "Costo adicional: Gs. 50.000",
+  price: 50000,
+};
+
+/** Galería/mini-blog de personalizaciones ya hechas, mostrada en
+ * /personalizacion debajo del banner. */
+export type PersonalizationGalleryPost = {
+  id: string;
+  image: string;
+  caption: string;
+};
+
+export type PersonalizationGallerySettings = {
+  posts: PersonalizationGalleryPost[];
+};
+
+export const DEFAULT_PERSONALIZATION_GALLERY: PersonalizationGallerySettings = {
+  posts: [],
+};
+
+/** Capturas de conversaciones de entrega o paquetes listos para envío,
+ * mostradas en la home antes del footer. */
+export type ReviewItem = {
+  id: string;
+  image: string;
+  caption: string;
+};
+
+export type ReviewsSettings = {
+  items: ReviewItem[];
+};
+
+export const DEFAULT_REVIEWS: ReviewsSettings = {
+  items: [],
 };
 
 export type HomeSettings = {
@@ -209,4 +246,6 @@ export type SiteSettingsKey =
   | "productNotices"
   | "productInfo"
   | "valueProps"
-  | "branding";
+  | "branding"
+  | "personalizationGallery"
+  | "reviews";

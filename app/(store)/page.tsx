@@ -6,6 +6,7 @@ import {
   DEFAULT_CUSTOM_BANNER,
   DEFAULT_HERO,
   DEFAULT_HOME,
+  DEFAULT_REVIEWS,
   DEFAULT_VALUE_PROPS,
 } from "@/lib/settings";
 import { Hero } from "@/components/home/Hero";
@@ -13,6 +14,7 @@ import { ValueProps } from "@/components/home/ValueProps";
 import { CategoryGrid } from "@/components/home/CategoryGrid";
 import { OffersSection } from "@/components/home/OffersSection";
 import { CustomBanner } from "@/components/home/CustomBanner";
+import { ReviewsSection } from "@/components/home/ReviewsSection";
 import { ProductGrid } from "@/components/product/ProductCard";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +32,7 @@ export default async function HomePage() {
     customBannerSettings,
     homeSettings,
     valuePropsSettings,
+    reviewsSettings,
   ] = await Promise.all([
     getAllProducts(),
     getAllCategories(),
@@ -38,6 +41,7 @@ export default async function HomePage() {
     getSetting("customBanner", DEFAULT_CUSTOM_BANNER),
     getSetting("home", DEFAULT_HOME),
     getSetting("valueProps", DEFAULT_VALUE_PROPS),
+    getSetting("reviews", DEFAULT_REVIEWS),
   ]);
   const nuevos = newArrivals(products).slice(0, 8);
   const populares = bestSellers(products).slice(0, 4);
@@ -118,6 +122,8 @@ export default async function HomePage() {
           </p>
         </div>
       </section>
+
+      <ReviewsSection settings={reviewsSettings} />
     </>
   );
 }
