@@ -1181,3 +1181,15 @@ begin
   return p_id;
 end;
 $$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Rol "vendedor" (solo Inventario, solo lectura) + última conexión de cada
+-- admin, para que el superadmin pueda ver quién está conectado en Usuarios.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+alter table admin_users drop constraint if exists admin_users_role_check;
+alter table admin_users
+  add constraint admin_users_role_check
+  check (role in ('superadmin', 'editor', 'viewer', 'vendedor'));
+
+alter table admin_users add column if not exists last_seen_at timestamptz;

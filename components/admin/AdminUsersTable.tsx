@@ -4,13 +4,18 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { AdminUser } from "@/lib/data";
+import { ROLE_LABELS } from "@/lib/admin-auth";
+import { formatRelativeTime } from "@/lib/format";
 import { IconTrash } from "@/components/ui/Icons";
 
-const ROLE_LABEL: Record<string, string> = {
-  superadmin: "Superadmin",
-  editor: "Editor",
-  viewer: "Solo lectura",
-};
+// Margen sobre el intervalo de 60s del heartbeat (AdminHeartbeat.tsx), para
+// no marcar "desconectado" por una demora de red puntual.
+const ONLINE_THRESHOLD_MS = 2 * 60 * 1000;
+
+function isOnline(lastSeenAt: string | null): boolean {
+  if (!lastSeenAt) return false;
+  return Date.now() - new Date(lastSeenAt).getTime() < ONLINE_THRESHOLD_MS;
+}
 
 export function AdminUsersTable({
   users,
@@ -54,11 +59,14 @@ export function AdminUsersTable({
               <th>Nombre</th>
               <th>Correo</th>
               <th>Rol</th>
+              <th>Estado</th>
               <th aria-label="Acciones" />
             </tr>
           </thead>
           <tbody>
-            {users.map((u) => (
+            {users.map((u) => {
+              const online = isOnline(u.lastSeenAt);
+              return (
               <tr key={u.id}>
                 <td style={{ fontWeight: 600 }}>
                   {u.name}
@@ -72,7 +80,28 @@ export function AdminUsersTable({
                   {u.email}
                 </td>
                 <td className="meta" data-label="Rol">
-                  {ROLE_LABEL[u.role] ?? u.role}
+                  {ROLE_LABELS[u.role] ?? u.role}
+                </td>
+                <td data-label="Estado">
+                  <span className="row gap-2" style={{ alignItems: "center" }}>
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: online ? "#2f9e5c" : "var(--ink-muted)",
+                        flex: "none",
+                      }}
+                    />
+                    <span className="meta">
+                      {online
+                        ? "En línea"
+                        : u.lastSeenAt
+                          ? `Desconectado — ${formatRelativeTime(u.lastSeenAt)}`
+                          : "Nunca conectado"}
+                    </span>
+                  </span>
                 </td>
                 <td>
                   <div className="admin-row-actions">
@@ -100,7 +129,8 @@ export function AdminUsersTable({
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

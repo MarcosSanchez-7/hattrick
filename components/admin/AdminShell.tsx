@@ -2,16 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import type { AdminRole } from "@/lib/admin-auth";
+import { ROLE_LABELS, type AdminRole } from "@/lib/admin-auth";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
+import { AdminHeartbeat } from "@/components/admin/AdminHeartbeat";
 import { IconClose, IconMenu } from "@/components/ui/Icons";
-
-const ROLE_LABEL: Record<string, string> = {
-  superadmin: "Superadmin",
-  editor: "Editor",
-  viewer: "Solo lectura",
-};
 
 export function AdminShell({
   role,
@@ -32,6 +27,7 @@ export function AdminShell({
 
   return (
     <div className="admin-shell">
+      <AdminHeartbeat />
       <aside className="admin-sidebar" data-open={menuOpen ? "true" : "false"}>
         <div className="admin-sidebar__brand">
           <div className="admin-sidebar__logo">Hattrick</div>
@@ -42,7 +38,7 @@ export function AdminShell({
           <div className="admin-sidebar__user">
             {name}
             <span className="admin-sidebar__user-role">
-              {ROLE_LABEL[role] ?? role}
+              {ROLE_LABELS[role] ?? role}
             </span>
           </div>
           <AdminLogoutButton />

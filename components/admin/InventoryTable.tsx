@@ -38,9 +38,12 @@ type RowActions = {
 export function InventoryTable({
   products,
   categories,
+  readOnly = false,
 }: {
   products: Product[];
   categories: Category[];
+  /** Vendedor: ve el stock, pero no puede editar/eliminar productos ni ajustar cantidades. */
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -175,6 +178,7 @@ export function InventoryTable({
           expandedStock={expandedStock}
           onToggleStock={toggleStock}
           onAdjust={setAdjusting}
+          readOnly={readOnly}
         />
       ) : (
         groups.map((group) => {
@@ -203,6 +207,7 @@ export function InventoryTable({
                   expandedStock={expandedStock}
                   onToggleStock={toggleStock}
                   onAdjust={setAdjusting}
+                  readOnly={readOnly}
                 />
               ) : null}
             </div>
@@ -231,6 +236,7 @@ function ProductRowsTable({
   expandedStock,
   onToggleStock,
   onAdjust,
+  readOnly,
 }: {
   products: Product[];
   categoryName: (slug: string) => string;
@@ -239,6 +245,7 @@ function ProductRowsTable({
   expandedStock: Set<string>;
   onToggleStock: (id: string) => void;
   onAdjust: (a: Adjusting) => void;
+  readOnly?: boolean;
 }) {
   return (
     <div className="admin-table-wrap">
@@ -313,31 +320,40 @@ function ProductRowsTable({
                       {isStockOpen ? (
                         <div className="inventory-stock-detail">
                           <div className="inventory-sizes">
-                            {(p.variants ?? []).map((v) => (
-                              <button
-                                key={v.id}
-                                type="button"
-                                className={
-                                  "inventory-size-chip" +
-                                  (v.stock === 0
-                                    ? " inventory-size-chip--out"
-                                    : v.stock <= LOW_STOCK_THRESHOLD
-                                      ? " inventory-size-chip--low"
-                                      : "")
-                                }
-                                title={`Ajustar stock de la talla ${v.size}`}
-                                onClick={() =>
-                                  onAdjust({
-                                    variantId: v.id,
-                                    productName: p.name,
-                                    size: v.size,
-                                    stock: v.stock,
-                                  })
-                                }
-                              >
-                                {v.size} {v.stock}
-                              </button>
-                            ))}
+                            {(p.variants ?? []).map((v) => {
+                              const chipClass =
+                                "inventory-size-chip" +
+                                (v.stock === 0
+                                  ? " inventory-size-chip--out"
+                                  : v.stock <= LOW_STOCK_THRESHOLD
+                                    ? " inventory-size-chip--low"
+                                    : "");
+                              if (readOnly) {
+                                return (
+                                  <span key={v.id} className={chipClass}>
+                                    {v.size} {v.stock}
+                                  </span>
+                                );
+                              }
+                              return (
+                                <button
+                                  key={v.id}
+                                  type="button"
+                                  className={chipClass}
+                                  title={`Ajustar stock de la talla ${v.size}`}
+                                  onClick={() =>
+                                    onAdjust({
+                                      variantId: v.id,
+                                      productName: p.name,
+                                      size: v.size,
+                                      stock: v.stock,
+                                    })
+                                  }
+                                >
+                                  {v.size} {v.stock}
+                                </button>
+                              );
+                            })}
                           </div>
                           {invested != null ? (
                             <p className="meta" style={{ marginTop: 6 }}>
@@ -362,37 +378,41 @@ function ProductRowsTable({
                     >
                       <IconExternal className="icon--sm" />
                     </Link>
-                    <button
-                      type="button"
-                      className="admin-icon-btn"
-                      aria-label={p.isVisible ? "Ocultar producto" : "Mostrar producto"}
-                      title={p.isVisible ? "Ocultar producto" : "Mostrar producto"}
-                      disabled={actions.togglingId === p.id}
-                      onClick={() => actions.onToggleVisibility(p)}
-                    >
-                      {p.isVisible ? (
-                        <IconEye className="icon--sm" />
-                      ) : (
-                        <IconEyeOff className="icon--sm" />
-                      )}
-                    </button>
-                    <Link
-                      href={`/gestion-ssjblue/productos/${p.id}`}
-                      className="btn btn--ghost btn--sm"
-                      style={{ height: 32, paddingInline: 12 }}
-                    >
-                      Editar
-                    </Link>
-                    <button
-                      type="button"
-                      className="admin-icon-btn admin-icon-btn--danger"
-                      aria-label="Eliminar producto"
-                      title="Eliminar"
-                      disabled={actions.pendingId === p.id}
-                      onClick={() => actions.onDelete(p)}
-                    >
-                      <IconTrash className="icon--sm" />
-                    </button>
+                    {readOnly ? null : (
+                      <>
+                        <button
+                          type="button"
+                          className="admin-icon-btn"
+                          aria-label={p.isVisible ? "Ocultar producto" : "Mostrar producto"}
+                          title={p.isVisible ? "Ocultar producto" : "Mostrar producto"}
+                          disabled={actions.togglingId === p.id}
+                          onClick={() => actions.onToggleVisibility(p)}
+                        >
+                          {p.isVisible ? (
+                            <IconEye className="icon--sm" />
+                          ) : (
+                            <IconEyeOff className="icon--sm" />
+                          )}
+                        </button>
+                        <Link
+                          href={`/gestion-ssjblue/productos/${p.id}`}
+                          className="btn btn--ghost btn--sm"
+                          style={{ height: 32, paddingInline: 12 }}
+                        >
+                          Editar
+                        </Link>
+                        <button
+                          type="button"
+                          className="admin-icon-btn admin-icon-btn--danger"
+                          aria-label="Eliminar producto"
+                          title="Eliminar"
+                          disabled={actions.pendingId === p.id}
+                          onClick={() => actions.onDelete(p)}
+                        >
+                          <IconTrash className="icon--sm" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>
