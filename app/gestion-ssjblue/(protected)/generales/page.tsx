@@ -65,6 +65,11 @@ const SECTIONS = [
     title: "Envíos del producto",
     description: "El texto de \"Envíos y devoluciones\" en la ficha de cada producto.",
   },
+  {
+    href: "/gestion-ssjblue/generales/qr",
+    title: "Códigos QR",
+    description: "Links rastreables para imprimir en bolsas, flyers, etc. — cuánta gente entra por cada uno.",
+  },
 ];
 
 export default function GeneralesPage() {

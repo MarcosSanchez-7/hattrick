@@ -1200,3 +1200,38 @@ alter table admin_users add column if not exists last_seen_at timestamptz;
 -- ═══════════════════════════════════════════════════════════════════════════
 
 alter table products add column if not exists wholesale_price numeric;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Códigos QR rastreables: cada campaña (bolsas de envío, flyer, cartel de
+-- local, etc.) tiene su propio link /qr/<slug> — al escanearlo se suma 1 acá
+-- y redirige a la home. Vercel Analytics registra la visita a /qr/<slug> en
+-- paralelo (misma página, dos fuentes de datos: conteo propio + gráficos).
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists qr_campaigns (
+  slug text primary key,
+  name text not null,
+  scan_count integer not null default 0,
+  last_scanned_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+alter table qr_campaigns enable row level security;
+
+insert into qr_campaigns (slug, name)
+values ('bolsas', 'Bolsas de envío')
+on conflict (slug) do nothing;
+
+-- Suma atómica (evita perder un escaneo si dos personas escanean casi al
+-- mismo tiempo, que con bolsas de envío en volumen es realista).
+create or replace function increment_qr_scan(p_slug text)
+returns boolean
+language plpgsql
+as $$
+begin
+  update qr_campaigns
+  set scan_count = scan_count + 1, last_scanned_at = now()
+  where slug = p_slug;
+  return found;
+end;
+$$;
