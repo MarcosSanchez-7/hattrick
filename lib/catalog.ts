@@ -23,6 +23,16 @@ export type ProductVariant = {
   stock: number;
 };
 
+/** Parche de liga/competición, con precio propio — el admin elige a mano
+ * cuáles se pueden poner a cada camiseta (sin regla automática por liga). */
+export type Patch = {
+  id: string;
+  name: string;
+  image: string | null;
+  price: number;
+  isVisible: boolean;
+};
+
 export type Product = {
   id: string;
   slug: string;
@@ -52,6 +62,10 @@ export type Product = {
   tags: string[];
   /** Rutas a /uploads/... subidas desde el panel. Vacío = se usa la ilustración generada. */
   images?: string[];
+  /** Habilita la casilla "Personalizado" (nombre y número) en la ficha. */
+  isCustomizable?: boolean;
+  /** Parches que se le pueden poner a este producto puntual. */
+  patches?: Patch[];
 };
 
 export type NoticeIcon = "truck" | "print" | "return" | "shield";

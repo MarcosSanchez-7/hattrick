@@ -154,6 +154,12 @@ function DrawerLine({ line }: { line: CartLine }) {
               {product.name}
             </Link>
             <div className="meta">Talla {line.size}</div>
+            {line.note ? <div className="meta">Personalizado: {line.note}</div> : null}
+            {line.patches?.length ? (
+              <div className="meta">
+                Parches: {line.patches.map((p) => p.name).join(", ")}
+              </div>
+            ) : null}
           </div>
           <button
             type="button"

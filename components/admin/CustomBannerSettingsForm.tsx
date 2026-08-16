@@ -2,17 +2,28 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CustomBannerSettings } from "@/lib/settings";
+import type {
+  CustomBannerSettings,
+  PersonalizationGalleryPost,
+  PersonalizationGallerySettings,
+} from "@/lib/settings";
 import { ImageUploader } from "@/components/admin/ImageUploader";
+
+function emptyPost(): PersonalizationGalleryPost {
+  return { id: crypto.randomUUID(), image: "", caption: "" };
+}
 
 export function CustomBannerSettingsForm({
   initial,
+  initialGallery,
 }: {
   initial: CustomBannerSettings;
+  initialGallery: PersonalizationGallerySettings;
 }) {
   const router = useRouter();
   const [form, setForm] = useState<CustomBannerSettings>(initial);
   const [points, setPoints] = useState(initial.points.join("\n"));
+  const [gallery, setGallery] = useState<PersonalizationGallerySettings>(initialGallery);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -23,6 +34,23 @@ export function CustomBannerSettingsForm({
   ) => {
     setSaved(false);
     setForm((f) => ({ ...f, [key]: value }));
+  };
+
+  const updatePost = (id: string, patch: Partial<PersonalizationGalleryPost>) => {
+    setSaved(false);
+    setGallery((g) => ({
+      posts: g.posts.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+    }));
+  };
+
+  const addPost = () => {
+    setSaved(false);
+    setGallery((g) => ({ posts: [...g.posts, emptyPost()] }));
+  };
+
+  const removePost = (id: string) => {
+    setSaved(false);
+    setGallery((g) => ({ posts: g.posts.filter((p) => p.id !== id) }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,13 +65,22 @@ export function CustomBannerSettingsForm({
           .map((p) => p.trim())
           .filter(Boolean),
       };
-      const res = await fetch("/api/admin/settings/customBanner", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "No se pudo guardar.");
+      const [bannerRes, galleryRes] = await Promise.all([
+        fetch("/api/admin/settings/customBanner", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }),
+        fetch("/api/admin/settings/personalizationGallery", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(gallery),
+        }),
+      ]);
+      const bannerData = await bannerRes.json();
+      const galleryData = await galleryRes.json();
+      if (!bannerRes.ok) throw new Error(bannerData.error ?? "No se pudo guardar.");
+      if (!galleryRes.ok) throw new Error(galleryData.error ?? "No se pudo guardar.");
       setSaved(true);
       router.refresh();
     } catch (err) {
@@ -147,6 +184,72 @@ export function CustomBannerSettingsForm({
             />
           </div>
         </div>
+      </div>
+
+      <div className="admin-fieldset">
+        <p className="admin-fieldset__title">Precio de personalización</p>
+        <p className="admin-help">
+          Precio real que se cobra por marcar &quot;Personalizado&quot; en la
+          ficha de un producto — se suma al carrito y aparece en el mensaje
+          de WhatsApp. El texto de arriba es solo lo que se muestra en este
+          banner; este número es el que se usa en los cálculos.
+        </p>
+        <div className="admin-field" style={{ maxWidth: 220 }}>
+          <label htmlFor="price">Precio (Gs.)</label>
+          <input
+            id="price"
+            type="number"
+            min={0}
+            step={1000}
+            value={form.price}
+            onChange={(e) => update("price", Number(e.target.value))}
+          />
+        </div>
+      </div>
+
+      <div className="admin-fieldset">
+        <p className="admin-fieldset__title">Galería de personalizaciones</p>
+        <p className="admin-help">
+          Fotos de personalizaciones ya entregadas (con o sin parches),
+          mostradas en una grilla en /personalizacion. Vacío = la sección no
+          se muestra.
+        </p>
+        <div className="stack gap-3">
+          {gallery.posts.map((post) => (
+            <div
+              key={post.id}
+              className="admin-form__grid admin-form__grid--3"
+              style={{ alignItems: "start", borderTop: "1px solid var(--line)", paddingTop: 12 }}
+            >
+              <ImageUploader
+                images={post.image ? [post.image] : []}
+                onChange={(images) => updatePost(post.id, { image: images[0] ?? "" })}
+                max={1}
+                folder="personalization"
+              />
+              <div className="admin-field">
+                <label htmlFor={`caption-${post.id}`}>Leyenda</label>
+                <input
+                  id={`caption-${post.id}`}
+                  type="text"
+                  value={post.caption}
+                  onChange={(e) => updatePost(post.id, { caption: e.target.value })}
+                  placeholder="Camiseta de River personalizada con parches"
+                />
+              </div>
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm"
+                onClick={() => removePost(post.id)}
+              >
+                Quitar
+              </button>
+            </div>
+          ))}
+        </div>
+        <button type="button" className="btn btn--ghost btn--sm" onClick={addPost} style={{ marginTop: 12 }}>
+          + Añadir foto
+        </button>
       </div>
 
       <div className="admin-actions">

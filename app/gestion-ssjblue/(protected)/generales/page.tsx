@@ -70,6 +70,16 @@ const SECTIONS = [
     title: "Códigos QR",
     description: "Links rastreables para imprimir en bolsas, flyers, etc. — cuánta gente entra por cada uno.",
   },
+  {
+    href: "/gestion-ssjblue/generales/parches",
+    title: "Parches",
+    description: "Catálogo de parches de ligas/competiciones con su precio — elegibles al cargar cada producto.",
+  },
+  {
+    href: "/gestion-ssjblue/generales/resenas",
+    title: "Reseñas",
+    description: "Capturas de conversaciones de entrega o paquetes listos, mostradas en la home.",
+  },
 ];
 
 export default function GeneralesPage() {

@@ -1235,3 +1235,38 @@ begin
   return found;
 end;
 $$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Parches (ligas/competiciones) y personalización: catálogo de parches con
+-- precio propio, relación manual producto↔parches (sin liga automática,
+-- el admin elige a mano), y un flag por producto para habilitar la casilla
+-- "Personalizado" en la ficha. El precio de personalización es único para
+-- todo el catálogo (vive en site_settings, key "customBanner"), no acá.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists patches (
+  id text primary key,
+  name text not null,
+  image text,
+  price numeric(10, 2) not null default 0,
+  is_visible boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table patches enable row level security;
+
+create trigger patches_set_updated_at
+  before update on patches
+  for each row
+  execute function set_updated_at();
+
+create table if not exists product_patches (
+  product_id text not null references products (id) on delete cascade,
+  patch_id text not null references patches (id) on delete cascade,
+  primary key (product_id, patch_id)
+);
+
+alter table product_patches enable row level security;
+
+alter table products add column if not exists is_customizable boolean not null default false;

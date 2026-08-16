@@ -32,10 +32,14 @@ function buildWhatsAppMessage(
   invoice: InvoiceInfo,
 ): string {
   const items = lines
-    .map(
-      (l) =>
-        `• ${l.product.name} (Talla ${l.size}) x${l.qty} — ${formatPrice(l.lineTotal)}`,
-    )
+    .map((l) => {
+      const base = `• ${l.product.name} (Talla ${l.size}) x${l.qty} — ${formatPrice(l.lineTotal)}`;
+      const extras = [
+        l.note ? `   Personalizado: "${l.note}"` : null,
+        l.patches?.length ? `   Parches: ${l.patches.map((p) => p.name).join(", ")}` : null,
+      ].filter(Boolean);
+      return extras.length > 0 ? `${base}\n${extras.join("\n")}` : base;
+    })
     .join("\n");
   const shippingLine = freeShipping
     ? "Envío: gratis"
@@ -146,6 +150,14 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
                           {line.product.name}
                         </Link>
                         <div className="meta">Talla {line.size}</div>
+                        {line.note ? (
+                          <div className="meta">Personalizado: {line.note}</div>
+                        ) : null}
+                        {line.patches?.length ? (
+                          <div className="meta">
+                            Parches: {line.patches.map((p) => p.name).join(", ")}
+                          </div>
+                        ) : null}
                       </div>
                       <button
                         type="button"

@@ -12,7 +12,22 @@ import type { Product } from "@/lib/catalog";
 
 export const FREE_SHIPPING_FROM = 650000;
 
-type StoredLine = { slug: string; size: string; qty: number };
+/** Parche elegido, guardado como snapshot liviano (nombre+precio) — evita
+ * tener que resolver el catálogo de parches de nuevo en cada lugar que lee
+ * el carrito (drawer, /carrito, mensaje de WhatsApp). */
+export type CartPatch = { name: string; price: number };
+
+type StoredLine = {
+  slug: string;
+  size: string;
+  qty: number;
+  /** Texto "Nombre #Número" si el cliente pidió personalización. */
+  note?: string | null;
+  patches?: CartPatch[] | null;
+  /** Recargo por unidad (personalización + parches), ya resuelto al agregar
+   * — el carrito no necesita saber el precio de personalización vigente. */
+  addOnsPerUnit?: number;
+};
 
 export type CartLine = StoredLine & {
   key: string;
@@ -35,7 +50,13 @@ type CartContextValue = {
     product: Product,
     size: string,
     qty?: number,
-    opts?: { silent?: boolean },
+    opts?: {
+      silent?: boolean;
+      note?: string | null;
+      patches?: CartPatch[];
+      /** Recargo por unidad ya calculado (personalización + parches). */
+      addOnsPerUnit?: number;
+    },
   ) => void;
   setQty: (key: string, qty: number) => void;
   remove: (key: string) => void;
@@ -48,7 +69,21 @@ type CartContextValue = {
 const CartContext = createContext<CartContextValue | null>(null);
 
 const STORAGE_KEY = "hattrick.cart.v1";
-const lineKey = (slug: string, size: string) => `${slug}::${size}`;
+
+/** Dos líneas del mismo producto/talla pero con personalización o parches
+ * distintos no deben mezclarse — se incluyen en la key para diferenciarlas. */
+function lineKey(
+  slug: string,
+  size: string,
+  note?: string | null,
+  patches?: CartPatch[] | null,
+): string {
+  const patchPart = (patches ?? [])
+    .map((p) => p.name)
+    .sort()
+    .join(",");
+  return `${slug}::${size}::${note ?? ""}::${patchPart}`;
+}
 
 /** Stock real disponible para esa talla, o null si no llevamos cantidad (ajeno/importado). */
 export function availableStock(product: Product, size: string): number | null {
@@ -113,11 +148,24 @@ export function CartProvider({
   }, [isOpen]);
 
   const add = useCallback(
-    (product: Product, size: string, qty = 1, opts?: { silent?: boolean }) => {
+    (
+      product: Product,
+      size: string,
+      qty = 1,
+      opts?: {
+        silent?: boolean;
+        note?: string | null;
+        patches?: CartPatch[];
+        addOnsPerUnit?: number;
+      },
+    ) => {
       const max = availableStock(product, size);
+      const note = opts?.note ?? null;
+      const patches = opts?.patches ?? null;
+      const key = lineKey(product.slug, size, note, patches);
       setStored((prev) => {
         const idx = prev.findIndex(
-          (l) => l.slug === product.slug && l.size === size,
+          (l) => lineKey(l.slug, l.size, l.note, l.patches) === key,
         );
         const currentQty = idx === -1 ? 0 : prev[idx].qty;
         const requested = currentQty + qty;
@@ -129,7 +177,17 @@ export function CartProvider({
 
         if (idx === -1) {
           if (capped <= 0) return prev;
-          return [...prev, { slug: product.slug, size, qty: capped }];
+          return [
+            ...prev,
+            {
+              slug: product.slug,
+              size,
+              qty: capped,
+              note,
+              patches,
+              addOnsPerUnit: opts?.addOnsPerUnit ?? 0,
+            },
+          ];
         }
         const next = [...prev];
         next[idx] = { ...next[idx], qty: capped };
@@ -144,7 +202,7 @@ export function CartProvider({
     (key: string, qty: number) => {
       setStored((prev) =>
         prev.flatMap((l) => {
-          if (lineKey(l.slug, l.size) !== key) return [l];
+          if (lineKey(l.slug, l.size, l.note, l.patches) !== key) return [l];
           if (qty <= 0) return [];
           const product = products.find((p) => p.slug === l.slug);
           const max = product ? availableStock(product, l.size) : null;
@@ -162,7 +220,9 @@ export function CartProvider({
   const dismissStockWarning = useCallback(() => setStockWarning(null), []);
 
   const remove = useCallback((key: string) => {
-    setStored((prev) => prev.filter((l) => lineKey(l.slug, l.size) !== key));
+    setStored((prev) =>
+      prev.filter((l) => lineKey(l.slug, l.size, l.note, l.patches) !== key),
+    );
   }, []);
 
   const clear = useCallback(() => setStored([]), []);
@@ -175,9 +235,9 @@ export function CartProvider({
         return [
           {
             ...l,
-            key: lineKey(l.slug, l.size),
+            key: lineKey(l.slug, l.size, l.note, l.patches),
             product,
-            lineTotal: product.price * l.qty,
+            lineTotal: (product.price + (l.addOnsPerUnit ?? 0)) * l.qty,
           },
         ];
       }),

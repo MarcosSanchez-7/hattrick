@@ -7,8 +7,10 @@ import {
   DEFAULT_HERO,
   DEFAULT_HOME,
   DEFAULT_NAVBAR,
+  DEFAULT_PERSONALIZATION_GALLERY,
   DEFAULT_PRODUCT_INFO,
   DEFAULT_PRODUCT_NOTICES,
+  DEFAULT_REVIEWS,
   DEFAULT_VALUE_PROPS,
   type SiteSettingsKey,
 } from "@/lib/settings";
@@ -23,6 +25,8 @@ const DEFAULTS: Record<SiteSettingsKey, unknown> = {
   productInfo: DEFAULT_PRODUCT_INFO,
   valueProps: DEFAULT_VALUE_PROPS,
   branding: DEFAULT_BRANDING,
+  personalizationGallery: DEFAULT_PERSONALIZATION_GALLERY,
+  reviews: DEFAULT_REVIEWS,
 };
 
 function isValidKey(key: string): key is SiteSettingsKey {
