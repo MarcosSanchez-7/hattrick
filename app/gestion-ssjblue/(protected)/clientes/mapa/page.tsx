@@ -1,4 +1,4 @@
-import { getAllCustomers } from "@/lib/data";
+import { getCustomersWithStats } from "@/lib/data";
 import { CustomersMap } from "@/components/admin/CustomersMap";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Mapa de clientes" };
 
 export default async function ClientesMapaPage() {
-  const customers = await getAllCustomers();
+  const customers = await getCustomersWithStats();
   const located = customers.filter((c) => c.latitude != null && c.longitude != null);
 
   return (

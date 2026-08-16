@@ -248,3 +248,9 @@ export const IconDocument = ({ className }: IconProps) => (
     <path d="M13.5 3.5v4h4M9 12h6M9 15.5h6" />
   </svg>
 );
+
+export const IconExpand = ({ className }: IconProps) => (
+  <svg className={base(className)} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" />
+  </svg>
+);
