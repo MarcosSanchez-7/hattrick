@@ -29,7 +29,12 @@ import {
 import { slugify, uniqueSlug } from "@/lib/slug";
 import type { SiteSettingsKey } from "@/lib/settings";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { hashPassword, verifyPassword, type AdminRole } from "@/lib/admin-auth";
+import {
+  hashPassword,
+  ROLE_LABELS,
+  verifyPassword,
+  type AdminRole,
+} from "@/lib/admin-auth";
 
 /**
  * Capa de datos sobre Supabase (Postgres). El resto de la app (páginas del
@@ -926,6 +931,7 @@ type AdminUserRow = {
   password_hash: string;
   role: AdminRole;
   created_at: string;
+  last_seen_at: string | null;
 };
 
 /** Nunca incluye password_hash — eso solo lo maneja verifyAdminCredentials. */
@@ -935,7 +941,11 @@ export type AdminUser = {
   email: string;
   role: AdminRole;
   createdAt: string;
+  /** Último heartbeat del panel abierto en el navegador — null = nunca conectado. */
+  lastSeenAt: string | null;
 };
+
+const ADMIN_USER_SELECT = "id, name, email, role, created_at, last_seen_at";
 
 function rowToAdminUser(row: AdminUserRow): AdminUser {
   return {
@@ -944,6 +954,7 @@ function rowToAdminUser(row: AdminUserRow): AdminUser {
     email: row.email,
     role: row.role,
     createdAt: row.created_at,
+    lastSeenAt: row.last_seen_at,
   };
 }
 
@@ -958,7 +969,7 @@ export async function getAdminUserCount(): Promise<number> {
 export async function getAllAdminUsers(): Promise<AdminUser[]> {
   const { data, error } = await supabaseAdmin
     .from("admin_users")
-    .select("id, name, email, role, created_at")
+    .select(ADMIN_USER_SELECT)
     .order("created_at", { ascending: true });
   if (error) fail(`No se pudieron cargar los usuarios del panel: ${error.message}`);
   return (data as AdminUserRow[]).map(rowToAdminUser);
@@ -967,7 +978,7 @@ export async function getAllAdminUsers(): Promise<AdminUser[]> {
 export async function getAdminUserById(id: string): Promise<AdminUser | null> {
   const { data, error } = await supabaseAdmin
     .from("admin_users")
-    .select("id, name, email, role, created_at")
+    .select(ADMIN_USER_SELECT)
     .eq("id", id)
     .maybeSingle();
   if (error) fail(`No se pudo cargar el usuario: ${error.message}`);
@@ -1014,7 +1025,7 @@ export async function createAdminUser(input: AdminUserInput): Promise<AdminUser>
   if (!input.email?.trim() || !input.email.includes("@")) {
     throw new DataError("Ingresa un correo válido.");
   }
-  if (!["superadmin", "editor", "viewer"].includes(input.role)) {
+  if (!Object.keys(ROLE_LABELS).includes(input.role)) {
     throw new DataError("Selecciona un rol válido.");
   }
   if (!input.password || input.password.length < 8) {
@@ -1031,7 +1042,7 @@ export async function createAdminUser(input: AdminUserInput): Promise<AdminUser>
       password_hash: hashPassword(input.password),
       role: input.role,
     })
-    .select("id, name, email, role, created_at")
+    .select(ADMIN_USER_SELECT)
     .single();
 
   if (error) {
@@ -1055,7 +1066,7 @@ export async function updateAdminUser(
   input: AdminUserUpdateInput,
 ): Promise<AdminUser> {
   if (!input.name?.trim()) throw new DataError("El nombre es obligatorio.");
-  if (!["superadmin", "editor", "viewer"].includes(input.role)) {
+  if (!Object.keys(ROLE_LABELS).includes(input.role)) {
     throw new DataError("Selecciona un rol válido.");
   }
   if (input.password && input.password.length < 8) {
@@ -1084,7 +1095,7 @@ export async function updateAdminUser(
     .from("admin_users")
     .update(patch)
     .eq("id", id)
-    .select("id, name, email, role, created_at")
+    .select(ADMIN_USER_SELECT)
     .single();
 
   if (error) fail(`No se pudo actualizar el usuario: ${error.message}`);
@@ -1112,6 +1123,14 @@ export async function deleteAdminUser(id: string): Promise<void> {
   if (!data || data.length === 0) {
     throw new DataError("Usuario no encontrado.", 404);
   }
+}
+
+/** La llama el heartbeat del panel, no un formulario — sin validaciones. */
+export async function touchAdminLastSeen(adminId: string): Promise<void> {
+  await supabaseAdmin
+    .from("admin_users")
+    .update({ last_seen_at: new Date().toISOString() })
+    .eq("id", adminId);
 }
 
 // ── Ventas ───────────────────────────────────────────────────────────────

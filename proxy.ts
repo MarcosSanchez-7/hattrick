@@ -71,6 +71,22 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/gestion-ssjblue/login", request.url));
   }
 
+  // Vendedor: acceso de solo lectura, únicamente a Inventario. Se resuelve
+  // acá (no página por página) para que ninguna sección nueva se olvide de
+  // excluirlo, y para cerrar de un saque cualquier endpoint de escritura.
+  if (session.role === "vendedor") {
+    if (isApi) {
+      if (request.method !== "GET" && pathname !== "/api/admin/heartbeat") {
+        return NextResponse.json(
+          { error: "Tu usuario es de solo lectura." },
+          { status: 403 },
+        );
+      }
+    } else if (pathname !== "/gestion-ssjblue/inventario") {
+      return NextResponse.redirect(new URL("/gestion-ssjblue/inventario", request.url));
+    }
+  }
+
   return NextResponse.next();
 }
 

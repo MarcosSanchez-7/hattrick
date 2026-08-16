@@ -36,7 +36,17 @@ export function verifyPassword(password: string, stored: string): boolean {
 
 // ── Sesión (JWT en cookie) ──────────────────────────────────────────────
 
-export type AdminRole = "superadmin" | "editor" | "viewer";
+export type AdminRole = "superadmin" | "editor" | "viewer" | "vendedor";
+
+/** Centralizado acá porque antes vivía triplicado (AdminShell,
+ * AdminUsersTable, AdminUserForm) — un Record<AdminRole,...> obliga al
+ * compilador a recordar cada lugar si se agrega un rol nuevo. */
+export const ROLE_LABELS: Record<AdminRole, string> = {
+  superadmin: "Superadmin",
+  editor: "Editor",
+  viewer: "Solo lectura",
+  vendedor: "Vendedor",
+};
 
 export type AdminSessionPayload = {
   adminId: string;
@@ -80,6 +90,7 @@ const ROLE_PERMISSIONS: Record<AdminRole, Set<AdminPermission> | "*"> = {
   superadmin: "*",
   editor: new Set(["products.write", "categories.write", "sales.write", "settings.write"]),
   viewer: new Set([]),
+  vendedor: new Set([]),
 };
 
 export function hasPermission(role: AdminRole, permission: AdminPermission): boolean {

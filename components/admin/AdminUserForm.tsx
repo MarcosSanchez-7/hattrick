@@ -9,6 +9,11 @@ const ROLES: { value: AdminRole; label: string; help: string }[] = [
   { value: "superadmin", label: "Superadmin", help: "Acceso total, incluida la gestión de usuarios." },
   { value: "editor", label: "Editor", help: "Puede editar catálogo, ventas y ajustes." },
   { value: "viewer", label: "Solo lectura", help: "Puede ver el panel, sin editar nada." },
+  {
+    value: "vendedor",
+    label: "Vendedor",
+    help: "Solo ve Inventario, sin poder editar nada ni acceder al resto del panel.",
+  },
 ];
 
 export function AdminUserForm({ user }: { user?: AdminUser }) {

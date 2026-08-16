@@ -41,9 +41,20 @@ const SUPERADMIN_ITEMS: NavItem[] = [
   { href: "/gestion-ssjblue/usuarios", label: "Usuarios", icon: IconUser },
 ];
 
+// Vendedor: solo Inventario, nada más — su acceso ya está reforzado en
+// proxy.ts, esto es solo para que el menú coincida con lo que puede ver.
+const VENDEDOR_ITEMS: NavItem[] = [
+  { href: "/gestion-ssjblue/inventario", label: "Inventario", icon: IconBox },
+];
+
 export function AdminNav({ role }: { role: AdminRole }) {
   const pathname = usePathname();
-  const items = role === "superadmin" ? [...ITEMS, ...SUPERADMIN_ITEMS] : ITEMS;
+  const items =
+    role === "vendedor"
+      ? VENDEDOR_ITEMS
+      : role === "superadmin"
+        ? [...ITEMS, ...SUPERADMIN_ITEMS]
+        : ITEMS;
 
   return (
     <nav className="admin-nav" aria-label="Navegación del panel">
