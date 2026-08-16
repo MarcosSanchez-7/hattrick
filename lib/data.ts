@@ -2659,4 +2659,96 @@ export async function updateSetting(
   if (error) fail(`No se pudo guardar la configuración "${key}": ${error.message}`);
 }
 
+// ── Códigos QR rastreables ──────────────────────────────────────────────
+
+type QrCampaignRow = {
+  slug: string;
+  name: string;
+  scan_count: number;
+  last_scanned_at: string | null;
+  created_at: string;
+};
+
+export type QrCampaign = {
+  slug: string;
+  name: string;
+  scanCount: number;
+  lastScannedAt: string | null;
+  createdAt: string;
+};
+
+function rowToQrCampaign(row: QrCampaignRow): QrCampaign {
+  return {
+    slug: row.slug,
+    name: row.name,
+    scanCount: row.scan_count,
+    lastScannedAt: row.last_scanned_at,
+    createdAt: row.created_at,
+  };
+}
+
+export async function getAllQrCampaigns(): Promise<QrCampaign[]> {
+  const { data, error } = await supabaseAdmin
+    .from("qr_campaigns")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (error) fail(`No se pudieron cargar los códigos QR: ${error.message}`);
+  return (data as QrCampaignRow[]).map(rowToQrCampaign);
+}
+
+export type QrCampaignInput = {
+  slug: string;
+  name: string;
+};
+
+function assertValidQrCampaign(input: QrCampaignInput) {
+  if (!input.name?.trim()) throw new DataError("El nombre es obligatorio.");
+  if (!/^[a-z0-9-]+$/.test(input.slug ?? "")) {
+    throw new DataError(
+      "El identificador solo puede tener minúsculas, números y guiones.",
+    );
+  }
+}
+
+export async function createQrCampaign(input: QrCampaignInput): Promise<QrCampaign> {
+  assertValidQrCampaign(input);
+
+  const { data, error } = await supabaseAdmin
+    .from("qr_campaigns")
+    .insert({ slug: input.slug.trim(), name: input.name.trim() })
+    .select("*")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      throw new DataError("Ya existe un código QR con ese identificador.");
+    }
+    fail(`No se pudo crear el código QR: ${error.message}`);
+  }
+  return rowToQrCampaign(data as QrCampaignRow);
+}
+
+export async function deleteQrCampaign(slug: string): Promise<void> {
+  const { data, error } = await supabaseAdmin
+    .from("qr_campaigns")
+    .delete()
+    .eq("slug", slug)
+    .select("slug");
+  if (error) fail(`No se pudo eliminar el código QR: ${error.message}`);
+  if (!data || data.length === 0) throw new DataError("Código QR no encontrado.", 404);
+}
+
+/** La llama /qr/[slug] al escanearse. Devuelve false si el slug no existe
+ * (typo, o el código ya se borró) — la página redirige igual a la home. */
+export async function recordQrScan(slug: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin.rpc("increment_qr_scan", {
+    p_slug: slug,
+  });
+  if (error) {
+    console.error(`No se pudo registrar el escaneo de "${slug}":`, error.message);
+    return false;
+  }
+  return Boolean(data);
+}
+
 export { slugify };
