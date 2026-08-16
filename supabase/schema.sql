@@ -1107,3 +1107,77 @@ begin
   return p_id;
 end;
 $$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Mapa de clientes: barrio (más detalle que la ciudad) y ubicación (lat/lng)
+-- marcada a mano en un mapa. La ubicación vive en crm_customers (permanente,
+-- por cliente) — se actualiza en JS desde findOrCreateCustomerByPhone, no
+-- pasa por record_sale. El barrio de cada venta es texto libre puntual,
+-- igual que destination_city ya funciona hoy (no se sincroniza solo con el
+-- barrio canónico del cliente).
+-- ═══════════════════════════════════════════════════════════════════════════
+
+alter table crm_customers add column if not exists neighborhood text;
+alter table crm_customers add column if not exists latitude double precision;
+alter table crm_customers add column if not exists longitude double precision;
+
+alter table sales add column if not exists destination_neighborhood text;
+
+drop function if exists record_sale(
+  text, text, text, text, jsonb, timestamptz, text, text, text, text, text, text
+);
+
+create or replace function record_sale(
+  p_id text,
+  p_channel text,
+  p_staff_name text,
+  p_customer_note text,
+  p_items jsonb,
+  p_sold_at timestamptz default null,
+  p_customer_name text default null,
+  p_customer_phone text default null,
+  p_destination_city text default null,
+  p_shipping_method text default null,
+  p_customer_id text default null,
+  p_shipping_method_detail text default null,
+  p_destination_neighborhood text default null
+)
+returns text
+language plpgsql
+as $$
+declare
+  v_item jsonb;
+begin
+  insert into sales (
+    id, channel, staff_name, customer_note, sold_at,
+    customer_name, customer_phone, destination_city, shipping_method,
+    customer_id, shipping_method_detail, destination_neighborhood
+  )
+  values (
+    p_id, p_channel, p_staff_name, p_customer_note, coalesce(p_sold_at, now()),
+    p_customer_name, p_customer_phone, p_destination_city, p_shipping_method,
+    p_customer_id, p_shipping_method_detail, p_destination_neighborhood
+  );
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    insert into sale_items (
+      sale_id, variant_id, quantity, unit_price, cost_price,
+      product_name_snapshot, size_snapshot, product_id_snapshot, item_note
+    )
+    values (
+      p_id,
+      nullif(v_item->>'variant_id', ''),
+      (v_item->>'quantity')::integer,
+      (v_item->>'unit_price')::numeric,
+      coalesce((v_item->>'cost_price')::numeric, 0),
+      v_item->>'product_name_snapshot',
+      v_item->>'size_snapshot',
+      nullif(v_item->>'product_id_snapshot', ''),
+      v_item->>'item_note'
+    );
+  end loop;
+
+  return p_id;
+end;
+$$;
