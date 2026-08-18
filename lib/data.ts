@@ -200,6 +200,7 @@ type PatchRow = {
   price: number | string;
   is_visible: boolean;
   category: string | null;
+  stock_on_hand: number;
 };
 
 function rowToPatch(row: PatchRow): Patch {
@@ -210,6 +211,7 @@ function rowToPatch(row: PatchRow): Patch {
     price: Number(row.price),
     isVisible: row.is_visible,
     category: row.category,
+    stock: row.stock_on_hand,
   };
 }
 
@@ -2855,12 +2857,16 @@ export type PatchInput = {
   price: number;
   isVisible?: boolean;
   category?: string | null;
+  stock?: number;
 };
 
 function assertValidPatch(input: PatchInput) {
   if (!input.name?.trim()) throw new DataError("El nombre es obligatorio.");
   if (!Number.isFinite(input.price) || input.price < 0) {
     throw new DataError("El precio no es válido.");
+  }
+  if (input.stock != null && (!Number.isFinite(input.stock) || input.stock < 0)) {
+    throw new DataError("El stock no es válido.");
   }
 }
 
@@ -2877,6 +2883,7 @@ export async function createPatch(input: PatchInput): Promise<Patch> {
       price: input.price,
       is_visible: input.isVisible ?? true,
       category: input.category?.trim() || null,
+      stock_on_hand: input.stock ?? 0,
     })
     .select("*")
     .single();
@@ -2896,6 +2903,7 @@ export async function updatePatch(id: string, input: PatchInput): Promise<Patch>
       price: input.price,
       is_visible: input.isVisible ?? true,
       category: input.category?.trim() || null,
+      stock_on_hand: input.stock ?? 0,
     })
     .eq("id", id)
     .select("*")

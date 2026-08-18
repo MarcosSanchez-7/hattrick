@@ -46,6 +46,7 @@ export function PatchesTable({ patches }: { patches: Patch[] }) {
                 <th>Parche</th>
                 <th>Categoría</th>
                 <th>Precio</th>
+                <th>Stock</th>
                 <th>Estado</th>
                 <th aria-label="Acciones" />
               </tr>
@@ -90,6 +91,13 @@ export function PatchesTable({ patches }: { patches: Patch[] }) {
                     {p.category ?? <span className="meta">Sin categoría</span>}
                   </td>
                   <td data-label="Precio">{formatPrice(p.price)}</td>
+                  <td data-label="Stock">
+                    {p.stock === 0 ? (
+                      <span className="badge badge--out">Sin stock</span>
+                    ) : (
+                      p.stock
+                    )}
+                  </td>
                   <td data-label="Estado">
                     {p.isVisible ? (
                       <span className="meta">Disponible</span>

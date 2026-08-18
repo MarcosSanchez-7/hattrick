@@ -36,6 +36,9 @@ export type Patch = {
   /** Carpeta libre para agrupar parches en el selector del admin (ej.
    * "Parches europeos"). null = sin categoría. */
   category: string | null;
+  /** Cuántos quedan disponibles — para saber cuándo reponer. Contador simple,
+   * sin ledger de movimientos (a diferencia del stock de producto). */
+  stock: number;
 };
 
 export type Product = {
