@@ -1281,3 +1281,11 @@ update patches set images = array[image] where image is not null and images = '{
 alter table patches drop column if exists image;
 
 alter table patches add column if not exists category text;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Stock de parches: cuántos quedan disponibles, para saber cuándo reponer.
+-- Es un contador simple (sin ledger de movimientos como product_variants) —
+-- el admin lo edita a mano desde el mismo formulario del parche.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+alter table patches add column if not exists stock_on_hand integer not null default 0 check (stock_on_hand >= 0);

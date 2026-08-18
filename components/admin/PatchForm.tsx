@@ -17,6 +17,7 @@ export function PatchForm({
 
   const [name, setName] = useState(patch?.name ?? "");
   const [price, setPrice] = useState(patch ? String(patch.price) : "");
+  const [stock, setStock] = useState(patch ? String(patch.stock) : "0");
   const [images, setImages] = useState<string[]>(patch?.images ?? []);
   const [category, setCategory] = useState(patch?.category ?? "");
   const [isVisible, setIsVisible] = useState(patch?.isVisible ?? true);
@@ -36,6 +37,11 @@ export function PatchForm({
       setError("El precio no es válido.");
       return;
     }
+    const stockNum = Number(stock);
+    if (!Number.isFinite(stockNum) || stockNum < 0) {
+      setError("El stock no es válido.");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -47,6 +53,7 @@ export function PatchForm({
           body: JSON.stringify({
             name: name.trim(),
             price: priceNum,
+            stock: stockNum,
             images,
             category: category.trim() || null,
             isVisible,
@@ -92,6 +99,18 @@ export function PatchForm({
               required
               value={price}
               onChange={(e) => setPrice(e.target.value)}
+            />
+          </div>
+          <div className="admin-field">
+            <label htmlFor="stock">Stock disponible</label>
+            <input
+              id="stock"
+              type="number"
+              min={0}
+              step={1}
+              required
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
             />
           </div>
           <div className="admin-field">
