@@ -2216,6 +2216,22 @@ textarea {
   );
 }
 
+.patch-swatch {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  overflow: hidden;
+}
+
+.patch-swatch img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
+}
+
 .accordion {
   border-top: 1px solid var(--line);
 }
@@ -3982,4 +3998,56 @@ button[aria-pressed='true'] .wishlist-heart-icon {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--sp-4);
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Vista previa de parche (lightbox del storefront) — mismo lenguaje visual
+   que .admin-modal/.admin-modal-backdrop, con clases propias porque este
+   overlay vive en la tienda, no en el admin.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.patch-preview-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  border: none;
+  padding: 0;
+  z-index: 60;
+}
+
+.patch-preview {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% - var(--sp-4) * 2);
+  max-width: 380px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: var(--sp-6);
+  z-index: 61;
+}
+
+.patch-preview__close {
+  position: absolute;
+  top: var(--sp-3);
+  right: var(--sp-3);
+}
+
+.patch-preview__media {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: var(--surface-soft);
+}
+
+.patch-preview__media img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: var(--sp-5);
 }

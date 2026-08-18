@@ -7,6 +7,7 @@ import {
   isOnSale,
   needsSizeSelection,
   type NoticeIcon,
+  type Patch,
   type Product,
   type ProductNotice,
 } from "@/lib/catalog";
@@ -17,6 +18,7 @@ import { useWishlist } from "@/components/wishlist/WishlistProvider";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import {
   IconChevron,
+  IconClose,
   IconHeart,
   IconPrint,
   IconReturn,
@@ -62,6 +64,8 @@ export function ProductDetail({
   const [customName, setCustomName] = useState("");
   const [customNumber, setCustomNumber] = useState("");
   const [selectedPatchIds, setSelectedPatchIds] = useState<string[]>([]);
+  const [previewPatch, setPreviewPatch] = useState<Patch | null>(null);
+  const [previewIndex, setPreviewIndex] = useState(0);
 
   const sale = isOnSale(product);
   const hasPhotos = (product.images?.length ?? 0) > 0;
@@ -77,6 +81,16 @@ export function ProductDetail({
     );
   };
   const selectedPatches = availablePatches.filter((p) => selectedPatchIds.includes(p.id));
+  const openPatchPreview = (patch: Patch) => {
+    setPreviewIndex(0);
+    setPreviewPatch(patch);
+  };
+  const closePatchPreview = () => setPreviewPatch(null);
+  const goToPreviewImage = (i: number) => {
+    if (!previewPatch) return;
+    const count = previewPatch.images.length;
+    setPreviewIndex((i + count) % count);
+  };
   const addOnsTotal =
     (customized ? personalizationPrice : 0) +
     selectedPatches.reduce((acc, p) => acc + p.price, 0);
@@ -95,6 +109,7 @@ export function ProductDetail({
   };
 
   return (
+    <>
     <div className="container pdp">
       <div className="pdp__gallery">
         <div className="pdp__main">
@@ -249,17 +264,29 @@ export function ProductDetail({
             {availablePatches.length > 0 ? (
               <div>
                 <span className="label">Parches</span>
-                <div className="sizes" style={{ marginTop: 8 }}>
+                <div className="stack gap-2" style={{ marginTop: 8 }}>
                   {availablePatches.map((patch) => (
-                    <button
-                      key={patch.id}
-                      type="button"
-                      className="size"
-                      data-selected={selectedPatchIds.includes(patch.id) ? "true" : "false"}
-                      onClick={() => togglePatch(patch.id)}
-                    >
-                      {patch.name} · +{formatPrice(patch.price)}
-                    </button>
+                    <div key={patch.id} className="row gap-2" style={{ alignItems: "center" }}>
+                      {patch.images[0] ? (
+                        <button
+                          type="button"
+                          className="patch-swatch"
+                          onClick={() => openPatchPreview(patch)}
+                          aria-label={`Ver el parche ${patch.name}`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={patch.images[0]} alt="" />
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="size"
+                        data-selected={selectedPatchIds.includes(patch.id) ? "true" : "false"}
+                        onClick={() => togglePatch(patch.id)}
+                      >
+                        {patch.name} · +{formatPrice(patch.price)}
+                      </button>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -321,6 +348,54 @@ export function ProductDetail({
         </div>
       </div>
     </div>
+
+    {previewPatch ? (
+      <>
+        <button
+          type="button"
+          className="patch-preview-backdrop"
+          aria-label="Cerrar vista previa"
+          onClick={closePatchPreview}
+        />
+        <div className="patch-preview" role="dialog" aria-modal="true">
+          <button
+            type="button"
+            className="nav__icon-btn patch-preview__close"
+            onClick={closePatchPreview}
+            aria-label="Cerrar"
+          >
+            <IconClose />
+          </button>
+          <div className="patch-preview__media">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={previewPatch.images[previewIndex]} alt={previewPatch.name} />
+            {previewPatch.images.length > 1 ? (
+              <>
+                <button
+                  type="button"
+                  className="pdp__nav pdp__nav--prev"
+                  onClick={() => goToPreviewImage(previewIndex - 1)}
+                  aria-label="Imagen anterior del parche"
+                >
+                  <IconChevron className="icon--sm" />
+                </button>
+                <button
+                  type="button"
+                  className="pdp__nav pdp__nav--next"
+                  onClick={() => goToPreviewImage(previewIndex + 1)}
+                  aria-label="Imagen siguiente del parche"
+                >
+                  <IconChevron className="icon--sm" />
+                </button>
+              </>
+            ) : null}
+          </div>
+          <p style={{ fontWeight: 600, marginTop: 12 }}>{previewPatch.name}</p>
+          <p className="meta">+{formatPrice(previewPatch.price)}</p>
+        </div>
+      </>
+    ) : null}
+    </>
   );
 }
 

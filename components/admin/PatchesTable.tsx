@@ -44,6 +44,7 @@ export function PatchesTable({ patches }: { patches: Patch[] }) {
             <thead>
               <tr>
                 <th>Parche</th>
+                <th>Categoría</th>
                 <th>Precio</th>
                 <th>Estado</th>
                 <th aria-label="Acciones" />
@@ -56,19 +57,37 @@ export function PatchesTable({ patches }: { patches: Patch[] }) {
                     <div className="admin-table__product">
                       <div
                         className="admin-table__thumb"
-                        style={{ width: 32, height: 32 }}
+                        style={{ width: 32, height: 32, position: "relative" }}
                       >
-                        {p.image ? (
+                        {p.images[0] ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={p.image}
+                            src={p.images[0]}
                             alt={p.name}
                             style={{ width: "100%", height: "100%", objectFit: "contain" }}
                           />
                         ) : null}
+                        {p.images.length > 1 ? (
+                          <span
+                            className="badge"
+                            style={{
+                              position: "absolute",
+                              bottom: -4,
+                              right: -4,
+                              fontSize: "0.5625rem",
+                              height: 16,
+                              paddingInline: 4,
+                            }}
+                          >
+                            +{p.images.length - 1}
+                          </span>
+                        ) : null}
                       </div>
                       <div style={{ fontWeight: 600 }}>{p.name}</div>
                     </div>
+                  </td>
+                  <td data-label="Categoría">
+                    {p.category ?? <span className="meta">Sin categoría</span>}
                   </td>
                   <td data-label="Precio">{formatPrice(p.price)}</td>
                   <td data-label="Estado">

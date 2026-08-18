@@ -16,6 +16,9 @@ import { formatPrice } from "@/lib/format";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 import { CategoryPathPicker } from "@/components/admin/CategoryPathPicker";
 import { TagPicker } from "@/components/admin/TagPicker";
+import { IconChevron, IconFolder } from "@/components/ui/Icons";
+
+const NO_PATCH_CATEGORY = "Sin categoría";
 
 const STOCK_MODES: { value: StockMode; label: string; help: string }[] = [
   {
@@ -153,6 +156,45 @@ export function ProductForm({
         ? f.patchIds.filter((id) => id !== patchId)
         : [...f.patchIds, patchId],
     }));
+  };
+
+  // Carpetas por categoría — mismo patrón que InventoryTable.tsx agrupa
+  // productos por categoría, pero acá la "categoría" es el campo libre
+  // Patch.category en vez de la categoría del catálogo.
+  const patchGroups = useMemo(() => {
+    const byCategory = new Map<string, Patch[]>();
+    for (const p of patches) {
+      const key = p.category ?? NO_PATCH_CATEGORY;
+      const list = byCategory.get(key) ?? [];
+      list.push(p);
+      byCategory.set(key, list);
+    }
+    const entries = Array.from(byCategory.entries());
+    entries.sort(([a], [b]) => {
+      if (a === NO_PATCH_CATEGORY) return 1;
+      if (b === NO_PATCH_CATEGORY) return -1;
+      return a.localeCompare(b);
+    });
+    return entries.map(([name, items]) => ({ name, items }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patches]);
+
+  const [openPatchCategories, setOpenPatchCategories] = useState<Set<string>>(
+    () =>
+      new Set(
+        patchGroups
+          .filter((g) => g.items.some((p) => form.patchIds.includes(p.id)))
+          .map((g) => g.name),
+      ),
+  );
+
+  const togglePatchCategory = (name: string) => {
+    setOpenPatchCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
   };
 
   const isPropio = form.stockMode === "propio";
@@ -459,34 +501,64 @@ export function ProductForm({
         ) : (
           <>
             <p className="admin-help" style={{ marginTop: 0 }}>
-              Marcá cuáles de estos parches se le pueden poner a este producto.
+              Desplegá una carpeta y marcá cuáles de esos parches se le pueden
+              poner a este producto.
             </p>
-            <div className="admin-checklist">
-              {patches
-                .filter((p) => p.isVisible || form.patchIds.includes(p.id))
-                .map((p) => (
-                  <label
-                    key={p.id}
-                    className="admin-check"
-                    data-checked={form.patchIds.includes(p.id) ? "true" : "false"}
+            {patchGroups.map((group) => {
+              const visibleItems = group.items.filter(
+                (p) => p.isVisible || form.patchIds.includes(p.id),
+              );
+              if (visibleItems.length === 0) return null;
+              const selectedCount = visibleItems.filter((p) =>
+                form.patchIds.includes(p.id),
+              ).length;
+              const isOpen = openPatchCategories.has(group.name);
+              return (
+                <div key={group.name} className="admin-cat-group">
+                  <button
+                    type="button"
+                    className="admin-cat-group__head"
+                    aria-expanded={isOpen}
+                    onClick={() => togglePatchCategory(group.name)}
                   >
-                    <input
-                      type="checkbox"
-                      checked={form.patchIds.includes(p.id)}
-                      onChange={() => togglePatch(p.id)}
-                    />
-                    {p.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={p.image}
-                        alt=""
-                        style={{ width: 20, height: 20, objectFit: "contain", marginRight: 4 }}
-                      />
-                    ) : null}
-                    {p.name} · {formatPrice(p.price)}
-                  </label>
-                ))}
-            </div>
+                    <IconFolder className="icon--sm" />
+                    <span>{group.name}</span>
+                    <span className="meta">
+                      {selectedCount > 0
+                        ? `${selectedCount} seleccionado${selectedCount !== 1 ? "s" : ""}`
+                        : `${visibleItems.length} parche${visibleItems.length !== 1 ? "s" : ""}`}
+                    </span>
+                    <IconChevron className="icon--sm" />
+                  </button>
+                  {isOpen ? (
+                    <div className="admin-checklist" style={{ padding: "0 var(--sp-5) var(--sp-4)" }}>
+                      {visibleItems.map((p) => (
+                        <label
+                          key={p.id}
+                          className="admin-check"
+                          data-checked={form.patchIds.includes(p.id) ? "true" : "false"}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={form.patchIds.includes(p.id)}
+                            onChange={() => togglePatch(p.id)}
+                          />
+                          {p.images[0] ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={p.images[0]}
+                              alt=""
+                              style={{ width: 20, height: 20, objectFit: "contain", marginRight: 4 }}
+                            />
+                          ) : null}
+                          {p.name} · {formatPrice(p.price)}
+                        </label>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
           </>
         )}
       </div>

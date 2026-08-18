@@ -5,13 +5,20 @@ import { useRouter } from "next/navigation";
 import type { Patch } from "@/lib/catalog";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 
-export function PatchForm({ patch }: { patch?: Patch }) {
+export function PatchForm({
+  patch,
+  existingCategories = [],
+}: {
+  patch?: Patch;
+  existingCategories?: string[];
+}) {
   const router = useRouter();
   const isEdit = Boolean(patch);
 
   const [name, setName] = useState(patch?.name ?? "");
   const [price, setPrice] = useState(patch ? String(patch.price) : "");
-  const [images, setImages] = useState<string[]>(patch?.image ? [patch.image] : []);
+  const [images, setImages] = useState<string[]>(patch?.images ?? []);
+  const [category, setCategory] = useState(patch?.category ?? "");
   const [isVisible, setIsVisible] = useState(patch?.isVisible ?? true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +47,8 @@ export function PatchForm({ patch }: { patch?: Patch }) {
           body: JSON.stringify({
             name: name.trim(),
             price: priceNum,
-            image: images[0] ?? null,
+            images,
+            category: category.trim() || null,
             isVisible,
           }),
         },
@@ -86,6 +94,22 @@ export function PatchForm({ patch }: { patch?: Patch }) {
               onChange={(e) => setPrice(e.target.value)}
             />
           </div>
+          <div className="admin-field">
+            <label htmlFor="category">Categoría (carpeta)</label>
+            <input
+              id="category"
+              type="text"
+              list="patch-categories"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="Ej. Parches europeos"
+            />
+            <datalist id="patch-categories">
+              {existingCategories.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
+          </div>
           <div className="admin-field admin-field--checkbox">
             <input
               id="isVisible"
@@ -100,13 +124,18 @@ export function PatchForm({ patch }: { patch?: Patch }) {
         </div>
 
         <div className="admin-field">
-          <label>Ícono del parche</label>
+          <label>Imágenes del parche</label>
+          <p className="admin-help" style={{ marginTop: 0 }}>
+            Si es un conjunto de varias piezas (ej. Champions League son 2
+            parchecitos), subí una imagen por cada una — el cliente las va a
+            poder ver todas en la vista previa.
+          </p>
           <ImageUploader
             images={images}
             onChange={setImages}
-            max={1}
+            max={4}
             folder="patches"
-            label="Imagen chica del parche"
+            label="Imágenes del parche"
           />
         </div>
       </div>
