@@ -18,6 +18,10 @@ export default async function EditPatchPage({
   const patch = patches.find((p) => p.id === id);
   if (!patch) notFound();
 
+  const existingCategories = Array.from(
+    new Set(patches.map((p) => p.category).filter((c): c is string => Boolean(c))),
+  ).sort();
+
   return (
     <>
       <nav className="breadcrumbs" aria-label="Migas de pan" style={{ marginBottom: 16 }}>
@@ -28,7 +32,7 @@ export default async function EditPatchPage({
       <h1 className="h1" style={{ marginBottom: 24 }}>
         Editar parche
       </h1>
-      <PatchForm patch={patch} />
+      <PatchForm patch={patch} existingCategories={existingCategories} />
     </>
   );
 }

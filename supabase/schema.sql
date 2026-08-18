@@ -1270,3 +1270,14 @@ create table if not exists product_patches (
 alter table product_patches enable row level security;
 
 alter table products add column if not exists is_customizable boolean not null default false;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Parches: soportar conjuntos de varias piezas (ej. Champions League son 2
+-- parchecitos que van juntos) y agruparlos en carpetas desde el admin.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+alter table patches add column if not exists images text[] not null default '{}';
+update patches set images = array[image] where image is not null and images = '{}';
+alter table patches drop column if exists image;
+
+alter table patches add column if not exists category text;

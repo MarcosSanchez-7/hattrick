@@ -28,9 +28,14 @@ export type ProductVariant = {
 export type Patch = {
   id: string;
   name: string;
-  image: string | null;
+  /** Una o más imágenes: algunos parches son un conjunto de varias piezas
+   * (ej. Champions League son 2 parchecitos que van juntos). */
+  images: string[];
   price: number;
   isVisible: boolean;
+  /** Carpeta libre para agrupar parches en el selector del admin (ej.
+   * "Parches europeos"). null = sin categoría. */
+  category: string | null;
 };
 
 export type Product = {

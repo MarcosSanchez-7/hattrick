@@ -196,18 +196,20 @@ async function fetchVariantsByProduct(
 type PatchRow = {
   id: string;
   name: string;
-  image: string | null;
+  images: string[] | null;
   price: number | string;
   is_visible: boolean;
+  category: string | null;
 };
 
 function rowToPatch(row: PatchRow): Patch {
   return {
     id: row.id,
     name: row.name,
-    image: row.image,
+    images: row.images ?? [],
     price: Number(row.price),
     isVisible: row.is_visible,
+    category: row.category,
   };
 }
 
@@ -2849,9 +2851,10 @@ export async function getAllPatches(): Promise<Patch[]> {
 
 export type PatchInput = {
   name: string;
-  image?: string | null;
+  images?: string[];
   price: number;
   isVisible?: boolean;
+  category?: string | null;
 };
 
 function assertValidPatch(input: PatchInput) {
@@ -2870,9 +2873,10 @@ export async function createPatch(input: PatchInput): Promise<Patch> {
     .insert({
       id,
       name: input.name.trim(),
-      image: input.image ?? null,
+      images: input.images ?? [],
       price: input.price,
       is_visible: input.isVisible ?? true,
+      category: input.category?.trim() || null,
     })
     .select("*")
     .single();
@@ -2888,9 +2892,10 @@ export async function updatePatch(id: string, input: PatchInput): Promise<Patch>
     .from("patches")
     .update({
       name: input.name.trim(),
-      image: input.image ?? null,
+      images: input.images ?? [],
       price: input.price,
       is_visible: input.isVisible ?? true,
+      category: input.category?.trim() || null,
     })
     .eq("id", id)
     .select("*")
