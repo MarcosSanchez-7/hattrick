@@ -5,6 +5,7 @@ import {
   CONSULT_SIZE_LABEL,
   discountPercent,
   isOnSale,
+  isPatchAvailable,
   needsSizeSelection,
   type NoticeIcon,
   type Patch,
@@ -74,7 +75,7 @@ export function ProductDetail({
 
   const goTo = (i: number) => setView((i + thumbCount) % thumbCount);
 
-  const availablePatches = product.patches?.filter((p) => p.isVisible) ?? [];
+  const availablePatches = product.patches?.filter(isPatchAvailable) ?? [];
   const togglePatch = (id: string) => {
     setSelectedPatchIds((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { Patch } from "@/lib/catalog";
+import { isPatchAvailable, type Patch } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { IconTrash } from "@/components/ui/Icons";
 
@@ -99,10 +99,12 @@ export function PatchesTable({ patches }: { patches: Patch[] }) {
                     )}
                   </td>
                   <td data-label="Estado">
-                    {p.isVisible ? (
+                    {isPatchAvailable(p) ? (
                       <span className="meta">Disponible</span>
-                    ) : (
+                    ) : !p.isVisible ? (
                       <span className="badge badge--out">Oculto</span>
+                    ) : (
+                      <span className="badge badge--out">Oculto (sin stock)</span>
                     )}
                   </td>
                   <td>
