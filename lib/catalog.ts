@@ -227,6 +227,11 @@ export const isSoldOut = (p: Product) =>
   p.sizes.length > 0 &&
   (p.soldOut?.length ?? 0) >= p.sizes.length;
 
+/** Un parche sin stock deja de ofrecerse en la ficha del producto aunque
+ * esté marcado "Disponible para elegir" — evita tener que acordarse de
+ * ocultarlo a mano cada vez que se agota. */
+export const isPatchAvailable = (p: Patch) => p.isVisible && p.stock > 0;
+
 export const getProduct = (products: Product[], slug: string) =>
   products.find((p) => p.slug === slug);
 

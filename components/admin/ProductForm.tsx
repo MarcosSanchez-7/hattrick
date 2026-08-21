@@ -552,6 +552,9 @@ export function ProductForm({
                             />
                           ) : null}
                           {p.name} · {formatPrice(p.price)}
+                          {p.stock === 0 ? (
+                            <span className="meta"> · sin stock</span>
+                          ) : null}
                         </label>
                       ))}
                     </div>
