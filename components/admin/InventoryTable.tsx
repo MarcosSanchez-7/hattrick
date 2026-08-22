@@ -3,7 +3,17 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { discountPercent, isOnSale, isSoldOut, type Category, type Product } from "@/lib/catalog";
+import {
+  byCategoryTree,
+  discountPercent,
+  isOnSale,
+  isSoldOut,
+  orderCategoriesTree,
+  SIZES_ADULT,
+  SIZES_KIDS,
+  type Category,
+  type Product,
+} from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import {
@@ -47,6 +57,8 @@ export function InventoryTable({
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [sizeFilter, setSizeFilter] = useState("");
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   // Arranca vacío a propósito: ninguna carpeta expandida = todas cerradas
@@ -58,16 +70,34 @@ export function InventoryTable({
   const categoryName = (slug: string) =>
     categories.find((c) => c.slug === slug)?.name ?? slug;
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return products;
-    return products.filter((p) =>
-      [p.name, categoryName(p.category)].join(" ").toLowerCase().includes(q),
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [products, query, categories]);
+  const categoryOptions = useMemo(() => orderCategoriesTree(categories), [categories]);
 
-  const isSearching = query.trim() !== "";
+  // Solo se ofrecen los talles que realmente existen en el catálogo actual,
+  // en el mismo orden en que se cargan (adultos, luego niños) en vez de
+  // alfabético (que mezclaría feo "10A, 12A, ... 4A, 6A, G, M, P, XL").
+  const sizeOptions = useMemo(() => {
+    const present = new Set(products.flatMap((p) => p.sizes));
+    const canonical = [...SIZES_ADULT, ...SIZES_KIDS].filter((s) => present.has(s));
+    const rest = Array.from(present)
+      .filter((s) => !canonical.includes(s))
+      .sort();
+    return [...canonical, ...rest];
+  }, [products]);
+
+  const filtered = useMemo(() => {
+    let list = categoryFilter ? byCategoryTree(products, categories, categoryFilter) : products;
+    if (sizeFilter) list = list.filter((p) => p.sizes.includes(sizeFilter));
+    const q = query.trim().toLowerCase();
+    if (q) {
+      list = list.filter((p) =>
+        [p.name, categoryName(p.category)].join(" ").toLowerCase().includes(q),
+      );
+    }
+    return list;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, query, categoryFilter, sizeFilter, categories]);
+
+  const isFiltering = query.trim() !== "" || categoryFilter !== "" || sizeFilter !== "";
 
   const groups = useMemo(() => {
     const bySlug = new Map<string, Product[]>();
@@ -154,23 +184,52 @@ export function InventoryTable({
         <p className="h3" style={{ fontSize: "0.9375rem" }}>
           {products.length} producto{products.length !== 1 ? "s" : ""}
         </p>
-        <input
-          type="search"
-          className="admin-search"
-          placeholder="Buscar por nombre o categoría…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          aria-label="Buscar productos"
-        />
+        <div className="row gap-2" style={{ flexWrap: "wrap" }}>
+          <select
+            className="select"
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            aria-label="Filtrar por categoría"
+          >
+            <option value="">Todas las categorías</option>
+            {categoryOptions.map(({ category: c, depth }) => (
+              <option key={c.slug} value={c.slug}>
+                {"— ".repeat(depth)}
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <select
+            className="select"
+            value={sizeFilter}
+            onChange={(e) => setSizeFilter(e.target.value)}
+            aria-label="Filtrar por talle"
+          >
+            <option value="">Todos los talles</option>
+            {sizeOptions.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <input
+            type="search"
+            className="admin-search"
+            placeholder="Buscar por nombre o categoría…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Buscar productos"
+          />
+        </div>
       </div>
 
       {filtered.length === 0 ? (
         <div className="admin-empty">
           {products.length === 0
             ? "Todavía no has añadido ningún producto."
-            : "Ningún producto coincide con la búsqueda."}
+            : "Ningún producto coincide con los filtros."}
         </div>
-      ) : isSearching ? (
+      ) : isFiltering ? (
         <ProductRowsTable
           products={filtered}
           categoryName={categoryName}
