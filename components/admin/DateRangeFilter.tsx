@@ -55,8 +55,11 @@ export function DateRangeFilter({
     if (!raw) return;
     try {
       const saved = JSON.parse(raw) as { from?: string; to?: string };
-      if (saved.from && saved.to) {
-        router.replace(`${pathname}?from=${saved.from}&to=${saved.to}`);
+      if (saved.from) {
+        // "Hasta" nunca se restaura del guardado — siempre se recalcula a
+        // hoy, así el admin nunca vuelve a un rango vencido sin darse cuenta.
+        const today = new Date().toISOString().slice(0, 10);
+        router.replace(`${pathname}?from=${saved.from}&to=${today}`);
       }
     } catch {
       window.localStorage.removeItem(storageId);
