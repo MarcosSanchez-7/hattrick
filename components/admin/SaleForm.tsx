@@ -14,6 +14,7 @@ import type { Customer } from "@/lib/data";
 import { formatPrice } from "@/lib/format";
 import { IconClose, IconPlus, IconSearch } from "@/components/ui/Icons";
 import { LocationPicker, type LatLng } from "@/components/admin/LocationPicker";
+import { ProductVisual } from "@/components/product/ProductVisual";
 
 type TicketLine = {
   /** Clave única de la línea: el id de la variante para stock propio, o un id generado para dropshipping. */
@@ -297,11 +298,22 @@ export function SaleForm({
               const isDropshipping = product.stockMode !== "propio";
               return (
                 <div key={product.id} className="admin-sale-result">
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{product.name}</div>
-                    <div className="meta">
-                      {formatPrice(product.price)}
-                      {isDropshipping ? " · Dropshipping, sin stock propio" : ""}
+                  <div className="admin-table__product">
+                    <div className="admin-table__thumb">
+                      <ProductVisual
+                        images={product.images}
+                        colors={product.colors}
+                        pattern={product.pattern}
+                        uid={`sale-${product.id}`}
+                        alt={product.name}
+                      />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600 }}>{product.name}</div>
+                      <div className="meta">
+                        {formatPrice(product.price)}
+                        {isDropshipping ? " · Dropshipping, sin stock propio" : ""}
+                      </div>
                     </div>
                   </div>
                   <div className={isDropshipping ? undefined : "admin-checklist"}>
