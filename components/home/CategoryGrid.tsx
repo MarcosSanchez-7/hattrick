@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import {
   byCategoryTree,
@@ -8,6 +9,47 @@ import {
 import { ProductVisual } from "@/components/product/ProductVisual";
 import { IconArrow } from "@/components/ui/Icons";
 
+type CardSpan = { colSpan: 1 | 2 | 3; rowSpan: 1 | 2 };
+
+/**
+ * Reparte las tarjetas en el grid de 3 columnas de forma que nunca quede
+ * ninguna "flotando" sola en la última fila — el tamaño de cada una depende
+ * de cuántas categorías haya en total, no de una posición fija.
+ *
+ * La tarjeta grande (hero) solo se usa cuando el total es múltiplo de 3
+ * (hero + 2 tarjetas chicas al lado llenan exactamente 2 filas): con
+ * cualquier otra cantidad, todas quedan del mismo tamaño y, si sobra 1 o 2
+ * al final, esas ocupan todo el ancho de la fila en vez de dejar huecos.
+ */
+function planCategoryGrid(n: number): CardSpan[] {
+  const plan: CardSpan[] = [];
+  const useHero = n >= 3 && n % 3 === 0;
+  let remaining = n;
+
+  if (useHero) {
+    plan.push(
+      { colSpan: 2, rowSpan: 2 },
+      { colSpan: 1, rowSpan: 1 },
+      { colSpan: 1, rowSpan: 1 },
+    );
+    remaining -= 3;
+  }
+
+  const fullRows = Math.floor(remaining / 3);
+  for (let i = 0; i < fullRows * 3; i++) {
+    plan.push({ colSpan: 1, rowSpan: 1 });
+  }
+
+  const rest = remaining % 3;
+  if (rest === 1) {
+    plan.push({ colSpan: 3, rowSpan: 1 });
+  } else if (rest === 2) {
+    plan.push({ colSpan: 2, rowSpan: 1 }, { colSpan: 1, rowSpan: 1 });
+  }
+
+  return plan;
+}
+
 export function CategoryGrid({
   categories,
   products,
@@ -16,6 +58,7 @@ export function CategoryGrid({
   products: Product[];
 }) {
   const topCategories = topLevelCategories(categories);
+  const spans = planCategoryGrid(topCategories.length);
 
   return (
     <section className="section">
@@ -32,14 +75,20 @@ export function CategoryGrid({
         </div>
 
         <div className="cats">
-          {topCategories.map((cat) => {
+          {topCategories.map((cat, i) => {
             const inCategory = byCategoryTree(products, categories, cat.slug);
             const cover = inCategory[0];
+            const span = spans[i] ?? { colSpan: 1, rowSpan: 1 };
+            const cardStyle = {
+              "--col-span": span.colSpan,
+              "--row-span": span.rowSpan,
+            } as CSSProperties;
             return (
               <Link
                 key={cat.slug}
                 href={`/categoria/${cat.slug}`}
                 className="cats__card"
+                style={cardStyle}
               >
                 <div className="cats__art">
                   {cat.image ? (
