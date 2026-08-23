@@ -7,14 +7,20 @@ import {
   type Product,
 } from "@/lib/catalog";
 import { ProductVisual } from "@/components/product/ProductVisual";
+import { CategoryHeroCarousel, type HeroCategorySlide } from "@/components/home/CategoryHeroCarousel";
 import { IconArrow } from "@/components/ui/Icons";
+
+/** Diseño estandarizado: hero grande + 5 tarjetas parejas (2 arriba a la
+ * derecha, 3 abajo). Con esta cantidad o más, cualquier categoría de más
+ * rota dentro del hero en vez de agrandar la grilla. */
+const STANDARD_COUNT = 6;
 
 type CardSpan = { colSpan: 1 | 2 | 3; rowSpan: 1 | 2 };
 
 /**
- * Reparte las tarjetas en el grid de 3 columnas de forma que nunca quede
- * ninguna "flotando" sola en la última fila — el tamaño de cada una depende
- * de cuántas categorías haya en total, no de una posición fija.
+ * Solo se usa por debajo de STANDARD_COUNT categorías, mientras el bento
+ * todavía no llegó a su forma estandarizada — reparte las tarjetas para que
+ * ninguna quede "flotando" sola en la última fila.
  *
  * La tarjeta grande (hero) solo se usa cuando el total es múltiplo de 3
  * (hero + 2 tarjetas chicas al lado llenan exactamente 2 filas): con
@@ -58,7 +64,32 @@ export function CategoryGrid({
   products: Product[];
 }) {
   const topCategories = topLevelCategories(categories);
-  const spans = planCategoryGrid(topCategories.length);
+
+  const coverOf = (cat: Category) => {
+    const inCategory = byCategoryTree(products, categories, cat.slug);
+    return inCategory[0];
+  };
+
+  const isStandard = topCategories.length >= STANDARD_COUNT;
+
+  // Categoría 0 + cualquiera desde la posición STANDARD_COUNT en adelante
+  // rotan en el espacio grande; las 5 del medio quedan fijas.
+  const heroSlides: HeroCategorySlide[] = isStandard
+    ? [topCategories[0], ...topCategories.slice(STANDARD_COUNT)].map((cat) => {
+        const cover = coverOf(cat);
+        return {
+          slug: cat.slug,
+          name: cat.name,
+          tagline: cat.tagline,
+          image: cat.image ?? null,
+          cover: cover
+            ? { images: cover.images, colors: cover.colors, pattern: cover.pattern }
+            : null,
+        };
+      })
+    : [];
+  const fixedCategories = isStandard ? topCategories.slice(1, STANDARD_COUNT) : topCategories;
+  const spans = isStandard ? [] : planCategoryGrid(topCategories.length);
 
   return (
     <section className="section">
@@ -75,14 +106,16 @@ export function CategoryGrid({
         </div>
 
         <div className="cats">
-          {topCategories.map((cat, i) => {
-            const inCategory = byCategoryTree(products, categories, cat.slug);
-            const cover = inCategory[0];
+          {isStandard ? <CategoryHeroCarousel slides={heroSlides} /> : null}
+          {fixedCategories.map((cat, i) => {
+            const cover = coverOf(cat);
             const span = spans[i] ?? { colSpan: 1, rowSpan: 1 };
-            const cardStyle = {
-              "--col-span": span.colSpan,
-              "--row-span": span.rowSpan,
-            } as CSSProperties;
+            const cardStyle = isStandard
+              ? undefined
+              : ({
+                  "--col-span": span.colSpan,
+                  "--row-span": span.rowSpan,
+                } as CSSProperties);
             return (
               <Link
                 key={cat.slug}
