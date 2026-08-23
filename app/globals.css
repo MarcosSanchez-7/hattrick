@@ -1075,11 +1075,8 @@ textarea {
   display: block;
   min-height: 240px;
   overflow: hidden;
-}
-
-.cats__card:first-child {
-  grid-column: span 2;
-  grid-row: span 2;
+  grid-column: span var(--col-span, 1);
+  grid-row: span var(--row-span, 1);
 }
 
 .cats__art {
@@ -1173,9 +1170,12 @@ textarea {
   .cats {
     grid-template-columns: repeat(2, 1fr);
   }
-  .cats__card:first-child {
-    grid-column: span 2;
-    grid-row: auto;
+  /* Por debajo de 3 columnas, los tramos calculados para el grid de
+     escritorio (span 2, span 3) ya no cierran parejo — se simplifica a
+     tarjetas uniformes en vez de arrastrar la cuenta a menos columnas. */
+  .cats__card {
+    grid-column: span 1 !important;
+    grid-row: span 1 !important;
   }
 }
 
@@ -1185,9 +1185,6 @@ textarea {
   }
   .cats__card {
     min-height: 340px;
-  }
-  .cats__card:first-child {
-    grid-column: auto;
   }
 }
 
