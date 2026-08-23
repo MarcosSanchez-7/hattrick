@@ -1289,3 +1289,17 @@ alter table patches add column if not exists category text;
 -- ═══════════════════════════════════════════════════════════════════════════
 
 alter table patches add column if not exists stock_on_hand integer not null default 0 check (stock_on_hand >= 0);
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Página "Ayuda": cuidado de la camiseta (lavado de dorsales termosellados).
+-- ═══════════════════════════════════════════════════════════════════════════
+
+insert into pages (slug, title, body, placement, sort_order) values
+(
+  'cuidado-de-la-camiseta',
+  'Cuidado de la camiseta',
+  E'Si tu camiseta tiene nombre y dorsal termosellados (aplicados con calor, no bordados), estos cuidados extienden mucho su vida útil y evitan que el estampado se agriete o se despegue.\n\nAntes de lavarla, dala vuelta del revés y cerrá cualquier cierre o velcro que tenga. Si hay manchas de pasto o comida, dejala en remojo con agua fría y un poco de vinagre blanco durante 30 minutos antes del lavado.\n\nLavala siempre con agua fría (no más de 30°C), a mano o en lavarropas en ciclo delicado, separada de prendas con cierres, botones o superficies ásperas que puedan rozar el estampado. Si la lavás a máquina, una bolsa de lavado o funda la protege todavía más.\n\nUsá un detergente suave, sin cloro ni blanqueador, y evitá el suavizante: deja una capa que tapa los poros de la tela y hace que la camiseta transpire menos.\n\nNo uses secadora. Colgala en una percha y dejala secar a la sombra, nunca al sol directo — el calor y los rayos UV son la principal causa de que el nombre, el dorsal o los escudos pierdan color o se despeguen.\n\nEvitá planchar directamente sobre el nombre, el dorsal o los escudos. Si necesitás plancharla, hacelo del revés, con temperatura baja y, si podés, un paño fino entre la plancha y el estampado.\n\nGuardala doblada en un lugar seco, sin que quede prensada contra otras prendas con cierres o velcro que puedan enganchar el estampado.\n\nSi tenés dudas sobre cómo cuidar un modelo en particular, escribinos por WhatsApp.',
+  'ayuda',
+  6
+)
+on conflict (slug) do nothing;
