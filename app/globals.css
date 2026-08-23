@@ -1079,6 +1079,20 @@ textarea {
   grid-row: span var(--row-span, 1);
 }
 
+/* Espacio grande del bento estandarizado (6+ categorías) — la propia
+   tarjeta ya no es el link (puede rotar entre varias categorías), así
+   que .cats__hero-link ocupa todo el espacio en su lugar. */
+.cats__card--hero {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+.cats__hero-link {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
 .cats__art {
   position: absolute;
   inset: 0;
