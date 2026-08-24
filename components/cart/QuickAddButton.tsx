@@ -94,7 +94,18 @@ export function QuickAddButton({
           e.stopPropagation();
           if (requiresSize) {
             const rect = e.currentTarget.getBoundingClientRect();
-            setPickerAnchor({ top: rect.top, left: rect.left + rect.width / 2 });
+            // El picker se centra en este punto (translateX(-50%)) y puede
+            // llegar a 240px de ancho (ver .quick-add-picker en globals.css)
+            // — en la columna derecha, centrarlo en el botón lo mandaba
+            // fuera de la pantalla. Se acota para que siempre quede visible.
+            const halfWidth = 120;
+            const margin = 24;
+            const center = rect.left + rect.width / 2;
+            const left = Math.min(
+              Math.max(center, halfWidth + margin),
+              window.innerWidth - halfWidth - margin,
+            );
+            setPickerAnchor({ top: rect.top, left });
             return;
           }
           flyToCart(e.currentTarget);
