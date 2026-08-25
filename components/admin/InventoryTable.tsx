@@ -65,6 +65,9 @@ export function InventoryTable({
   // hasta que el admin haga click.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [expandedStock, setExpandedStock] = useState<Set<string>>(new Set());
+  // Solo tiene efecto visual en mobile (ver globals.css) — en desktop la
+  // fila siempre muestra todos los detalles, sin importar este estado.
+  const [expandedMobile, setExpandedMobile] = useState<Set<string>>(new Set());
   const [adjusting, setAdjusting] = useState<Adjusting | null>(null);
 
   const categoryName = (slug: string) =>
@@ -125,6 +128,15 @@ export function InventoryTable({
 
   const toggleStock = (id: string) => {
     setExpandedStock((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleMobile = (id: string) => {
+    setExpandedMobile((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -236,6 +248,8 @@ export function InventoryTable({
           actions={actions}
           expandedStock={expandedStock}
           onToggleStock={toggleStock}
+          expandedMobile={expandedMobile}
+          onToggleMobile={toggleMobile}
           onAdjust={setAdjusting}
           readOnly={readOnly}
         />
@@ -265,6 +279,8 @@ export function InventoryTable({
                   hideCategoryColumn
                   expandedStock={expandedStock}
                   onToggleStock={toggleStock}
+                  expandedMobile={expandedMobile}
+                  onToggleMobile={toggleMobile}
                   onAdjust={setAdjusting}
                   readOnly={readOnly}
                 />
@@ -294,6 +310,8 @@ function ProductRowsTable({
   hideCategoryColumn,
   expandedStock,
   onToggleStock,
+  expandedMobile,
+  onToggleMobile,
   onAdjust,
   readOnly,
 }: {
@@ -303,6 +321,8 @@ function ProductRowsTable({
   hideCategoryColumn?: boolean;
   expandedStock: Set<string>;
   onToggleStock: (id: string) => void;
+  expandedMobile: Set<string>;
+  onToggleMobile: (id: string) => void;
   onAdjust: (a: Adjusting) => void;
   readOnly?: boolean;
 }) {
@@ -322,23 +342,32 @@ function ProductRowsTable({
         <tbody>
           {products.map((p) => {
             const isStockOpen = expandedStock.has(p.id);
+            const isMobileOpen = expandedMobile.has(p.id);
             const stock = totalStock(p);
             const invested = p.costPrice != null ? p.costPrice * stock : null;
             return (
-              <tr key={p.id}>
+              <tr key={p.id} data-expanded={isMobileOpen ? "true" : "false"}>
                 <td>
-                  <div className="admin-table__product">
-                    <div className="admin-table__thumb">
-                      <ProductVisual
-                        images={p.images}
-                        colors={p.colors}
-                        pattern={p.pattern}
-                        uid={`inv-${p.id}`}
-                        alt={p.name}
-                      />
+                  <button
+                    type="button"
+                    className="admin-table__row-toggle"
+                    aria-expanded={isMobileOpen}
+                    onClick={() => onToggleMobile(p.id)}
+                  >
+                    <div className="admin-table__product">
+                      <div className="admin-table__thumb">
+                        <ProductVisual
+                          images={p.images}
+                          colors={p.colors}
+                          pattern={p.pattern}
+                          uid={`inv-${p.id}`}
+                          alt={p.name}
+                        />
+                      </div>
+                      <div style={{ fontWeight: 600 }}>{p.name}</div>
                     </div>
-                    <div style={{ fontWeight: 600 }}>{p.name}</div>
-                  </div>
+                    <IconChevron className="icon--sm admin-table__row-chevron" />
+                  </button>
                 </td>
                 {hideCategoryColumn ? null : (
                   <td data-label="Categoría">{categoryName(p.category)}</td>

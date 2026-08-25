@@ -2960,6 +2960,17 @@ textarea {
   min-width: 220px;
 }
 
+/* Envuelve la celda de producto para poder desplegar la fila en mobile
+   (ver @media 640px) — en desktop no tiene ningún efecto visual: se
+   comporta como si sus hijos fueran directos de la celda. */
+.admin-table__row-toggle {
+  display: contents;
+}
+
+.admin-table__row-chevron {
+  display: none;
+}
+
 .admin-table__thumb {
   width: 42px;
   height: 50px;
@@ -3573,6 +3584,41 @@ textarea {
   }
   .admin-row-actions {
     flex-wrap: wrap;
+  }
+
+  /* La tarjeta arranca colapsada: solo foto + nombre, con una flecha para
+     desplegar precio/estado/stock/acciones — así entran más productos a
+     la vista sin perder el detalle a un toque de distancia. */
+  .admin-table__row-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .admin-table__row-chevron {
+    display: block;
+    flex: none;
+    transition: transform 0.2s var(--ease);
+  }
+  .admin-table tr[data-expanded='false'] .admin-table__row-chevron {
+    transform: rotate(-90deg);
+  }
+  .admin-table tr[data-expanded='false'] td[data-label],
+  .admin-table tr[data-expanded='false'] td:not([data-label]):last-child {
+    display: none;
+  }
+  .admin-table tr[data-expanded='false'] td:not([data-label]):first-child {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
   }
 }
 
