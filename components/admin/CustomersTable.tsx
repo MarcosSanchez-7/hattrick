@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CustomerWithStats } from "@/lib/data";
 import { formatPrice } from "@/lib/format";
-import { IconTrash } from "@/components/ui/Icons";
+import { IconChevron, IconTrash } from "@/components/ui/Icons";
 
 const dateFormatter = new Intl.DateTimeFormat("es-PY", {
   day: "2-digit",
@@ -16,6 +16,18 @@ const dateFormatter = new Intl.DateTimeFormat("es-PY", {
 export function CustomersTable({ customers }: { customers: CustomerWithStats[] }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  // Solo tiene efecto visual en mobile (ver globals.css) — en desktop la
+  // fila siempre muestra todos los datos, sin importar este estado.
+  const [expandedMobile, setExpandedMobile] = useState<Set<string>>(new Set());
+
+  const toggleMobile = (id: string) => {
+    setExpandedMobile((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const handleDelete = async (customer: CustomerWithStats) => {
     if (!window.confirm(`¿Eliminar «${customer.name}»? Sus ventas no se borran, solo dejan de estar vinculadas a este cliente.`)) {
@@ -66,13 +78,27 @@ export function CustomersTable({ customers }: { customers: CustomerWithStats[] }
               </tr>
             </thead>
             <tbody>
-              {customers.map((c) => (
-                <tr key={c.id}>
+              {customers.map((c) => {
+                const isMobileOpen = expandedMobile.has(c.id);
+                return (
+                <tr key={c.id} data-expanded={isMobileOpen ? "true" : "false"}>
                   <td>
-                    <div style={{ fontWeight: 600 }}>{c.name}</div>
-                    {c.notes ? <div className="meta">{c.notes}</div> : null}
+                    <button
+                      type="button"
+                      className="admin-table__row-toggle"
+                      aria-expanded={isMobileOpen}
+                      onClick={() => toggleMobile(c.id)}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{c.name}</div>
+                        {c.notes ? <div className="meta">{c.notes}</div> : null}
+                      </div>
+                      <IconChevron className="icon--sm admin-table__row-chevron" />
+                    </button>
                   </td>
-                  <td data-label="Teléfono">{c.phone || "—"}</td>
+                  <td data-label="Teléfono" className="admin-table__always-visible">
+                    {c.phone || "—"}
+                  </td>
                   <td data-label="Ciudad">{c.city || "—"}</td>
                   <td data-label="Pedidos">{c.orderCount}</td>
                   <td data-label="Total gastado">{formatPrice(c.totalSpent)}</td>
@@ -103,7 +129,8 @@ export function CustomersTable({ customers }: { customers: CustomerWithStats[] }
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

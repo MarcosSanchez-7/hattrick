@@ -3615,6 +3615,13 @@ textarea {
   .admin-table tr[data-expanded='false'] td:not([data-label]):last-child {
     display: none;
   }
+  /* Excepción: este dato se quiere ver siempre, aunque la fila esté
+     colapsada (ej. el teléfono junto al nombre del cliente). */
+  .admin-table tr[data-expanded='false'] td[data-label].admin-table__always-visible {
+    display: flex;
+    border-top: none;
+    padding-top: 0;
+  }
   .admin-table tr[data-expanded='false'] td:not([data-label]):first-child {
     border-bottom: none;
     padding-bottom: 0;
