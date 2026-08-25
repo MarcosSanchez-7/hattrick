@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CustomerWithStats } from "@/lib/data";
 import { formatPrice } from "@/lib/format";
 import { IconChevron, IconTrash } from "@/components/ui/Icons";
+
+type SortBy = "" | "recent" | "name";
 
 const dateFormatter = new Intl.DateTimeFormat("es-PY", {
   day: "2-digit",
@@ -16,6 +18,8 @@ const dateFormatter = new Intl.DateTimeFormat("es-PY", {
 export function CustomersTable({ customers }: { customers: CustomerWithStats[] }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [cityFilter, setCityFilter] = useState("");
+  const [sortBy, setSortBy] = useState<SortBy>("");
   // Solo tiene efecto visual en mobile (ver globals.css) — en desktop la
   // fila siempre muestra todos los datos, sin importar este estado.
   const [expandedMobile, setExpandedMobile] = useState<Set<string>>(new Set());
@@ -28,6 +32,30 @@ export function CustomersTable({ customers }: { customers: CustomerWithStats[] }
       return next;
     });
   };
+
+  // Solo se ofrecen las ciudades que realmente aparecen entre los clientes
+  // cargados, tal cual quedaron escritas (es un campo libre, sin catálogo).
+  const cityOptions = useMemo(() => {
+    const set = new Set(
+      customers.map((c) => c.city).filter((c): c is string => Boolean(c?.trim())),
+    );
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [customers]);
+
+  const filtered = useMemo(() => {
+    let list = cityFilter ? customers.filter((c) => c.city === cityFilter) : customers;
+    if (sortBy === "recent") {
+      list = [...list].sort((a, b) => {
+        if (!a.lastPurchaseAt && !b.lastPurchaseAt) return 0;
+        if (!a.lastPurchaseAt) return 1;
+        if (!b.lastPurchaseAt) return -1;
+        return b.lastPurchaseAt.localeCompare(a.lastPurchaseAt);
+      });
+    } else if (sortBy === "name") {
+      list = [...list].sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return list;
+  }, [customers, cityFilter, sortBy]);
 
   const handleDelete = async (customer: CustomerWithStats) => {
     if (!window.confirm(`¿Eliminar «${customer.name}»? Sus ventas no se borran, solo dejan de estar vinculadas a este cliente.`)) {
@@ -54,8 +82,33 @@ export function CustomersTable({ customers }: { customers: CustomerWithStats[] }
     <div className="admin-card">
       <div className="admin-card__head">
         <p className="h3" style={{ fontSize: "0.9375rem" }}>
-          {customers.length} cliente{customers.length !== 1 ? "s" : ""}
+          {filtered.length} cliente{filtered.length !== 1 ? "s" : ""}
         </p>
+        <div className="row gap-2" style={{ flexWrap: "wrap" }}>
+          <select
+            className="select"
+            value={cityFilter}
+            onChange={(e) => setCityFilter(e.target.value)}
+            aria-label="Filtrar por ciudad"
+          >
+            <option value="">Todas las ciudades</option>
+            {cityOptions.map((city) => (
+              <option key={city} value={city}>
+                {city}
+              </option>
+            ))}
+          </select>
+          <select
+            className="select"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortBy)}
+            aria-label="Ordenar clientes"
+          >
+            <option value="">Sin ordenar</option>
+            <option value="recent">Compra más reciente primero</option>
+            <option value="name">Nombre (A-Z)</option>
+          </select>
+        </div>
       </div>
 
       {customers.length === 0 ? (
@@ -63,6 +116,8 @@ export function CustomersTable({ customers }: { customers: CustomerWithStats[] }
           Todavía no hay clientes cargados. Se crean solos al registrar una
           venta con teléfono, o los podés agregar a mano.
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="admin-empty">Ningún cliente coincide con los filtros.</div>
       ) : (
         <div className="admin-table-wrap">
           <table className="admin-table">
@@ -78,7 +133,7 @@ export function CustomersTable({ customers }: { customers: CustomerWithStats[] }
               </tr>
             </thead>
             <tbody>
-              {customers.map((c) => {
+              {filtered.map((c) => {
                 const isMobileOpen = expandedMobile.has(c.id);
                 return (
                 <tr key={c.id} data-expanded={isMobileOpen ? "true" : "false"}>
