@@ -5,7 +5,17 @@ import { useRouter } from "next/navigation";
 import type { Customer } from "@/lib/data";
 import { LocationPicker, type LatLng } from "@/components/admin/LocationPicker";
 
-export function CustomerForm({ customer }: { customer?: Customer }) {
+export function CustomerForm({
+  customer,
+  onCancel,
+  onSaved,
+}: {
+  customer?: Customer;
+  /** Por defecto vuelve al listado — se puede pisar (ej. volver a modo lectura en la misma página). */
+  onCancel?: () => void;
+  /** Por defecto vuelve al listado tras guardar — se puede pisar. */
+  onSaved?: () => void;
+}) {
   const router = useRouter();
   const isEdit = Boolean(customer);
 
@@ -51,7 +61,8 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "No se pudo guardar el cliente.");
-      router.push("/gestion-ssjblue/clientes");
+      if (onSaved) onSaved();
+      else router.push("/gestion-ssjblue/clientes");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado.");
@@ -135,7 +146,7 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
         <button
           type="button"
           className="btn btn--ghost btn--sm"
-          onClick={() => router.push("/gestion-ssjblue/clientes")}
+          onClick={() => (onCancel ? onCancel() : router.push("/gestion-ssjblue/clientes"))}
         >
           Cancelar
         </button>
