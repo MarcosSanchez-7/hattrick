@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getAllCustomers, getCustomerSales } from "@/lib/data";
-import { CustomerForm } from "@/components/admin/CustomerForm";
+import { CustomerDetailCard } from "@/components/admin/CustomerDetailCard";
 import { CustomerPurchaseHistory } from "@/components/admin/CustomerPurchaseHistory";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
@@ -31,12 +31,15 @@ export default async function EditCustomerPage({
       <h1 className="h1" style={{ marginBottom: 24 }}>
         {customer.name}
       </h1>
-      <CustomerForm customer={customer} />
 
-      <p className="h3" style={{ fontSize: "0.9375rem", marginTop: 40, marginBottom: 12 }}>
+      <p className="h3" style={{ fontSize: "0.9375rem", marginBottom: 12 }}>
         Historial de compras
       </p>
       <CustomerPurchaseHistory sales={sales} />
+
+      <div style={{ marginTop: 32 }}>
+        <CustomerDetailCard customer={customer} />
+      </div>
     </>
   );
 }
