@@ -99,14 +99,25 @@ export async function POST(request: NextRequest) {
         .toBuffer();
       outputExt = ".webp";
       outputContentType = "image/webp";
-    } else if (contentType === "image/gif" || contentType === "image/svg+xml") {
+    } else if (contentType === "image/gif") {
+      // Se guarda tal cual (para no perder la animación al re-codificar),
+      // pero se acotan las dimensiones para que un GIF armado a propósito
+      // con un tamaño enorme no sea costoso de decodificar en el navegador.
+      const { width, height } = await sharp(working, { animated: true }).metadata();
+      if ((width ?? 0) > 3000 || (height ?? 0) > 3000) {
+        await del(rawUrl);
+        return NextResponse.json(
+          { error: "El GIF supera el tamaño máximo de 3000×3000 px." },
+          { status: 400 },
+        );
+      }
       payload = working;
-      outputExt = contentType === "image/gif" ? ".gif" : ".svg";
+      outputExt = ".gif";
       outputContentType = contentType;
     } else {
       await del(rawUrl);
       return NextResponse.json(
-        { error: "Formato no admitido. Usa PNG, JPG, WEBP, GIF, SVG o HEIC." },
+        { error: "Formato no admitido. Usa PNG, JPG, WEBP, GIF o HEIC." },
         { status: 400 },
       );
     }
@@ -132,9 +143,9 @@ export async function POST(request: NextRequest) {
     );
   } catch (err) {
     if (rawUrl) await del(rawUrl).catch(() => {});
-    const message = err instanceof Error ? err.message : "Error desconocido.";
+    console.error("Error procesando imagen subida:", err);
     return NextResponse.json(
-      { error: `No se pudo procesar la imagen: ${message}` },
+      { error: "No se pudo procesar la imagen." },
       { status: 500 },
     );
   }

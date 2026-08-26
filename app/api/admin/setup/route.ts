@@ -13,6 +13,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+
+    // Si se configura SETUP_TOKEN (opcional), además de que no exista ningún
+    // admin todavía, hace falta conocer este token para crear el primero —
+    // cierra la ventana entre desplegar con la base vacía y completar el
+    // setup, que si no cualquiera que llegue primero a /setup podría usar
+    // para crearse una cuenta de superadmin.
+    const setupToken = process.env.SETUP_TOKEN;
+    if (setupToken && body?.setupToken !== setupToken) {
+      return NextResponse.json(
+        { error: "Token de configuración inválido." },
+        { status: 403 },
+      );
+    }
+
     const admin = await createAdminUser({
       name: body?.name,
       email: body?.email,
