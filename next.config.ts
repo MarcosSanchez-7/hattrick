@@ -17,13 +17,24 @@ import type { NextConfig } from "next";
  * - Vercel Analytics (@vercel/analytics/next) sirve su script y manda sus
  *   eventos por /_vercel/insights/* en el propio dominio — no necesita
  *   entrada aparte, ya cubierto por 'self'.
+ *
+ * script-src necesita 'unsafe-inline': Next.js App Router hidrata la página
+ * con sus propios <script> inline (self.__next_f.push(...), el streaming de
+ * RSC) — sin 'unsafe-inline' el navegador los bloquea, React nunca hidrata,
+ * y la página queda visualmente igual pero sin reaccionar a ningún click ni
+ * tocar nada (así se detectó: el admin y el timer de ofertas dejaron de
+ * responder apenas se agregó la CSP). La alternativa correcta es CSP por
+ * nonce generado en proxy.ts en vez de next.config.ts (Next.js lo soporta
+ * de forma nativa), pero requiere que proxy.ts cubra TODAS las rutas del
+ * sitio, no solo /gestion-ssjblue y /api/admin como hoy — queda pendiente
+ * como mejora, no bloqueante.
  */
 const isDev = process.env.NODE_ENV === "development";
 
 const CSP = [
   "default-src 'self'",
   // 'unsafe-eval' solo en dev: lo necesita el refresh/HMR de Next.js.
-  `script-src 'self'${isDev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   // 'unsafe-inline' porque el sitio usa style={{...}} inline extensamente
   // (no hay forma simple de pasar a nonces sin tocar cientos de componentes).
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
