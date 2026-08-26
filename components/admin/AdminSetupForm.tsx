@@ -9,6 +9,7 @@ export function AdminSetupForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [setupToken, setSetupToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +31,7 @@ export function AdminSetupForm() {
       const res = await fetch("/api/admin/setup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, setupToken: setupToken.trim() || undefined }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "No se pudo crear el administrador.");
@@ -88,6 +89,18 @@ export function AdminSetupForm() {
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
         />
+      </div>
+      <div className="admin-field">
+        <label htmlFor="setupToken">Token de configuración (opcional)</label>
+        <input
+          id="setupToken"
+          type="text"
+          value={setupToken}
+          onChange={(e) => setSetupToken(e.target.value)}
+        />
+        <p className="admin-help">
+          Solo hace falta si se configuró la variable de entorno SETUP_TOKEN.
+        </p>
       </div>
       <button type="submit" className="btn btn--block" disabled={submitting}>
         {submitting ? "Creando…" : "Crear cuenta"}
