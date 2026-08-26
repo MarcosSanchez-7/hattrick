@@ -17,7 +17,17 @@ export async function POST(request: Request) {
       body,
       request,
       onBeforeGenerateToken: async () => ({
-        allowedContentTypes: ["image/*"],
+        // Sin image/svg+xml a propósito: un SVG puede llevar <script>
+        // embebido — ver app/api/admin/upload/optimize/route.ts, que ya no
+        // lo acepta tampoco. El catálogo son fotos, no vectores.
+        allowedContentTypes: [
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+          "image/gif",
+          "image/heic",
+          "image/heif",
+        ],
         addRandomSuffix: true,
         maximumSizeInBytes: 25 * 1024 * 1024,
       }),
