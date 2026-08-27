@@ -29,15 +29,19 @@ import type { NextConfig } from "next";
  * sitio, no solo /gestion-ssjblue y /api/admin como hoy — queda pendiente
  * como mejora, no bloqueante.
  *
- * connect-src necesita el host de Vercel Blob: ImageUploader sube el
- * archivo ORIGINAL directo desde el navegador a Vercel Blob (@vercel/blob/client,
- * ver components/admin/ImageUploader.tsx) para no chocar con el límite de
- * tamaño de las funciones serverless — ese PUT es un fetch a
- * https://{storeId}.public.blob.vercel-storage.com/... (confirmado leyendo
- * node_modules/@vercel/blob/dist/chunk-*.js), no una carga de <img>, así que
- * lo cubre connect-src, no img-src. Sin esto, la subida queda bloqueada por
- * la CSP y el uploader se queda "subiendo" para siempre sin mostrar error
- * (el fetch nunca sale, pero nada en el código distingue ese rechazo de una
+ * connect-src necesita vercel.com Y el host de storage de Vercel Blob:
+ * ImageUploader sube el archivo ORIGINAL directo desde el navegador a
+ * Vercel Blob (@vercel/blob/client, ver components/admin/ImageUploader.tsx)
+ * para no chocar con el límite de tamaño de las funciones serverless. El
+ * PUT real de los bytes pasa por requestApi() -> getApiUrl(), que apunta a
+ * "https://vercel.com/api/blob" por defecto (confirmado leyendo
+ * node_modules/@vercel/blob/dist/chunk-*.js — no directo al host de
+ * storage, esa suposición inicial estaba mal y dejó la subida rota una
+ * primera vez). El host {storeId}.public.blob.vercel-storage.com se deja
+ * igual por las dudas (además de servir las imágenes ya subidas, vía
+ * img-src). Sin vercel.com en connect-src, la subida queda bloqueada por la
+ * CSP y el uploader se queda "subiendo" para siempre sin mostrar error (el
+ * fetch nunca sale, pero nada en el código distingue ese rechazo de una
  * subida lenta).
  */
 const isDev = process.env.NODE_ENV === "development";
@@ -51,7 +55,7 @@ const CSP = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data: https:",
-  "connect-src 'self' https://nominatim.openstreetmap.org https://*.public.blob.vercel-storage.com",
+  "connect-src 'self' https://nominatim.openstreetmap.org https://*.public.blob.vercel-storage.com https://vercel.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
