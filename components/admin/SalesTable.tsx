@@ -165,6 +165,13 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                   </td>
                   <td>
                     <div className="admin-row-actions">
+                      <Link
+                        href={`/gestion-ssjblue/ventas/${sale.id}`}
+                        className="btn btn--ghost btn--sm"
+                        style={{ height: 32, paddingInline: 12 }}
+                      >
+                        Editar
+                      </Link>
                       <button
                         type="button"
                         className="admin-icon-btn admin-icon-btn--danger"

@@ -126,6 +126,8 @@ export const SALE_CHANNELS: { value: SaleChannel; label: string }[] = [
 
 export type SaleLine = {
   id: number;
+  /** Presente = stock propio (descontó inventario). Ausente = dropshipping/importada. */
+  variantId: string | null;
   productId: string;
   name: string;
   size: string;
