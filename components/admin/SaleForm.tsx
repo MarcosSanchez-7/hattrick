@@ -7,6 +7,7 @@ import {
   SALE_CHANNELS,
   SHIPPING_METHODS,
   type Product,
+  type Sale,
   type SaleChannel,
   type ShippingMethod,
 } from "@/lib/catalog";
@@ -41,6 +42,36 @@ function matches(product: Product, query: string) {
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Convierte las líneas ya guardadas de una venta en líneas editables del
+ * ticket. El tope de cantidad se calcula sumando el stock actual de la
+ * variante más lo que esta misma línea ya tenía reservado — al guardar la
+ * edición, esa cantidad vieja se repone antes de descontar la nueva (ver
+ * update_sale en schema.sql), así que ese es el máximo real disponible.
+ */
+function saleToLines(sale: Sale, products: Product[]): TicketLine[] {
+  return sale.items.map((item) => {
+    const variant = item.variantId
+      ? products
+          .find((p) => p.id === item.productId)
+          ?.variants?.find((v) => v.id === item.variantId)
+      : undefined;
+    const maxStock = variant ? variant.stock + item.quantity : null;
+    return {
+      key: String(item.id),
+      variantId: item.variantId,
+      productId: item.productId,
+      name: item.name,
+      size: item.size,
+      maxStock,
+      quantity: item.quantity,
+      unitPrice: String(item.unitPrice),
+      costPrice: String(item.costPrice),
+      itemNote: item.note ?? "",
+    };
+  });
 }
 
 /**
@@ -89,26 +120,45 @@ function DropshippingSizeInput({ onAdd }: { onAdd: (size: string) => void }) {
 }
 
 export function SaleForm({
+  sale,
   products,
   customers,
 }: {
+  /** Presente = modo edición (PUT sobre esta venta). Ausente = alta nueva. */
+  sale?: Sale;
   products: Product[];
   customers: Customer[];
 }) {
+  const isEdit = Boolean(sale);
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [lines, setLines] = useState<TicketLine[]>([]);
-  const [channel, setChannel] = useState<SaleChannel>("store");
-  const [staffName, setStaffName] = useState("");
-  const [customerNote, setCustomerNote] = useState("");
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [destinationCity, setDestinationCity] = useState("");
-  const [destinationNeighborhood, setDestinationNeighborhood] = useState("");
-  const [shippingMethod, setShippingMethod] = useState<ShippingMethod | "">("");
-  const [shippingMethodDetail, setShippingMethodDetail] = useState("");
+  const [lines, setLines] = useState<TicketLine[]>(() =>
+    sale ? saleToLines(sale, products) : [],
+  );
+  const [channel, setChannel] = useState<SaleChannel>(sale?.channel ?? "store");
+  const [staffName, setStaffName] = useState(sale?.staffName ?? "");
+  const [customerNote, setCustomerNote] = useState(sale?.customerNote ?? "");
+  const [customerName, setCustomerName] = useState(sale?.customerName ?? "");
+  const [customerPhone, setCustomerPhone] = useState(sale?.customerPhone ?? "");
+  const [destinationCity, setDestinationCity] = useState(sale?.destinationCity ?? "");
+  const [destinationNeighborhood, setDestinationNeighborhood] = useState(
+    sale?.destinationNeighborhood ?? "",
+  );
+  const [shippingMethod, setShippingMethod] = useState<ShippingMethod | "">(
+    sale?.shippingMethod ?? "",
+  );
+  const [shippingMethodDetail, setShippingMethodDetail] = useState(
+    sale?.shippingMethodDetail ?? "",
+  );
   const [location, setLocation] = useState<LatLng | null>(null);
-  const [soldAt, setSoldAt] = useState(todayStr());
+  // Referencia para saber si el admin tocó la fecha: si no, se manda vacío
+  // y el servidor conserva la fecha/hora que ya tenía (o "ahora" si es alta
+  // nueva) en vez de forzarla a mediodía.
+  const initialSoldAtStr = useMemo(
+    () => (sale ? sale.soldAt.slice(0, 10) : todayStr()),
+    [sale],
+  );
+  const [soldAt, setSoldAt] = useState(initialSoldAtStr);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -220,39 +270,46 @@ export function SaleForm({
 
     setSubmitting(true);
     try {
-      const res = await fetch("/api/admin/sales", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          channel,
-          staffName: staffName.trim() || null,
-          customerNote: customerNote.trim() || null,
-          customerName: customerName.trim() || null,
-          customerPhone: customerPhone.trim() || null,
-          destinationCity: destinationCity.trim() || null,
-          destinationNeighborhood: destinationNeighborhood.trim() || null,
-          shippingMethod: shippingMethod || null,
-          shippingMethodDetail:
-            shippingMethod === "otro" ? shippingMethodDetail.trim() || null : null,
-          customerLat: location?.lat ?? null,
-          customerLng: location?.lng ?? null,
-          // Si no se tocó la fecha, no se manda: la venta queda con la hora
-          // exacta de ahora en vez de quedar fija al mediodía.
-          soldAt: soldAt === todayStr() ? null : `${soldAt}T12:00:00`,
-          items: lines.map((l) => ({
-            variantId: l.variantId,
-            productId: l.productId,
-            productName: l.variantId ? null : l.name,
-            size: l.variantId ? null : l.size,
-            quantity: l.quantity,
-            unitPrice: Number(l.unitPrice) || 0,
-            costPrice: Number(l.costPrice) || 0,
-            itemNote: l.itemNote.trim() || null,
-          })),
-        }),
-      });
+      const res = await fetch(
+        isEdit ? `/api/admin/sales/${sale!.id}` : "/api/admin/sales",
+        {
+          method: isEdit ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            channel,
+            staffName: staffName.trim() || null,
+            customerNote: customerNote.trim() || null,
+            customerName: customerName.trim() || null,
+            customerPhone: customerPhone.trim() || null,
+            destinationCity: destinationCity.trim() || null,
+            destinationNeighborhood: destinationNeighborhood.trim() || null,
+            shippingMethod: shippingMethod || null,
+            shippingMethodDetail:
+              shippingMethod === "otro" ? shippingMethodDetail.trim() || null : null,
+            customerLat: location?.lat ?? null,
+            customerLng: location?.lng ?? null,
+            // Si no se tocó la fecha, no se manda: el servidor conserva la
+            // que ya tenía (edición) o usa "ahora" (alta nueva) en vez de
+            // quedar fija al mediodía.
+            soldAt: soldAt === initialSoldAtStr ? null : `${soldAt}T12:00:00`,
+            items: lines.map((l) => ({
+              variantId: l.variantId,
+              productId: l.productId,
+              productName: l.variantId ? null : l.name,
+              size: l.variantId ? null : l.size,
+              quantity: l.quantity,
+              unitPrice: Number(l.unitPrice) || 0,
+              costPrice: Number(l.costPrice) || 0,
+              itemNote: l.itemNote.trim() || null,
+            })),
+          }),
+        },
+      );
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "No se pudo registrar la venta.");
+      if (!res.ok)
+        throw new Error(
+          data.error ?? (isEdit ? "No se pudo actualizar la venta." : "No se pudo registrar la venta."),
+        );
       router.push("/gestion-ssjblue/ventas");
       router.refresh();
     } catch (err) {
@@ -627,7 +684,7 @@ export function SaleForm({
           Cancelar
         </button>
         <button type="submit" className="btn btn--sm" disabled={submitting}>
-          {submitting ? "Guardando…" : "Registrar venta"}
+          {submitting ? "Guardando…" : isEdit ? "Guardar cambios" : "Registrar venta"}
         </button>
       </div>
     </form>

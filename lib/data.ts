@@ -1229,6 +1229,7 @@ export async function touchAdminLastSeen(adminId: string): Promise<void> {
 
 type SaleItemRow = {
   id: number;
+  variant_id: string | null;
   quantity: number;
   unit_price: number | string;
   cost_price: number | string;
@@ -1260,7 +1261,7 @@ type SaleRow = {
 };
 
 const SALE_SELECT =
-  "id, channel, staff_name, customer_note, customer_name, customer_phone, destination_city, destination_neighborhood, shipping_method, shipping_method_detail, customer_id, sold_at, sale_items(id, quantity, unit_price, cost_price, product_name_snapshot, size_snapshot, product_id_snapshot, item_note, product_variants(size, product_id, products(name, images)))";
+  "id, channel, staff_name, customer_note, customer_name, customer_phone, destination_city, destination_neighborhood, shipping_method, shipping_method_detail, customer_id, sold_at, sale_items(id, variant_id, quantity, unit_price, cost_price, product_name_snapshot, size_snapshot, product_id_snapshot, item_note, product_variants(size, product_id, products(name, images)))";
 
 function rowToSale(row: SaleRow): Sale {
   // product_name_snapshot/size_snapshot solo existen en ventas importadas
@@ -1272,6 +1273,7 @@ function rowToSale(row: SaleRow): Sale {
   // a diferencia de una importación de CSV histórico).
   const items: SaleLine[] = (row.sale_items ?? []).map((si) => ({
     id: si.id,
+    variantId: si.variant_id,
     productId: si.product_variants?.product_id ?? si.product_id_snapshot ?? "",
     name: si.product_variants?.products?.name ?? si.product_name_snapshot ?? "—",
     size: si.product_variants?.size ?? si.size_snapshot ?? "—",
@@ -1345,6 +1347,45 @@ export async function getSales(range?: {
   }
 
   return sales;
+}
+
+export async function getSaleById(id: string): Promise<Sale | null> {
+  const { data, error } = await supabaseAdmin
+    .from("sales")
+    .select(SALE_SELECT)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) fail(`No se pudo cargar la venta: ${error.message}`);
+  if (!data) return null;
+
+  const sale = rowToSale(data as unknown as SaleRow);
+
+  const missingProductIds = Array.from(
+    new Set(
+      sale.items
+        .filter((item) => !item.imageUrl && item.productId)
+        .map((item) => item.productId),
+    ),
+  );
+  if (missingProductIds.length > 0) {
+    const { data: productRows } = await supabaseAdmin
+      .from("products")
+      .select("id, images")
+      .in("id", missingProductIds);
+    const imageById = new Map(
+      (productRows ?? []).map((p) => [
+        p.id as string,
+        ((p.images as string[] | null) ?? [])[0] ?? null,
+      ]),
+    );
+    for (const item of sale.items) {
+      if (!item.imageUrl && item.productId) {
+        item.imageUrl = imageById.get(item.productId) ?? null;
+      }
+    }
+  }
+
+  return sale;
 }
 
 export type SaleItemInput = {
@@ -1449,6 +1490,63 @@ export async function recordSale(input: SaleInput): Promise<string> {
       );
     }
     fail(`No se pudo registrar la venta: ${error.message}`);
+  }
+  return id;
+}
+
+/**
+ * Edita una venta ya registrada. Usa la RPC update_sale (schema.sql), que
+ * repone el stock de las líneas viejas antes de reemplazarlas por las
+ * nuevas — mismo criterio que deleteSale, nunca se toca stock_on_hand a
+ * mano. El id de la venta no cambia.
+ */
+export async function updateSale(id: string, input: SaleInput): Promise<string> {
+  assertValidSale(input);
+
+  const customerId = await findOrCreateCustomerByPhone(
+    input.customerName ?? null,
+    input.customerPhone ?? null,
+    input.destinationCity ?? null,
+    input.customerLat ?? null,
+    input.customerLng ?? null,
+  );
+
+  const { error } = await supabaseAdmin.rpc("update_sale", {
+    p_id: id,
+    p_channel: input.channel,
+    p_staff_name: input.staffName ?? null,
+    p_customer_note: input.customerNote ?? null,
+    p_sold_at: input.soldAt || null,
+    p_customer_name: input.customerName || null,
+    p_customer_phone: input.customerPhone || null,
+    p_destination_city: input.destinationCity || null,
+    p_destination_neighborhood: input.destinationNeighborhood || null,
+    p_shipping_method: input.shippingMethod || null,
+    p_shipping_method_detail: input.shippingMethodDetail || null,
+    p_customer_id: customerId,
+    p_items: input.items.map((i) => ({
+      variant_id: i.variantId ?? null,
+      product_id_snapshot: i.productId ?? null,
+      product_name_snapshot: i.variantId ? null : i.productName ?? null,
+      size_snapshot: i.variantId ? null : i.size ?? null,
+      quantity: i.quantity,
+      unit_price: i.unitPrice,
+      cost_price: i.costPrice,
+      item_note: i.itemNote?.trim() || null,
+    })),
+  });
+
+  if (error) {
+    if (error.message.includes("stock_on_hand")) {
+      fail(
+        "No hay stock suficiente para completar la venta con esas cantidades.",
+        400,
+      );
+    }
+    if (error.message.includes("no encontrada")) {
+      throw new DataError("Venta no encontrada.", 404);
+    }
+    fail(`No se pudo actualizar la venta: ${error.message}`);
   }
   return id;
 }
