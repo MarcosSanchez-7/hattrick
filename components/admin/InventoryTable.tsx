@@ -394,7 +394,9 @@ function ProductRowsTable({
                   {!p.isVisible ? (
                     <span className="badge badge--out">Oculto</span>
                   ) : p.stockMode !== "propio" ? (
-                    <span className="meta">Consultar talle</span>
+                    <span className="meta">
+                      Consultar talle{p.internalControl ? " · control interno" : ""}
+                    </span>
                   ) : isSoldOut(p) ? (
                     <span className="badge badge--out">Agotado</span>
                   ) : p.isNew ? (
@@ -404,7 +406,7 @@ function ProductRowsTable({
                   )}
                 </td>
                 <td data-label="Stock">
-                  {p.stockMode === "propio" ? (
+                  {p.stockMode === "propio" || p.internalControl ? (
                     <div className="inventory-stock-cell">
                       <button
                         type="button"

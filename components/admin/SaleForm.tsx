@@ -352,7 +352,11 @@ export function SaleForm({
         {results.length > 0 ? (
           <div className="admin-sale-results">
             {results.map((product) => {
-              const isDropshipping = product.stockMode !== "propio";
+              // Con control interno activado, aunque el stock sea
+              // ajeno/importado, sí llevamos cantidad real — la venta debe
+              // descontarla como una variante normal, no como dropshipping.
+              const isDropshipping =
+                product.stockMode !== "propio" && !product.internalControl;
               return (
                 <div key={product.id} className="admin-sale-result">
                   <div className="admin-table__product">

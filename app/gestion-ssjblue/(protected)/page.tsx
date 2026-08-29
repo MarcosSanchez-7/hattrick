@@ -43,7 +43,7 @@ export default async function AdminDashboard() {
   const soldOut = products.filter(isSoldOut).length;
 
   const stockBajo = products
-    .filter((p) => p.stockMode === "propio")
+    .filter((p) => p.stockMode === "propio" || p.internalControl)
     .flatMap((p) => p.variants ?? [])
     .filter((v) => v.stock > 0 && v.stock <= LOW_STOCK_THRESHOLD).length;
 
