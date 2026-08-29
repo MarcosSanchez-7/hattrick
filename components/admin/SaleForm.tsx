@@ -139,6 +139,12 @@ export function SaleForm({
   const [staffName, setStaffName] = useState(sale?.staffName ?? "");
   const [customerNote, setCustomerNote] = useState(sale?.customerNote ?? "");
   const [customerName, setCustomerName] = useState(sale?.customerName ?? "");
+  // Presente = "Nombre del cliente" coincide con un cliente elegido de la
+  // lista de sugerencias (o ya venía vinculado al editar). Se limpia apenas
+  // el admin vuelve a tocar el campo a mano, para no mandar un id que ya no
+  // corresponde al texto escrito.
+  const [customerId, setCustomerId] = useState<string | null>(sale?.customerId ?? null);
+  const [customerSuggestionsOpen, setCustomerSuggestionsOpen] = useState(false);
   const [customerPhone, setCustomerPhone] = useState(sale?.customerPhone ?? "");
   const [destinationCity, setDestinationCity] = useState(sale?.destinationCity ?? "");
   const [destinationNeighborhood, setDestinationNeighborhood] = useState(
@@ -177,6 +183,24 @@ export function SaleForm({
       customers.find((c) => c.phone && normalizePhone(c.phone) === normalized) ?? null
     );
   }, [customers, customerPhone]);
+
+  // Sugerencias por nombre mientras se escribe. Se ocultan apenas hay un
+  // cliente ya elegido (customerId), para no mostrar la lista de nuevo
+  // encima de un nombre que ya matchea exacto.
+  const customerSuggestions = useMemo(() => {
+    const q = customerName.trim().toLowerCase();
+    if (!q || customerId) return [];
+    return customers.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 6);
+  }, [customers, customerName, customerId]);
+
+  const selectCustomer = (customer: Customer) => {
+    setCustomerName(customer.name);
+    setCustomerPhone(customer.phone ?? "");
+    setDestinationCity(customer.city ?? "");
+    setDestinationNeighborhood(customer.neighborhood ?? "");
+    setCustomerId(customer.id);
+    setCustomerSuggestionsOpen(false);
+  };
 
   const addLine = (product: Product, variant: NonNullable<Product["variants"]>[number]) => {
     if (variant.stock <= 0) return;
@@ -280,6 +304,7 @@ export function SaleForm({
             staffName: staffName.trim() || null,
             customerNote: customerNote.trim() || null,
             customerName: customerName.trim() || null,
+            customerId,
             customerPhone: customerPhone.trim() || null,
             destinationCity: destinationCity.trim() || null,
             destinationNeighborhood: destinationNeighborhood.trim() || null,
@@ -586,15 +611,61 @@ export function SaleForm({
           adónde y por qué medio.
         </p>
         <div className="admin-form__grid admin-form__grid--3">
-          <div className="admin-field">
+          <div className="admin-field" style={{ position: "relative" }}>
             <label htmlFor="customerName">Nombre del cliente</label>
             <input
               id="customerName"
               type="text"
+              autoComplete="off"
               value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
+              onChange={(e) => {
+                setCustomerName(e.target.value);
+                setCustomerId(null);
+                setCustomerSuggestionsOpen(true);
+              }}
+              onFocus={() => setCustomerSuggestionsOpen(true)}
+              onBlur={() => setCustomerSuggestionsOpen(false)}
               placeholder="Nombre y apellido"
             />
+            {customerId ? (
+              <p className="admin-help" style={{ color: "var(--ink)" }}>
+                Cliente vinculado — se suma a su historial.
+              </p>
+            ) : null}
+            {customerSuggestionsOpen && customerSuggestions.length > 0 ? (
+              <div
+                className="admin-checklist"
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  right: 0,
+                  zIndex: 5,
+                  background: "var(--surface)",
+                  border: "1px solid var(--line)",
+                  marginTop: 4,
+                  flexDirection: "column",
+                }}
+              >
+                {customerSuggestions.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className="admin-check"
+                    style={{ width: "100%", justifyContent: "flex-start" }}
+                    onMouseDown={(e) => {
+                      // mousedown (no click) para que dispare antes del
+                      // onBlur del input y no se cierre la lista primero.
+                      e.preventDefault();
+                      selectCustomer(c);
+                    }}
+                  >
+                    {c.name}
+                    {c.phone ? ` · ${c.phone}` : ""}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
           <div className="admin-field">
             <label htmlFor="customerPhone">Teléfono del cliente</label>

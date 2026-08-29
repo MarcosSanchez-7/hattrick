@@ -1419,6 +1419,10 @@ export type SaleInput = {
    * mapa; si no, la ubicación existente del cliente queda intacta. */
   customerLat?: number | null;
   customerLng?: number | null;
+  /** Presente = el admin eligió un cliente existente de la lista de
+   * sugerencias (por nombre). Se usa tal cual, sin pasar por el matching
+   * heurístico por teléfono — evita duplicados por typos de teléfono. */
+  customerId?: string | null;
   items: SaleItemInput[];
 };
 
@@ -1445,10 +1449,12 @@ function assertValidSale(input: SaleInput) {
 export async function recordSale(input: SaleInput): Promise<string> {
   assertValidSale(input);
 
-  // CRM ligero: si hay teléfono, vincula a un cliente existente (por
-  // teléfono normalizado) o crea uno nuevo — sin esto, cada venta queda
-  // aislada y no se puede ver historial/gasto total por persona.
-  const customerId = await findOrCreateCustomerByPhone(
+  // CRM ligero: si el admin eligió un cliente de la lista, se usa ese id
+  // directo; si no, vincula por teléfono normalizado o crea uno nuevo —
+  // sin esto, cada venta queda aislada y no se puede ver historial/gasto
+  // total por persona.
+  const customerId = await resolveCustomerId(
+    input.customerId,
     input.customerName ?? null,
     input.customerPhone ?? null,
     input.destinationCity ?? null,
@@ -1503,7 +1509,8 @@ export async function recordSale(input: SaleInput): Promise<string> {
 export async function updateSale(id: string, input: SaleInput): Promise<string> {
   assertValidSale(input);
 
-  const customerId = await findOrCreateCustomerByPhone(
+  const customerId = await resolveCustomerId(
+    input.customerId,
     input.customerName ?? null,
     input.customerPhone ?? null,
     input.destinationCity ?? null,
@@ -1808,6 +1815,35 @@ export async function deleteCustomer(id: string): Promise<void> {
  * no se marcó nada (lat/lng null), la ubicación previa del cliente queda
  * intacta.
  */
+/**
+ * Resuelve a qué cliente se vincula la venta. Si el admin ya eligió uno de
+ * la lista de sugerencias (explicitId), se usa tal cual — sin esto, cada
+ * venta se vinculaba por teléfono normalizado, y un typo en el teléfono
+ * creaba un cliente duplicado en vez de sumarse al historial del real.
+ */
+async function resolveCustomerId(
+  explicitId: string | null | undefined,
+  name: string | null,
+  phone: string | null,
+  city: string | null,
+  lat?: number | null,
+  lng?: number | null,
+): Promise<string | null> {
+  if (explicitId) {
+    if (lat != null && lng != null) {
+      const { error } = await supabaseAdmin
+        .from("crm_customers")
+        .update({ latitude: lat, longitude: lng })
+        .eq("id", explicitId);
+      if (error) {
+        fail(`No se pudo actualizar la ubicación del cliente: ${error.message}`);
+      }
+    }
+    return explicitId;
+  }
+  return findOrCreateCustomerByPhone(name, phone, city, lat, lng);
+}
+
 async function findOrCreateCustomerByPhone(
   name: string | null,
   phone: string | null,
