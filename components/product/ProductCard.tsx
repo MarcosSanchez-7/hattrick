@@ -3,6 +3,7 @@ import { discountPercent, isOnSale, isSoldOut, type Product, type Tag } from "@/
 import { formatPrice } from "@/lib/format";
 import { readableTextColor } from "@/lib/color";
 import { ProductVisual } from "@/components/product/ProductVisual";
+import { ProductCardMedia } from "@/components/product/ProductCardMedia";
 import { WishlistHeartButton } from "@/components/wishlist/WishlistHeartButton";
 import { QuickAddButton } from "@/components/cart/QuickAddButton";
 
@@ -14,7 +15,14 @@ export function ProductCard({ product, tags = [] }: { product: Product; tags?: T
 
   return (
     <article className="card">
-      <div className="card__media">
+      <ProductCardMedia
+        hasSecondImage={hasSecondImage}
+        images={product.images}
+        colors={product.colors}
+        pattern={product.pattern}
+        uid={product.id}
+        alt={alt}
+      >
         <div className="card__badges">
           {product.isNew ? <span className="badge">Nuevo</span> : null}
           {sale ? (
@@ -54,18 +62,7 @@ export function ProductCard({ product, tags = [] }: { product: Product; tags?: T
           uid={product.id}
           alt={alt}
         />
-        {hasSecondImage ? (
-          <ProductVisual
-            images={product.images}
-            imageIndex={1}
-            colors={product.colors}
-            pattern={product.pattern}
-            uid={`${product.id}-hover`}
-            alt={alt}
-            className="card__media-hover"
-          />
-        ) : null}
-      </div>
+      </ProductCardMedia>
 
       <div className="card__body">
         <Link href={`/producto/${product.slug}`} className="card__name">
