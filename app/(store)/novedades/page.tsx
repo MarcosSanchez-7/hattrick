@@ -41,7 +41,7 @@ export default async function NovedadesPage() {
 
       <section className="section section--tight">
         <div className="container">
-          <ProductBrowser products={products} tags={tags} />
+          <ProductBrowser products={products} tags={tags} defaultSort="novedad" />
         </div>
       </section>
     </>

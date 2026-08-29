@@ -32,6 +32,10 @@ type TicketLine = {
   costPrice: string;
   /** Personalización, parches u otro detalle de este artículo puntual. */
   itemNote: string;
+  /** Origen del artículo — para saber de un vistazo, en una venta con
+   * varias líneas, cuáles son de nuestro stock y cuáles vienen de otro
+   * proveedor (dropshipping), ya que vendemos de ambos tipos. */
+  source: "propio" | "interno" | "dropshipping";
 };
 
 function matches(product: Product, query: string) {
@@ -51,12 +55,16 @@ function todayStr() {
  * edición, esa cantidad vieja se repone antes de descontar la nueva (ver
  * update_sale en schema.sql), así que ese es el máximo real disponible.
  */
+function lineSource(product: Product | undefined, variantId: string | null): TicketLine["source"] {
+  if (!variantId) return "dropshipping";
+  return product?.stockMode === "propio" ? "propio" : "interno";
+}
+
 function saleToLines(sale: Sale, products: Product[]): TicketLine[] {
   return sale.items.map((item) => {
+    const product = products.find((p) => p.id === item.productId);
     const variant = item.variantId
-      ? products
-          .find((p) => p.id === item.productId)
-          ?.variants?.find((v) => v.id === item.variantId)
+      ? product?.variants?.find((v) => v.id === item.variantId)
       : undefined;
     const maxStock = variant ? variant.stock + item.quantity : null;
     return {
@@ -70,6 +78,7 @@ function saleToLines(sale: Sale, products: Product[]): TicketLine[] {
       unitPrice: String(item.unitPrice),
       costPrice: String(item.costPrice),
       itemNote: item.note ?? "",
+      source: lineSource(product, item.variantId),
     };
   });
 }
@@ -226,6 +235,7 @@ export function SaleForm({
           unitPrice: String(product.price),
           costPrice: product.costPrice != null ? String(product.costPrice) : "0",
           itemNote: "",
+          source: lineSource(product, variant.id),
         },
       ];
     });
@@ -255,6 +265,7 @@ export function SaleForm({
           unitPrice: String(product.price),
           costPrice: product.costPrice != null ? String(product.costPrice) : "0",
           itemNote: "",
+          source: "dropshipping",
         },
       ];
     });
@@ -377,11 +388,16 @@ export function SaleForm({
         {results.length > 0 ? (
           <div className="admin-sale-results">
             {results.map((product) => {
-              // Con control interno activado, aunque el stock sea
-              // ajeno/importado, sí llevamos cantidad real — la venta debe
-              // descontarla como una variante normal, no como dropshipping.
-              const isDropshipping =
-                product.stockMode !== "propio" && !product.internalControl;
+              const hasOwnStock = product.stockMode === "propio";
+              // Ajeno/importado pero con cantidad cargada a mano: puede
+              // venderse de las dos formas, y el admin tiene que elegir
+              // cuál pasó en ESTA venta puntual — si no, cargar el talle
+              // siempre descontaría el stock interno aunque el pedido se
+              // haya resuelto por el proveedor.
+              const hasInternalTracking =
+                product.stockMode !== "propio" && product.internalControl;
+              const showVariants = hasOwnStock || hasInternalTracking;
+              const showDropshipping = !hasOwnStock;
               return (
                 <div key={product.id} className="admin-sale-result">
                   <div className="admin-table__product">
@@ -398,17 +414,24 @@ export function SaleForm({
                       <div style={{ fontWeight: 600 }}>{product.name}</div>
                       <div className="meta">
                         {formatPrice(product.price)}
-                        {isDropshipping ? " · Dropshipping, sin stock propio" : ""}
+                        {!hasOwnStock && !hasInternalTracking
+                          ? " · Dropshipping, sin stock propio"
+                          : ""}
+                        {hasInternalTracking
+                          ? " · Ajeno con control interno — elegí de dónde sale esta venta"
+                          : ""}
                       </div>
                     </div>
                   </div>
-                  <div className={isDropshipping ? undefined : "admin-checklist"}>
-                    {isDropshipping ? (
-                      <DropshippingSizeInput
-                        onAdd={(size) => addDropshippingLine(product, size)}
-                      />
-                    ) : (
-                      (product.variants ?? []).map((variant) => (
+
+                  {showVariants ? (
+                    <div className="admin-checklist">
+                      {hasInternalTracking ? (
+                        <p className="admin-help" style={{ width: "100%", marginBottom: 4 }}>
+                          De mi stock interno:
+                        </p>
+                      ) : null}
+                      {(product.variants ?? []).map((variant) => (
                         <button
                           key={variant.id}
                           type="button"
@@ -423,9 +446,22 @@ export function SaleForm({
                         >
                           {variant.size} ({variant.stock})
                         </button>
-                      ))
-                    )}
-                  </div>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {showDropshipping ? (
+                    <div style={{ marginTop: hasInternalTracking ? 8 : 0 }}>
+                      {hasInternalTracking ? (
+                        <p className="admin-help" style={{ marginBottom: 4 }}>
+                          O desde el proveedor (no toca mi stock interno):
+                        </p>
+                      ) : null}
+                      <DropshippingSizeInput
+                        onAdd={(size) => addDropshippingLine(product, size)}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               );
             })}
@@ -469,8 +505,12 @@ export function SaleForm({
                       <td>
                         <div style={{ fontWeight: 600 }}>{l.name}</div>
                         <div className="meta">
-                          Talla {l.size}
-                          {l.variantId === null ? " · Dropshipping" : ""}
+                          Talla {l.size} ·{" "}
+                          {l.source === "dropshipping"
+                            ? "Dropshipping"
+                            : l.source === "interno"
+                              ? "Control interno (otro proveedor)"
+                              : "Stock propio"}
                         </div>
                       </td>
                       <td>

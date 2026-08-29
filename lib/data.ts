@@ -81,6 +81,7 @@ type ProductRow = {
   internal_control: boolean;
   is_visible: boolean;
   is_customizable: boolean;
+  created_at: string;
 };
 
 type VariantRow = {
@@ -140,6 +141,7 @@ function rowToProduct(
     reviews: row.reviews,
     stockMode: row.stock_mode,
     internalControl: row.internal_control,
+    createdAt: row.created_at,
     variants: tracksVariants ? variants : undefined,
     // Derivadas de product_variants, PERO solo cuando stockMode === "propio"
     // — a propósito, no se usa tracksVariants acá: un producto con control

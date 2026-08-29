@@ -72,6 +72,8 @@ export type Product = {
    * únicamente de stockMode === "propio", nunca de este flag.
    */
   internalControl: boolean;
+  /** ISO datetime de alta del producto — para ordenar "novedades" del más reciente al más viejo. */
+  createdAt: string;
   colors: { primary: string; secondary: string; accent: string };
   pattern: Pattern;
   description: string;
@@ -385,7 +387,9 @@ export const onSaleProducts = (products: Product[]) =>
   products.filter(isOnSale);
 
 export const newArrivals = (products: Product[]) =>
-  products.filter((p) => p.isNew);
+  products
+    .filter((p) => p.isNew)
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 
 export const bestSellers = (products: Product[]) =>
   [...products].sort((a, b) => b.reviews - a.reviews).slice(0, 8);

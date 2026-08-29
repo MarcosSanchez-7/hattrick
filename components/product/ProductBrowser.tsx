@@ -17,11 +17,15 @@ const SORTS: [Sort, string][] = [
 export function ProductBrowser({
   products,
   tags = [],
+  defaultSort = "destacados",
 }: {
   products: Product[];
   tags?: Tag[];
+  /** Ej. "novedad" en /novedades: arranca ordenado por fecha de alta sin
+   * que el cliente tenga que tocar el selector. */
+  defaultSort?: Sort;
 }) {
-  const [sort, setSort] = useState<Sort>("destacados");
+  const [sort, setSort] = useState<Sort>(defaultSort);
 
   const visible = useMemo(() => {
     const sorted = [...products];
@@ -33,7 +37,10 @@ export function ProductBrowser({
         sorted.sort((a, b) => b.price - a.price);
         break;
       case "novedad":
-        sorted.sort((a, b) => Number(b.isNew ?? false) - Number(a.isNew ?? false));
+        // Más reciente primero (fecha de alta), no solo "es nuevo sí/no"
+        // — antes ordenaba por el booleano isNew, que entre productos que
+        // ya son todos isNew (ej. /novedades) no cambiaba nada el orden.
+        sorted.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
         break;
       default:
         sorted.sort((a, b) => b.reviews - a.reviews);
