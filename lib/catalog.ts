@@ -60,10 +60,18 @@ export type Product = {
   rating: number;
   reviews: number;
   stockMode: StockMode;
-  /** Sólo relevante cuando stockMode === "propio"; cantidad real por talla. */
+  /** Sólo relevante cuando stockMode === "propio" o internalControl; cantidad real por talla. */
   variants?: ProductVariant[];
   sizes: string[];
   soldOut?: string[];
+  /**
+   * Control interno de stock para productos ajeno/importado: permite cargar
+   * cantidad real por talla (visible solo en el panel admin) sin que el
+   * storefront deje de mostrar "Consultar talle" — el cliente nunca ve esta
+   * cantidad ni queda limitado por ella. `sizes`/`soldOut` siguen derivados
+   * únicamente de stockMode === "propio", nunca de este flag.
+   */
+  internalControl: boolean;
   colors: { primary: string; secondary: string; accent: string };
   pattern: Pattern;
   description: string;

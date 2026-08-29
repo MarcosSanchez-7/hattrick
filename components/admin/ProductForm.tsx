@@ -57,6 +57,9 @@ type FormState = {
   rating: string;
   reviews: string;
   stockMode: StockMode;
+  /** Carga cantidad real por talla aunque stockMode no sea "propio" — solo
+   * para uso interno, la ficha pública sigue mostrando "Consultar talle". */
+  internalControl: boolean;
   /** Talla -> cantidad (como texto, para no pelear con inputs controlados). */
   variantQuantities: Record<string, string>;
   colorPrimary: string;
@@ -94,6 +97,7 @@ function toFormState(product?: Product): FormState {
     rating: product ? String(product.rating) : "5",
     reviews: product ? String(product.reviews) : "0",
     stockMode: product?.stockMode ?? "propio",
+    internalControl: product?.internalControl ?? false,
     variantQuantities,
     colorPrimary: product?.colors.primary ?? "#111111",
     colorSecondary: product?.colors.secondary ?? "#f2f2f2",
@@ -198,6 +202,9 @@ export function ProductForm({
   };
 
   const isPropio = form.stockMode === "propio";
+  // Con Control interno activado se carga/edita cantidad por talla aunque
+  // el stock sea ajeno/importado — pero solo para uso interno.
+  const showVariantEditor = isPropio || form.internalControl;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,7 +248,8 @@ export function ProductForm({
       rating: Number(form.rating) || 5,
       reviews: Number(form.reviews) || 0,
       stockMode: form.stockMode,
-      variantQuantities: isPropio
+      internalControl: form.internalControl,
+      variantQuantities: showVariantEditor
         ? Object.fromEntries(
             Object.entries(form.variantQuantities).map(([size, qty]) => [
               size,
@@ -450,8 +458,34 @@ export function ProductForm({
           {STOCK_MODES.find((m) => m.value === form.stockMode)?.help}
         </p>
 
-        {isPropio ? (
-          <div className="admin-variant-list">
+        <div className="admin-field admin-field--checkbox">
+          <input
+            id="internalControl"
+            type="checkbox"
+            checked={form.internalControl}
+            onChange={(e) => update("internalControl", e.target.checked)}
+          />
+          <label htmlFor="internalControl" style={{ marginBottom: 0 }}>
+            Control interno de stock
+          </label>
+        </div>
+        <p className="admin-help">
+          Cargá cuántas unidades tenés de cada talla para tu propio control,
+          sin importar el tipo de stock elegido arriba. La ficha pública NO
+          muestra esta cantidad — el cliente sigue viendo &quot;Consultar
+          talle&quot; igual que siempre.
+        </p>
+
+        {showVariantEditor ? (
+          <>
+            {!isPropio ? (
+              <p className="admin-notice-ok">
+                Esta cantidad es solo para tu control interno — la ficha
+                pública sigue mostrando &quot;Consultar talle&quot;, el cliente no
+                la ve ni queda limitado por ella.
+              </p>
+            ) : null}
+            <div className="admin-variant-list">
             {SIZES_ADULT.map((size) => {
               const included = size in form.variantQuantities;
               return (
@@ -482,7 +516,8 @@ export function ProductForm({
                 </div>
               );
             })}
-          </div>
+            </div>
+          </>
         ) : (
           <p className="admin-notice-ok">
             Este producto mostrará &quot;Consultar talle&quot; en la tienda en vez

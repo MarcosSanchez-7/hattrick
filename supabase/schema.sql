@@ -1390,3 +1390,10 @@ begin
   return p_id;
 end;
 $$;
+
+-- ── Control interno de stock (independiente del modo de stock) ─────────────
+-- Permite cargar cantidad real por talla (product_variants) incluso en
+-- productos "ajeno"/"importado", solo para uso interno — el storefront
+-- sigue mostrando "Consultar talle" sin importar este valor.
+alter table products
+  add column if not exists internal_control boolean not null default false;

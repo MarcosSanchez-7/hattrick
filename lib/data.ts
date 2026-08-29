@@ -78,6 +78,7 @@ type ProductRow = {
   tags: string[] | null;
   images: string[] | null;
   stock_mode: StockMode;
+  internal_control: boolean;
   is_visible: boolean;
   is_customizable: boolean;
 };
@@ -112,6 +113,9 @@ function rowToProduct(
   patches: Patch[] = [],
 ): Product {
   const isPropio = row.stock_mode === "propio";
+  // Con control interno activado se cargan variantes aunque no sea "propio"
+  // — pero solo para uso del panel admin, nunca para lo que ve el cliente.
+  const tracksVariants = isPropio || row.internal_control;
   const orderedVariantRows = [...variantRows].sort(
     (a, b) => sizeRank(a.size) - sizeRank(b.size),
   );
@@ -135,9 +139,12 @@ function rowToProduct(
     rating: Number(row.rating),
     reviews: row.reviews,
     stockMode: row.stock_mode,
-    variants: isPropio ? variants : undefined,
-    // Derivadas de product_variants: la cantidad real es la única fuente de
-    // verdad para saber qué tallas hay y cuáles están agotadas.
+    internalControl: row.internal_control,
+    variants: tracksVariants ? variants : undefined,
+    // Derivadas de product_variants, PERO solo cuando stockMode === "propio"
+    // — a propósito, no se usa tracksVariants acá: un producto con control
+    // interno sigue mostrándole "Consultar talle" al cliente sin importar
+    // cuánta cantidad real haya cargada.
     sizes: isPropio ? variants.map((v) => v.size) : [],
     soldOut: isPropio ? variants.filter((v) => v.stock <= 0).map((v) => v.size) : [],
     colors: {
@@ -251,7 +258,9 @@ async function fetchProductWithVariants(id: string): Promise<Product> {
 
   const row = data as ProductRow;
   const [variantMap, patchMap] = await Promise.all([
-    fetchVariantsByProduct(row.stock_mode === "propio" ? [row.id] : []),
+    fetchVariantsByProduct(
+      row.stock_mode === "propio" || row.internal_control ? [row.id] : [],
+    ),
     fetchPatchesByProduct([row.id]),
   ]);
   return rowToProduct(row, variantMap.get(row.id) ?? [], patchMap.get(row.id) ?? []);
@@ -292,10 +301,12 @@ export async function getAllProducts(
     rows = rows.filter((r) => !hiddenSlugs.has(r.category));
   }
 
-  const propioIds = rows.filter((r) => r.stock_mode === "propio").map((r) => r.id);
+  const tracksVariantsIds = rows
+    .filter((r) => r.stock_mode === "propio" || r.internal_control)
+    .map((r) => r.id);
   const allIds = rows.map((r) => r.id);
   const [variantMap, patchMap] = await Promise.all([
-    fetchVariantsByProduct(propioIds),
+    fetchVariantsByProduct(tracksVariantsIds),
     fetchPatchesByProduct(allIds),
   ]);
 
@@ -593,6 +604,7 @@ function productToRow(input: ProductInput) {
     tags: input.tags ?? [],
     images: input.images ?? [],
     stock_mode: input.stockMode,
+    internal_control: Boolean(input.internalControl),
     is_customizable: Boolean(input.isCustomizable),
   };
 }
@@ -642,7 +654,7 @@ export async function createProduct(input: ProductInput): Promise<Product> {
     fail(`No se pudo crear el producto: ${error.message}`);
   }
 
-  if (input.stockMode === "propio") {
+  if (input.stockMode === "propio" || input.internalControl) {
     await syncProductVariants(id, input.variantQuantities ?? {});
   }
   await syncProductPatches(id, input.patchIds ?? []);
@@ -681,11 +693,14 @@ export async function updateProduct(
     fail(`No se pudo actualizar el producto: ${error.message}`);
   }
 
-  // Siempre se llama (incluso fuera de "propio") para dejar en 0 cualquier
-  // talla que hubiera quedado de un cambio de tipo de stock anterior.
+  // Siempre se llama (incluso sin tracking) para dejar en 0 cualquier talla
+  // que hubiera quedado de un cambio de tipo de stock o de control interno
+  // anterior.
   await syncProductVariants(
     id,
-    input.stockMode === "propio" ? input.variantQuantities ?? {} : {},
+    input.stockMode === "propio" || input.internalControl
+      ? input.variantQuantities ?? {}
+      : {},
   );
   await syncProductPatches(id, input.patchIds ?? []);
 
@@ -2465,8 +2480,9 @@ export type InventoryValuation = {
   totalUnits: number;
 };
 
-/** Cuánto vale el stock propio disponible ahora — a costo (lo que salió
- * comprarlo) y a precio de venta (lo que facturaría si se vende todo). */
+/** Cuánto vale el stock disponible ahora (propio + control interno de
+ * productos ajeno/importado) — a costo (lo que salió comprarlo) y a precio
+ * de venta (lo que facturaría si se vende todo). */
 export async function getInventoryValuation(): Promise<InventoryValuation> {
   const products = await getAllProducts({ includeHidden: true });
 
@@ -2475,7 +2491,7 @@ export async function getInventoryValuation(): Promise<InventoryValuation> {
   let totalUnits = 0;
 
   for (const p of products) {
-    if (p.stockMode !== "propio" || !p.variants) continue;
+    if ((p.stockMode !== "propio" && !p.internalControl) || !p.variants) continue;
     const stock = p.variants.reduce((acc, v) => acc + v.stock, 0);
     totalUnits += stock;
     retailValue += p.price * stock;
