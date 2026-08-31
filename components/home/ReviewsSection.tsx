@@ -1,4 +1,5 @@
 import type { ReviewsSettings } from "@/lib/settings";
+import { imageVariant } from "@/lib/image";
 
 export function ReviewsSection({ settings }: { settings: ReviewsSettings }) {
   if (settings.items.length === 0) return null;
@@ -17,7 +18,11 @@ export function ReviewsSection({ settings }: { settings: ReviewsSettings }) {
             <div key={item.id} className="photo-grid__item">
               <div className="photo-grid__media">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={item.image} alt={item.caption || "Reseña de cliente HATTRICK"} />
+                <img
+                  src={imageVariant(item.image, "card")}
+                  alt={item.caption || "Reseña de cliente HATTRICK"}
+                  loading="lazy"
+                />
               </div>
               {item.caption ? <p className="meta">{item.caption}</p> : null}
             </div>

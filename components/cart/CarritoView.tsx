@@ -138,6 +138,7 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
                       pattern={line.product.pattern}
                       uid={`cart-${line.product.id}-${line.size}`}
                       alt={line.product.name}
+                      size="thumb"
                     />
                   </div>
                   <div>

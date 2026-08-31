@@ -141,6 +141,7 @@ function DrawerLine({ line }: { line: CartLine }) {
           pattern={product.pattern}
           uid={`d-${product.id}-${line.size}`}
           alt={product.name}
+          size="thumb"
         />
       </div>
       <div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { isPatchAvailable, type Patch } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
+import { imageVariant } from "@/lib/image";
 import { IconTrash } from "@/components/ui/Icons";
 
 export function PatchesTable({ patches }: { patches: Patch[] }) {
@@ -63,9 +64,10 @@ export function PatchesTable({ patches }: { patches: Patch[] }) {
                         {p.images[0] ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={p.images[0]}
+                            src={imageVariant(p.images[0], "thumb")}
                             alt={p.name}
                             style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                            loading="lazy"
                           />
                         ) : null}
                         {p.images.length > 1 ? (

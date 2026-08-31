@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { CustomBannerSettings } from "@/lib/settings";
+import { imageVariant } from "@/lib/image";
 import { JerseyArt } from "@/components/product/JerseyArt";
 import { IconCheck, IconChevron } from "@/components/ui/Icons";
 
@@ -55,9 +56,10 @@ export function CustomBanner({ settings }: { settings: CustomBannerSettings }) {
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={images[index]}
+                  src={imageVariant(images[index], "full")}
                   alt={`Ejemplo de personalización ${index + 1}`}
                   className="custom__visual-img"
+                  loading="lazy"
                 />
                 {count > 1 ? (
                   <>

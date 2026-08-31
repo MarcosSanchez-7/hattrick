@@ -13,6 +13,7 @@ import {
 } from "@/lib/catalog";
 import { slugify } from "@/lib/slug";
 import { formatPrice } from "@/lib/format";
+import { imageVariant } from "@/lib/image";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 import { CategoryPathPicker } from "@/components/admin/CategoryPathPicker";
 import { TagPicker } from "@/components/admin/TagPicker";
@@ -581,9 +582,10 @@ export function ProductForm({
                           {p.images[0] ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
-                              src={p.images[0]}
+                              src={imageVariant(p.images[0], "thumb")}
                               alt=""
                               style={{ width: 20, height: 20, objectFit: "contain", marginRight: 4 }}
+                              loading="lazy"
                             />
                           ) : null}
                           {p.name} · {formatPrice(p.price)}

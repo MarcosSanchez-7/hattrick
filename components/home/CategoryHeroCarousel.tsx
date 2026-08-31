@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Pattern } from "@/lib/catalog";
+import { imageVariant } from "@/lib/image";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import { IconArrow, IconChevron } from "@/components/ui/Icons";
 
@@ -49,7 +50,7 @@ export function CategoryHeroCarousel({ slides }: { slides: HeroCategorySlide[] }
         <div className="cats__art">
           {slide.image ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={slide.image} alt={slide.name} />
+            <img src={imageVariant(slide.image, "full")} alt={slide.name} loading="lazy" />
           ) : slide.cover ? (
             <ProductVisual
               images={slide.cover.images}
@@ -57,6 +58,7 @@ export function CategoryHeroCarousel({ slides }: { slides: HeroCategorySlide[] }
               pattern={slide.cover.pattern}
               uid={`cat-hero-${slide.slug}`}
               alt={slide.name}
+              size="full"
             />
           ) : null}
         </div>

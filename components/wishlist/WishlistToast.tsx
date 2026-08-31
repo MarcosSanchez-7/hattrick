@@ -63,6 +63,7 @@ export function WishlistToast() {
             pattern={product.pattern}
             uid={`wtoast-${product.id}`}
             alt={product.name}
+            size="thumb"
           />
         </div>
         <div style={{ minWidth: 0 }}>

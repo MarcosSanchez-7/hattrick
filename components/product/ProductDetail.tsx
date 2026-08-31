@@ -13,6 +13,7 @@ import {
   type ProductNotice,
 } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
+import { imageVariant } from "@/lib/image";
 import type { ProductInfoSettings } from "@/lib/settings";
 import { useCart } from "@/components/cart/CartProvider";
 import { useWishlist } from "@/components/wishlist/WishlistProvider";
@@ -123,6 +124,7 @@ export function ProductDetail({
             number={!hasPhotos && view === 1 ? "10" : undefined}
             alt={alt}
             priority
+            size="full"
           />
           {thumbCount > 1 ? (
             <>
@@ -164,6 +166,7 @@ export function ProductDetail({
                   uid={`thumb-${product.id}-${i}`}
                   number={!hasPhotos && i === 1 ? "10" : undefined}
                   alt={alt}
+                  size="thumb"
                 />
               </button>
             ))}
@@ -276,7 +279,11 @@ export function ProductDetail({
                           aria-label={`Ver el parche ${patch.name}`}
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={patch.images[0]} alt="" />
+                          <img
+                            src={imageVariant(patch.images[0], "thumb")}
+                            alt=""
+                            loading="lazy"
+                          />
                         </button>
                       ) : null}
                       <button
@@ -369,7 +376,10 @@ export function ProductDetail({
           </button>
           <div className="patch-preview__media">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={previewPatch.images[previewIndex]} alt={previewPatch.name} />
+            <img
+              src={imageVariant(previewPatch.images[previewIndex], "full")}
+              alt={previewPatch.name}
+            />
             {previewPatch.images.length > 1 ? (
               <>
                 <button

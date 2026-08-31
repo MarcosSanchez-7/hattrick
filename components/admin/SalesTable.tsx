@@ -11,6 +11,7 @@ import {
   type Sale,
 } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
+import { imageVariant } from "@/lib/image";
 import { IconTrash } from "@/components/ui/Icons";
 
 const channelLabel = (value: string) =>
@@ -109,7 +110,7 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                       {item.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={item.imageUrl}
+                          src={imageVariant(item.imageUrl, "thumb")}
                           alt={item.name}
                           loading="lazy"
                           style={{

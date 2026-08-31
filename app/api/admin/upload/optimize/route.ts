@@ -3,15 +3,17 @@ import { del, put } from "@vercel/blob";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
 import convertHeic from "heic-convert";
+import { OWN_BLOB_HOST } from "@/lib/image";
 
 const MAX_BYTES = 25 * 1024 * 1024;
 const CONVERTIBLE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const HEIC_MIME_TYPES = new Set(["image/heic", "image/heif"]);
 
-// Solo procesamos blobs que ya viven en nuestro propio store (los que
-// acaban de subirse vía /api/admin/upload) — nunca una URL arbitraria que
-// nos manden, para no convertir esto en un proxy de descargas.
-const OWN_BLOB_HOST = /^https:\/\/[a-z0-9]+\.public\.blob\.vercel-storage\.com\//i;
+// Variantes chicas generadas al lado del archivo "full" de siempre (mismo
+// nombre + sufijo, ver lib/image.ts) — así las grillas/miniaturas/thumbnails
+// de admin no piden el mismo archivo de hasta 2000px que la imagen grande.
+const CARD_MAX = 640;
+const THUMB_MAX = 160;
 
 function isHeic(contentType: string, pathname: string) {
   return HEIC_MIME_TYPES.has(contentType) || /\.hei[cf]$/i.test(pathname);
@@ -85,10 +87,16 @@ export async function POST(request: NextRequest) {
     let payload: Buffer<ArrayBufferLike>;
     let outputExt: string;
     let outputContentType: string;
+    // Solo se llenan cuando aplica (no para GIF fuera de rango, ver abajo) —
+    // variantes chicas para grillas/miniaturas, derivadas del mismo buffer
+    // ya rotado/decodificado, sin volver a descargar nada.
+    let cardPayload: Buffer<ArrayBufferLike> | null = null;
+    let thumbPayload: Buffer<ArrayBufferLike> | null = null;
 
     if (heic || CONVERTIBLE_TYPES.has(contentType)) {
-      payload = await sharp(working)
-        .rotate()
+      const rotated = sharp(working).rotate();
+      payload = await rotated
+        .clone()
         .resize({
           width: 2000,
           height: 2000,
@@ -96,6 +104,16 @@ export async function POST(request: NextRequest) {
           withoutEnlargement: true,
         })
         .webp({ quality: 82, effort: 4 })
+        .toBuffer();
+      cardPayload = await rotated
+        .clone()
+        .resize({ width: CARD_MAX, height: CARD_MAX, fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 80, effort: 4 })
+        .toBuffer();
+      thumbPayload = await rotated
+        .clone()
+        .resize({ width: THUMB_MAX, height: THUMB_MAX, fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 75, effort: 4 })
         .toBuffer();
       outputExt = ".webp";
       outputContentType = "image/webp";
@@ -114,6 +132,16 @@ export async function POST(request: NextRequest) {
       payload = working;
       outputExt = ".gif";
       outputContentType = contentType;
+      // Las variantes chicas sí pueden perder la animación (se usa el
+      // primer frame nomás) — nadie necesita una miniatura de 160px animada.
+      cardPayload = await sharp(working)
+        .resize({ width: CARD_MAX, height: CARD_MAX, fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 80, effort: 4 })
+        .toBuffer();
+      thumbPayload = await sharp(working)
+        .resize({ width: THUMB_MAX, height: THUMB_MAX, fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 75, effort: 4 })
+        .toBuffer();
     } else {
       await del(rawUrl);
       return NextResponse.json(
@@ -123,13 +151,42 @@ export async function POST(request: NextRequest) {
     }
 
     const folderPath = folder ? `products/${folder}` : "products";
-    const finalBlob = await put(`${folderPath}/${randomUUID()}${outputExt}`, payload, {
-      access: "public",
-      contentType: outputContentType,
-      addRandomSuffix: false,
-    });
+    // Mismo id para las 3 variantes — imageVariant() (lib/image.ts) arma la
+    // URL de "-card"/"-thumb" insertando el sufijo antes de la extensión,
+    // así que el nombre base tiene que coincidir exacto entre las tres.
+    const id = randomUUID();
+    const uploads: Promise<{ url: string }>[] = [
+      put(`${folderPath}/${id}${outputExt}`, payload, {
+        access: "public",
+        contentType: outputContentType,
+        addRandomSuffix: false,
+      }),
+    ];
+    if (cardPayload) {
+      uploads.push(
+        put(`${folderPath}/${id}-card.webp`, cardPayload, {
+          access: "public",
+          contentType: "image/webp",
+          addRandomSuffix: false,
+        }),
+      );
+    }
+    if (thumbPayload) {
+      uploads.push(
+        put(`${folderPath}/${id}-thumb.webp`, thumbPayload, {
+          access: "public",
+          contentType: "image/webp",
+          addRandomSuffix: false,
+        }),
+      );
+    }
+    const [finalBlob] = await Promise.all(uploads);
 
-    await del(rawUrl);
+    // Fallo al limpiar el raw no debe tirar abajo una subida que ya
+    // terminó bien (el blob final ya está arriba) — antes esto caía al
+    // catch general, devolvía 500, y el blob final quedaba huérfano sin
+    // que el cliente nunca recibiera su URL.
+    await del(rawUrl).catch(() => {});
 
     return NextResponse.json(
       {

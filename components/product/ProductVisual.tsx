@@ -1,4 +1,5 @@
 import type { Pattern } from "@/lib/catalog";
+import { imageVariant, type ImageSize } from "@/lib/image";
 import { JerseyArt } from "@/components/product/JerseyArt";
 
 type Props = {
@@ -12,6 +13,10 @@ type Props = {
   className?: string;
   /** true = probable LCP (hero, imagen principal de producto): carga eager y con prioridad. Default: lazy. */
   priority?: boolean;
+  /** Qué variante de tamaño pedir (ver lib/image.ts) — "card" para grillas
+   * (default), "thumb" para miniaturas/admin, "full" para la imagen grande
+   * real de la ficha de producto. */
+  size?: ImageSize;
 };
 
 /** Foto subida desde el panel si existe; si no, ilustración SVG generada. */
@@ -25,13 +30,14 @@ export function ProductVisual({
   alt,
   className,
   priority = false,
+  size = "card",
 }: Props) {
   const src = images?.[imageIndex];
   if (src) {
     // eslint-disable-next-line @next/next/no-img-element
     return (
       <img
-        src={src}
+        src={imageVariant(src, size)}
         alt={alt}
         className={className}
         loading={priority ? "eager" : "lazy"}

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
+import { imageVariant } from "@/lib/image";
 import { IconArrow, IconClose, IconPlus, IconUpload } from "@/components/ui/Icons";
 
 type Props = {
@@ -21,7 +22,11 @@ type Props = {
  * (convertir HEIC, redimensionar, comprimir) a partir de esa URL.
  */
 async function uploadFile(file: File, folder?: string): Promise<string> {
-  const rawBlob = await upload(file.name, file, {
+  // Prefijo "raw/" a propósito: si esto queda huérfano (el usuario cierra
+  // la pestaña, o falla la red, entre este PUT y la llamada a /optimize de
+  // abajo), queda identificable y barrible por prefijo desde el dashboard
+  // de Blob en vez de mezclado con el resto de los archivos.
+  const rawBlob = await upload(`raw/${file.name}`, file, {
     access: "public",
     handleUploadUrl: "/api/admin/upload",
   });
@@ -197,11 +202,12 @@ export function ImageUploader({ images, onChange, max = 6, label, folder }: Prop
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={src}
+                  src={imageVariant(src, "thumb")}
                   alt={`Imagen ${idx + 1}`}
                   onClick={() => moveToFront(idx)}
                   title={idx === 0 ? "Portada" : "Clic para hacer portada"}
                   style={{ cursor: max > 1 ? "pointer" : "default" }}
+                  loading="lazy"
                 />
                 {idx === 0 ? <span className="admin-upload__cover">Portada</span> : null}
                 <button

@@ -408,6 +408,7 @@ export function SaleForm({
                         pattern={product.pattern}
                         uid={`sale-${product.id}`}
                         alt={product.name}
+                        size="thumb"
                       />
                     </div>
                     <div>

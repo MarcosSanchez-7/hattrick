@@ -362,6 +362,7 @@ function ProductRowsTable({
                           pattern={p.pattern}
                           uid={`inv-${p.id}`}
                           alt={p.name}
+                          size="thumb"
                         />
                       </div>
                       <div style={{ fontWeight: 600 }}>{p.name}</div>

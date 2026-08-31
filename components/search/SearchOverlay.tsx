@@ -186,6 +186,7 @@ export function SearchOverlay({
                           pattern={p.pattern}
                           uid={`s-${p.id}`}
                           alt={p.name}
+                          size="thumb"
                         />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>

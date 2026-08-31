@@ -9,6 +9,7 @@ import {
   orderCategoriesTree,
   type Category,
 } from "@/lib/catalog";
+import { imageVariant } from "@/lib/image";
 import {
   IconExternal,
   IconEye,
@@ -109,7 +110,11 @@ export function CategoriesTable({
                         <div className="admin-table__thumb">
                           {c.image ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={c.image} alt={c.name} />
+                            <img
+                              src={imageVariant(c.image, "thumb")}
+                              alt={c.name}
+                              loading="lazy"
+                            />
                           ) : (
                             <span className="meta" style={{ fontSize: "0.625rem" }}>
                               Sin foto

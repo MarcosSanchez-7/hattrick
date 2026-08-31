@@ -6,6 +6,7 @@ import {
   type Category,
   type Product,
 } from "@/lib/catalog";
+import { imageVariant } from "@/lib/image";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import { CategoryHeroCarousel, type HeroCategorySlide } from "@/components/home/CategoryHeroCarousel";
 import { IconArrow } from "@/components/ui/Icons";
@@ -126,7 +127,11 @@ export function CategoryGrid({
                 <div className="cats__art">
                   {cat.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={cat.image} alt={cat.name} />
+                    <img
+                      src={imageVariant(cat.image, "card")}
+                      alt={cat.name}
+                      loading="lazy"
+                    />
                   ) : cover ? (
                     <ProductVisual
                       images={cover.images}

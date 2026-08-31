@@ -1,5 +1,6 @@
 import { saleProfit, saleTotal, SALE_CHANNELS, type Sale } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
+import { imageVariant } from "@/lib/image";
 
 const channelLabel = (value: string) =>
   SALE_CHANNELS.find((c) => c.value === value)?.label ?? value;
@@ -47,7 +48,7 @@ export function CustomerPurchaseHistory({ sales }: { sales: Sale[] }) {
                     {item.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={item.imageUrl}
+                        src={imageVariant(item.imageUrl, "thumb")}
                         alt={item.name}
                         loading="lazy"
                         style={{

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getSetting } from "@/lib/data";
 import { DEFAULT_CUSTOM_BANNER, DEFAULT_PERSONALIZATION_GALLERY } from "@/lib/settings";
+import { imageVariant } from "@/lib/image";
 import { CustomBanner } from "@/components/home/CustomBanner";
 
 export const dynamic = "force-dynamic";
@@ -48,7 +49,11 @@ export default async function PersonalizacionPage() {
                 <div key={post.id} className="photo-grid__item">
                   <div className="photo-grid__media">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={post.image} alt={post.caption || "Personalización HATTRICK"} />
+                    <img
+                      src={imageVariant(post.image, "card")}
+                      alt={post.caption || "Personalización HATTRICK"}
+                      loading="lazy"
+                    />
                   </div>
                   {post.caption ? <p className="meta">{post.caption}</p> : null}
                 </div>
