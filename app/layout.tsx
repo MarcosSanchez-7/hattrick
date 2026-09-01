@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Analytics } from "@vercel/analytics/next";
+import { AnalyticsWithOptOut } from "@/components/analytics/AnalyticsWithOptOut";
 import "./globals.css";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
@@ -52,7 +52,7 @@ export default function RootLayout({
     <html lang="es">
       <body>
         {children}
-        <Analytics />
+        <AnalyticsWithOptOut />
       </body>
     </html>
   );
