@@ -36,6 +36,11 @@ type TicketLine = {
    * varias líneas, cuáles son de nuestro stock y cuáles vienen de otro
    * proveedor (dropshipping), ya que vendemos de ambos tipos. */
   source: "propio" | "interno" | "dropshipping";
+  /** Proveedor puntual del que salió esta unidad (lista de precios del
+   * producto, no dropshipping) — opcional, solo si el producto tiene
+   * proveedores configurados. Elegirlo autocompleta costPrice. */
+  supplierId: string | null;
+  supplierName: string | null;
 };
 
 function matches(product: Product, query: string) {
@@ -79,6 +84,8 @@ function saleToLines(sale: Sale, products: Product[]): TicketLine[] {
       costPrice: String(item.costPrice),
       itemNote: item.note ?? "",
       source: lineSource(product, item.variantId),
+      supplierId: item.supplierId,
+      supplierName: item.supplierName,
     };
   });
 }
@@ -236,6 +243,8 @@ export function SaleForm({
           costPrice: product.costPrice != null ? String(product.costPrice) : "0",
           itemNote: "",
           source: lineSource(product, variant.id),
+          supplierId: null,
+          supplierName: null,
         },
       ];
     });
@@ -266,6 +275,8 @@ export function SaleForm({
           costPrice: product.costPrice != null ? String(product.costPrice) : "0",
           itemNote: "",
           source: "dropshipping",
+          supplierId: null,
+          supplierName: null,
         },
       ];
     });
@@ -282,6 +293,28 @@ export function SaleForm({
 
   const removeLine = (key: string) => {
     setLines((prev) => prev.filter((l) => l.key !== key));
+  };
+
+  /** Elegir un proveedor autocompleta costPrice con su precio de compra —
+   * sigue siendo editable a mano después, como cualquier costPrice. */
+  const setLineSupplier = (key: string, supplierId: string) => {
+    setLines((prev) =>
+      prev.map((l) => {
+        if (l.key !== key) return l;
+        if (!supplierId) {
+          return { ...l, supplierId: null, supplierName: null };
+        }
+        const product = products.find((p) => p.id === l.productId);
+        const supplier = product?.suppliers?.find((s) => s.supplierId === supplierId);
+        if (!supplier) return l;
+        return {
+          ...l,
+          supplierId: supplier.supplierId,
+          supplierName: supplier.supplierName,
+          costPrice: String(supplier.unitCost),
+        };
+      }),
+    );
   };
 
   const total = lines.reduce(
@@ -337,6 +370,8 @@ export function SaleForm({
               unitPrice: Number(l.unitPrice) || 0,
               costPrice: Number(l.costPrice) || 0,
               itemNote: l.itemNote.trim() || null,
+              supplierId: l.supplierId,
+              supplierName: l.supplierName,
             })),
           }),
         },
@@ -489,6 +524,7 @@ export function SaleForm({
                 <tr>
                   <th>Artículo</th>
                   <th>Detalle</th>
+                  <th>Proveedor</th>
                   <th>Cant.</th>
                   <th>Precio venta</th>
                   <th>Precio costo</th>
@@ -523,6 +559,30 @@ export function SaleForm({
                           placeholder="Personalizado, parches…"
                           onChange={(e) => updateLine(l.key, "itemNote", e.target.value)}
                         />
+                      </td>
+                      <td>
+                        {(() => {
+                          const lineProduct = products.find((p) => p.id === l.productId);
+                          const options = lineProduct?.suppliers ?? [];
+                          if (options.length === 0) {
+                            return <span className="meta">—</span>;
+                          }
+                          return (
+                            <select
+                              className="admin-variant-qty"
+                              value={l.supplierId ?? ""}
+                              onChange={(e) => setLineSupplier(l.key, e.target.value)}
+                              aria-label="Proveedor"
+                            >
+                              <option value="">Sin elegir</option>
+                              {options.map((s) => (
+                                <option key={s.supplierId} value={s.supplierId}>
+                                  {s.supplierName} ({formatPrice(s.unitCost)})
+                                </option>
+                              ))}
+                            </select>
+                          );
+                        })()}
                       </td>
                       <td>
                         <input

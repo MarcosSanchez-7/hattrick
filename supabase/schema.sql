@@ -1397,3 +1397,181 @@ $$;
 -- sigue mostrando "Consultar talle" sin importar este valor.
 alter table products
   add column if not exists internal_control boolean not null default false;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Proveedores: lista de precios por producto (un producto puede comprarse a
+-- varios proveedores, cada uno a un costo distinto) + trazabilidad de cuál
+-- proveedor abasteció cada línea de venta. No es un sistema de lotes con
+-- cantidad restante por proveedor a propósito — product_variants/
+-- inventory_movements siguen siendo la única fuente de verdad del stock,
+-- esto es puramente precio de compra + etiqueta.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists suppliers (
+  id text primary key,
+  name text not null unique,
+  notes text,
+  created_at timestamptz not null default now()
+);
+alter table suppliers enable row level security;
+
+create table if not exists product_suppliers (
+  product_id text not null references products(id) on delete cascade,
+  supplier_id text not null references suppliers(id) on delete cascade,
+  unit_cost numeric(10,2) not null check (unit_cost >= 0),
+  primary key (product_id, supplier_id)
+);
+alter table product_suppliers enable row level security;
+
+-- Snapshot histórico (mismo patrón que product_id_snapshot/product_name_snapshot):
+-- si el proveedor se borra después, el nombre de la venta ya hecha no se pierde.
+alter table sale_items add column if not exists supplier_id_snapshot text references suppliers(id) on delete set null;
+alter table sale_items add column if not exists supplier_name_snapshot text;
+
+-- record_sale/update_sale redefinidas para grabar supplier_id_snapshot/
+-- supplier_name_snapshot junto al resto de sale_items (única diferencia vs
+-- las versiones anteriores, más arriba en este archivo).
+create or replace function record_sale(
+  p_id text,
+  p_channel text,
+  p_staff_name text,
+  p_customer_note text,
+  p_items jsonb,
+  p_sold_at timestamptz default null,
+  p_customer_name text default null,
+  p_customer_phone text default null,
+  p_destination_city text default null,
+  p_shipping_method text default null,
+  p_customer_id text default null,
+  p_shipping_method_detail text default null,
+  p_destination_neighborhood text default null
+)
+returns text
+language plpgsql
+as $$
+declare
+  v_item jsonb;
+begin
+  insert into sales (
+    id, channel, staff_name, customer_note, sold_at,
+    customer_name, customer_phone, destination_city, shipping_method,
+    customer_id, shipping_method_detail, destination_neighborhood
+  )
+  values (
+    p_id, p_channel, p_staff_name, p_customer_note, coalesce(p_sold_at, now()),
+    p_customer_name, p_customer_phone, p_destination_city, p_shipping_method,
+    p_customer_id, p_shipping_method_detail, p_destination_neighborhood
+  );
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    insert into sale_items (
+      sale_id, variant_id, quantity, unit_price, cost_price,
+      product_name_snapshot, size_snapshot, product_id_snapshot, item_note,
+      supplier_id_snapshot, supplier_name_snapshot
+    )
+    values (
+      p_id,
+      nullif(v_item->>'variant_id', ''),
+      (v_item->>'quantity')::integer,
+      (v_item->>'unit_price')::numeric,
+      coalesce((v_item->>'cost_price')::numeric, 0),
+      v_item->>'product_name_snapshot',
+      v_item->>'size_snapshot',
+      nullif(v_item->>'product_id_snapshot', ''),
+      v_item->>'item_note',
+      nullif(v_item->>'supplier_id_snapshot', ''),
+      v_item->>'supplier_name_snapshot'
+    );
+  end loop;
+
+  return p_id;
+end;
+$$;
+
+create or replace function update_sale(
+  p_id text,
+  p_channel text,
+  p_staff_name text,
+  p_customer_note text,
+  p_items jsonb,
+  p_sold_at timestamptz default null,
+  p_customer_name text default null,
+  p_customer_phone text default null,
+  p_destination_city text default null,
+  p_shipping_method text default null,
+  p_customer_id text default null,
+  p_shipping_method_detail text default null,
+  p_destination_neighborhood text default null
+)
+returns text
+language plpgsql
+as $$
+declare
+  v_item jsonb;
+  v_old_item record;
+begin
+  for v_old_item in
+    select variant_id, quantity from sale_items
+    where sale_id = p_id and variant_id is not null
+  loop
+    insert into inventory_movements (variant_id, movement_type, quantity_delta, note)
+    values (
+      v_old_item.variant_id,
+      'return',
+      v_old_item.quantity,
+      'Reposición de stock por edición de venta'
+    );
+  end loop;
+
+  delete from sale_items where sale_id = p_id;
+
+  update sales set
+    channel = p_channel,
+    staff_name = p_staff_name,
+    customer_note = p_customer_note,
+    sold_at = coalesce(p_sold_at, sold_at),
+    customer_name = p_customer_name,
+    customer_phone = p_customer_phone,
+    destination_city = p_destination_city,
+    shipping_method = p_shipping_method,
+    customer_id = p_customer_id,
+    shipping_method_detail = p_shipping_method_detail,
+    destination_neighborhood = p_destination_neighborhood
+  where id = p_id;
+
+  if not found then
+    raise exception 'Venta % no encontrada', p_id;
+  end if;
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    insert into sale_items (
+      sale_id, variant_id, quantity, unit_price, cost_price,
+      product_name_snapshot, size_snapshot, product_id_snapshot, item_note,
+      supplier_id_snapshot, supplier_name_snapshot
+    )
+    values (
+      p_id,
+      nullif(v_item->>'variant_id', ''),
+      (v_item->>'quantity')::integer,
+      (v_item->>'unit_price')::numeric,
+      coalesce((v_item->>'cost_price')::numeric, 0),
+      v_item->>'product_name_snapshot',
+      v_item->>'size_snapshot',
+      nullif(v_item->>'product_id_snapshot', ''),
+      v_item->>'item_note',
+      nullif(v_item->>'supplier_id_snapshot', ''),
+      v_item->>'supplier_name_snapshot'
+    );
+  end loop;
+
+  return p_id;
+end;
+$$;
+
+-- record_sale y update_sale redefinidas para insertar supplier_id_snapshot/
+-- supplier_name_snapshot junto al resto de las columnas de sale_items — ver
+-- las últimas definiciones de cada una más arriba en este archivo (no se
+-- repiten acá completas para no duplicar; el cambio real es agregar esas
+-- dos columnas al insert into sale_items de cada función).

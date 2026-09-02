@@ -84,6 +84,20 @@ export type Product = {
   isCustomizable?: boolean;
   /** Parches que se le pueden poner a este producto puntual. */
   patches?: Patch[];
+  /** Lista de precios por proveedor (solo relevante en stock propio) — no
+   * es cantidad de stock, solo a qué costo compramos a cada uno. */
+  suppliers?: ProductSupplier[];
+};
+
+/** Proveedor reutilizable entre productos, con su precio de compra
+ * puntual para ESE producto (el mismo proveedor puede tener otro precio
+ * en otro producto). */
+export type Supplier = { id: string; name: string; notes: string | null };
+
+export type ProductSupplier = {
+  supplierId: string;
+  supplierName: string;
+  unitCost: number;
 };
 
 export type NoticeIcon = "truck" | "print" | "return" | "shield";
@@ -148,6 +162,10 @@ export type SaleLine = {
   imageUrl: string | null;
   /** Detalle del artículo: personalización, parches, etc. */
   note: string | null;
+  /** Proveedor del que salió esta unidad (snapshot al momento de la venta,
+   * si se eligió uno). Null = no se marcó ninguno. */
+  supplierId: string | null;
+  supplierName: string | null;
 };
 
 /** Solo dígitos, últimos 9 — para matchear teléfonos sin pelear con

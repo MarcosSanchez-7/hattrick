@@ -1,6 +1,12 @@
 import { notFound } from "next/navigation";
 import { getProductById } from "@/lib/catalog";
-import { getAllCategories, getAllPatches, getAllProducts, getAllTags } from "@/lib/data";
+import {
+  getAllCategories,
+  getAllPatches,
+  getAllProducts,
+  getAllSuppliers,
+  getAllTags,
+} from "@/lib/data";
 import { ProductForm } from "@/components/admin/ProductForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
@@ -15,11 +21,12 @@ export default async function EditProductPage({
   params: Promise<Params>;
 }) {
   const { id } = await params;
-  const [products, categories, tags, patches] = await Promise.all([
+  const [products, categories, tags, patches, suppliers] = await Promise.all([
     getAllProducts({ includeHidden: true }),
     getAllCategories({ includeHidden: true }),
     getAllTags(),
     getAllPatches(),
+    getAllSuppliers(),
   ]);
   const product = getProductById(products, id);
   if (!product) notFound();
@@ -34,7 +41,13 @@ export default async function EditProductPage({
       <h1 className="h1" style={{ marginBottom: 24 }}>
         Editar producto
       </h1>
-      <ProductForm categories={categories} tags={tags} patches={patches} product={product} />
+      <ProductForm
+        categories={categories}
+        tags={tags}
+        patches={patches}
+        suppliers={suppliers}
+        product={product}
+      />
     </>
   );
 }
