@@ -18,6 +18,7 @@ const dateFormatter = new Intl.DateTimeFormat("es-PY", {
 export function CustomersTable({ customers }: { customers: CustomerWithStats[] }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
   const [cityFilter, setCityFilter] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("");
   // Solo tiene efecto visual en mobile (ver globals.css) — en desktop la
@@ -44,6 +45,17 @@ export function CustomersTable({ customers }: { customers: CustomerWithStats[] }
 
   const filtered = useMemo(() => {
     let list = cityFilter ? customers.filter((c) => c.city === cityFilter) : customers;
+
+    const q = query.trim().toLowerCase();
+    if (q) {
+      const qDigits = q.replace(/\D/g, "");
+      list = list.filter((c) => {
+        const nameMatch = c.name.toLowerCase().includes(q);
+        const phoneMatch = qDigits && c.phone ? c.phone.replace(/\D/g, "").includes(qDigits) : false;
+        return nameMatch || phoneMatch;
+      });
+    }
+
     if (sortBy === "recent") {
       list = [...list].sort((a, b) => {
         if (!a.lastPurchaseAt && !b.lastPurchaseAt) return 0;
@@ -55,7 +67,7 @@ export function CustomersTable({ customers }: { customers: CustomerWithStats[] }
       list = [...list].sort((a, b) => a.name.localeCompare(b.name));
     }
     return list;
-  }, [customers, cityFilter, sortBy]);
+  }, [customers, query, cityFilter, sortBy]);
 
   const handleDelete = async (customer: CustomerWithStats) => {
     if (!window.confirm(`¿Eliminar «${customer.name}»? Sus ventas no se borran, solo dejan de estar vinculadas a este cliente.`)) {
@@ -85,6 +97,14 @@ export function CustomersTable({ customers }: { customers: CustomerWithStats[] }
           {filtered.length} cliente{filtered.length !== 1 ? "s" : ""}
         </p>
         <div className="row gap-2" style={{ flexWrap: "wrap" }}>
+          <input
+            type="search"
+            className="admin-search"
+            placeholder="Buscar por nombre o teléfono…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Buscar clientes"
+          />
           <select
             className="select"
             value={cityFilter}
