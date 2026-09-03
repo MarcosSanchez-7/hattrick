@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import { ensureLeafletIcons } from "@/components/admin/leafletIcons";
 import { formatPrice } from "@/lib/format";
 import type { CustomerWithStats } from "@/lib/data";

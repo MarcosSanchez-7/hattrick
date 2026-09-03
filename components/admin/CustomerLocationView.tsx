@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { MapContainer, Marker, TileLayer } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import { ensureLeafletIcons } from "@/components/admin/leafletIcons";
 import type { LatLng } from "@/components/admin/LocationPicker";
 import { IconExternal } from "@/components/ui/Icons";
