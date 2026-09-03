@@ -1552,8 +1552,46 @@ function assertValidSale(input: SaleInput) {
   }
 }
 
+/**
+ * El precio de cada línea lo manda el cliente (SaleForm) sin que el
+ * servidor lo recalcule — es intencional, un vendedor carga el precio real
+ * al que ya se coordinó/cobró la venta, que puede diferir del catálogo por
+ * descuentos manuales o cambios de precio posteriores a la venta. Esto solo
+ * deja un aviso en el log si el precio cargado no coincide ni con el precio
+ * normal ni con el de oferta del producto — para pescar errores de tipeo o
+ * una sesión de admin comprometida, sin bloquear ventas legítimas.
+ */
+async function warnPriceMismatches(items: SaleItemInput[]) {
+  const productIds = Array.from(
+    new Set(items.map((i) => i.productId).filter((id): id is string => Boolean(id))),
+  );
+  if (productIds.length === 0) return;
+
+  const { data, error } = await supabaseAdmin
+    .from("products")
+    .select("id, name, price, compare_at")
+    .in("id", productIds);
+  if (error || !data) return;
+
+  const byId = new Map(data.map((p) => [p.id, p]));
+  for (const item of items) {
+    if (!item.productId) continue;
+    const product = byId.get(item.productId);
+    if (!product) continue;
+    const validPrices = [Number(product.price), Number(product.compare_at)].filter((n) =>
+      Number.isFinite(n),
+    );
+    if (!validPrices.includes(item.unitPrice)) {
+      console.warn(
+        `[recordSale] Precio cargado (${item.unitPrice}) no coincide con el catálogo para "${product.name}" (esperado: ${validPrices.join(" o ")}).`,
+      );
+    }
+  }
+}
+
 export async function recordSale(input: SaleInput): Promise<string> {
   assertValidSale(input);
+  await warnPriceMismatches(input.items);
 
   // CRM ligero: si el admin eligió un cliente de la lista, se usa ese id
   // directo; si no, vincula por teléfono normalizado o crea uno nuevo —
@@ -1616,6 +1654,7 @@ export async function recordSale(input: SaleInput): Promise<string> {
  */
 export async function updateSale(id: string, input: SaleInput): Promise<string> {
   assertValidSale(input);
+  await warnPriceMismatches(input.items);
 
   const customerId = await resolveCustomerId(
     input.customerId,
