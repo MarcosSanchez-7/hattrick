@@ -20,8 +20,12 @@ export function CustomerPurchaseHistory({ sales }: { sales: Sale[] }) {
     );
   }
 
+  const totalCompras = sales.reduce((acc, sale) => acc + saleTotal(sale), 0);
+  const totalGanancia = sales.reduce((acc, sale) => acc + saleProfit(sale), 0);
+
   return (
-    <div className="admin-table-wrap">
+    <>
+      <div className="admin-table-wrap">
       <table className="admin-table">
         <thead>
           <tr>
@@ -76,6 +80,17 @@ export function CustomerPurchaseHistory({ sales }: { sales: Sale[] }) {
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+      <div className="totals" style={{ maxWidth: 320, marginLeft: "auto", marginTop: 16 }}>
+        <div className="totals__row">
+          <span>Total de compra</span>
+          <span>{formatPrice(totalCompras)}</span>
+        </div>
+        <div className="totals__row totals__row--total">
+          <span>Ganancia total</span>
+          <span>{formatPrice(totalGanancia)}</span>
+        </div>
+      </div>
+    </>
   );
 }
