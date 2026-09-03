@@ -1397,3 +1397,24 @@ $$;
 -- sigue mostrando "Consultar talle" sin importar este valor.
 alter table products
   add column if not exists internal_control boolean not null default false;
+
+-- ── Hardening de seguridad (auditoría 2026-09-02) ───────────────────────────
+-- El linter de seguridad de Supabase señaló estas 6 funciones sin
+-- search_path fijo. Ninguna es SECURITY DEFINER (verificado antes de
+-- aplicar: todas corren como SECURITY INVOKER, siempre invocadas desde
+-- supabaseAdmin/service_role server-side), así que no cambia su
+-- comportamiento — solo cierra la recomendación del linter.
+alter function set_updated_at() set search_path = public;
+alter function apply_inventory_movement() set search_path = public;
+alter function create_sale_inventory_movement() set search_path = public;
+alter function increment_qr_scan(text) set search_path = public;
+alter function record_sale(text, text, text, text, jsonb, timestamptz, text, text, text, text, text, text, text) set search_path = public;
+alter function update_sale(text, text, text, text, jsonb, timestamptz, text, text, text, text, text, text, text) set search_path = public;
+
+-- handle_new_customer() es SECURITY DEFINER y solo debe correr como trigger
+-- de auth.users (ese disparo no depende de estos grants). Postgres otorga
+-- EXECUTE a PUBLIC por defecto al crear una función, lo que dejaba esta
+-- función técnicamente invocable vía /rest/v1/rpc/handle_new_customer por
+-- cualquiera con la anon key (aunque al ser "returns trigger" fallaba si se
+-- llamaba fuera de un trigger real). Se le saca ese acceso público.
+revoke execute on function public.handle_new_customer() from public;
