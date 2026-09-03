@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CustomerWithStats } from "@/lib/data";
 import { formatPrice } from "@/lib/format";
-import { IconChevron, IconTrash } from "@/components/ui/Icons";
+import { IconChevron, IconSearch, IconTrash } from "@/components/ui/Icons";
 
 type SortBy = "" | "recent" | "name";
 
@@ -18,7 +18,9 @@ const dateFormatter = new Intl.DateTimeFormat("es-PY", {
 export function CustomersTable({ customers }: { customers: CustomerWithStats[] }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
   const [cityFilter, setCityFilter] = useState("");
+  const [minOrders, setMinOrders] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("");
   // Solo tiene efecto visual en mobile (ver globals.css) — en desktop la
   // fila siempre muestra todos los datos, sin importar este estado.
@@ -42,8 +44,32 @@ export function CustomersTable({ customers }: { customers: CustomerWithStats[] }
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [customers]);
 
+  // Umbrales de "mínimo de pedidos" — solo se ofrecen los que realmente
+  // tienen algún cliente con esa cantidad o más, para no mostrar opciones
+  // que siempre den una lista vacía.
+  const minOrdersOptions = useMemo(() => {
+    const counts = customers.map((c) => c.orderCount).filter((n) => n >= 2);
+    return Array.from(new Set(counts)).sort((a, b) => a - b);
+  }, [customers]);
+
   const filtered = useMemo(() => {
     let list = cityFilter ? customers.filter((c) => c.city === cityFilter) : customers;
+
+    const q = query.trim().toLowerCase();
+    if (q) {
+      const qDigits = q.replace(/\D/g, "");
+      list = list.filter((c) => {
+        const nameMatch = c.name.toLowerCase().includes(q);
+        const phoneMatch = qDigits && c.phone ? c.phone.replace(/\D/g, "").includes(qDigits) : false;
+        return nameMatch || phoneMatch;
+      });
+    }
+
+    if (minOrders) {
+      const min = Number(minOrders);
+      list = list.filter((c) => c.orderCount >= min);
+    }
+
     if (sortBy === "recent") {
       list = [...list].sort((a, b) => {
         if (!a.lastPurchaseAt && !b.lastPurchaseAt) return 0;
@@ -55,7 +81,7 @@ export function CustomersTable({ customers }: { customers: CustomerWithStats[] }
       list = [...list].sort((a, b) => a.name.localeCompare(b.name));
     }
     return list;
-  }, [customers, cityFilter, sortBy]);
+  }, [customers, query, cityFilter, sortBy]);
 
   const handleDelete = async (customer: CustomerWithStats) => {
     if (!window.confirm(`¿Eliminar «${customer.name}»? Sus ventas no se borran, solo dejan de estar vinculadas a este cliente.`)) {
@@ -85,6 +111,28 @@ export function CustomersTable({ customers }: { customers: CustomerWithStats[] }
           {filtered.length} cliente{filtered.length !== 1 ? "s" : ""}
         </p>
         <div className="row gap-2" style={{ flexWrap: "wrap" }}>
+          <div className="row gap-2" style={{ alignItems: "center", position: "relative" }}>
+            <span
+              style={{
+                position: "absolute",
+                left: 12,
+                display: "flex",
+                pointerEvents: "none",
+                color: "var(--muted)",
+              }}
+            >
+              <IconSearch className="icon--sm" />
+            </span>
+            <input
+              type="search"
+              className="admin-search"
+              placeholder="Buscar por nombre o teléfono…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Buscar clientes"
+              style={{ paddingLeft: 36 }}
+            />
+          </div>
           <select
             className="select"
             value={cityFilter}
@@ -95,6 +143,19 @@ export function CustomersTable({ customers }: { customers: CustomerWithStats[] }
             {cityOptions.map((city) => (
               <option key={city} value={city}>
                 {city}
+              </option>
+            ))}
+          </select>
+          <select
+            className="select"
+            value={minOrders}
+            onChange={(e) => setMinOrders(e.target.value)}
+            aria-label="Filtrar por cantidad de pedidos"
+          >
+            <option value="">Cualquier cantidad de pedidos</option>
+            {minOrdersOptions.map((n) => (
+              <option key={n} value={n}>
+                {n} o más pedidos
               </option>
             ))}
           </select>
