@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { IconExpand } from "@/components/ui/Icons";
+import { IconExpand, IconExternal } from "@/components/ui/Icons";
 
 export type LatLng = { lat: number; lng: number };
 
@@ -42,13 +42,26 @@ export function LocationPicker({
         </span>
         <div className="row gap-3">
           {value ? (
-            <button
-              type="button"
-              className="link-underline meta"
-              onClick={() => onChange(null)}
-            >
-              Quitar ubicación
-            </button>
+            <>
+              <a
+                href={`https://www.google.com/maps?q=${value.lat},${value.lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="link-underline meta"
+              >
+                <span className="row gap-2" style={{ alignItems: "center" }}>
+                  <IconExternal className="icon--sm" />
+                  Abrir en Google Maps
+                </span>
+              </a>
+              <button
+                type="button"
+                className="link-underline meta"
+                onClick={() => onChange(null)}
+              >
+                Quitar ubicación
+              </button>
+            </>
           ) : null}
           <button
             type="button"
