@@ -9,6 +9,7 @@ import {
   type Pattern,
   type Product,
   type StockMode,
+  type Supplier,
   type Tag,
 } from "@/lib/catalog";
 import { slugify } from "@/lib/slug";
@@ -17,6 +18,7 @@ import { imageVariant } from "@/lib/image";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 import { CategoryPathPicker } from "@/components/admin/CategoryPathPicker";
 import { TagPicker } from "@/components/admin/TagPicker";
+import { SupplierPicker, type SelectedSupplier } from "@/components/admin/SupplierPicker";
 import { IconChevron, IconFolder } from "@/components/ui/Icons";
 
 const NO_PATCH_CATEGORY = "Sin categoría";
@@ -63,6 +65,8 @@ type FormState = {
   internalControl: boolean;
   /** Talla -> cantidad (como texto, para no pelear con inputs controlados). */
   variantQuantities: Record<string, string>;
+  /** Proveedores + precio de compra (solo aplica con stockMode === "propio"). */
+  suppliers: SelectedSupplier[];
   colorPrimary: string;
   colorSecondary: string;
   colorAccent: string;
@@ -100,6 +104,10 @@ function toFormState(product?: Product): FormState {
     stockMode: product?.stockMode ?? "propio",
     internalControl: product?.internalControl ?? false,
     variantQuantities,
+    suppliers: (product?.suppliers ?? []).map((s) => ({
+      supplierId: s.supplierId,
+      unitCost: String(s.unitCost),
+    })),
     colorPrimary: product?.colors.primary ?? "#111111",
     colorSecondary: product?.colors.secondary ?? "#f2f2f2",
     colorAccent: product?.colors.accent ?? "#d4af37",
@@ -115,17 +123,20 @@ export function ProductForm({
   categories,
   tags,
   patches,
+  suppliers,
   product,
 }: {
   categories: Category[];
   tags: Tag[];
   patches: Patch[];
+  suppliers: Supplier[];
   product?: Product;
 }) {
   const router = useRouter();
   const isEdit = Boolean(product);
   const [form, setForm] = useState<FormState>(() => toFormState(product));
   const [tagsCatalog, setTagsCatalog] = useState(tags);
+  const [suppliersCatalog, setSuppliersCatalog] = useState(suppliers);
   const [slugTouched, setSlugTouched] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -258,6 +269,11 @@ export function ProductForm({
             ]),
           )
         : undefined,
+      suppliers: isPropio
+        ? form.suppliers
+            .filter((s) => Number(s.unitCost) > 0)
+            .map((s) => ({ supplierId: s.supplierId, unitCost: Number(s.unitCost) }))
+        : [],
       colors: {
         primary: form.colorPrimary,
         secondary: form.colorSecondary,
@@ -526,6 +542,23 @@ export function ProductForm({
           </p>
         )}
       </div>
+
+      {isPropio ? (
+        <div className="admin-fieldset">
+          <p className="admin-fieldset__title">Proveedores</p>
+          <p className="admin-help" style={{ marginTop: 0 }}>
+            Opcional — si comprás este producto a más de un proveedor con
+            precios distintos, cargalos acá. Al registrar una venta vas a
+            poder elegir de cuál salió esa unidad.
+          </p>
+          <SupplierPicker
+            catalog={suppliersCatalog}
+            value={form.suppliers}
+            onChange={(next) => update("suppliers", next)}
+            onCatalogChange={setSuppliersCatalog}
+          />
+        </div>
+      ) : null}
 
       <div className="admin-fieldset">
         <p className="admin-fieldset__title">Parches disponibles</p>
