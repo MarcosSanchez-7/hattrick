@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { formatPrice } from "@/lib/format";
+import { SITE_URL } from "@/lib/site";
 import {
   FREE_SHIPPING_FROM,
   availableStock,
@@ -10,6 +11,7 @@ import {
   type CartLine,
 } from "@/components/cart/CartProvider";
 import { ProductVisual } from "@/components/product/ProductVisual";
+import { LocationPicker, type LatLng } from "@/components/admin/LocationPicker";
 import {
   IconBag,
   IconMinus,
@@ -30,24 +32,27 @@ function buildWhatsAppMessage(
   total: number,
   freeShipping: boolean,
   invoice: InvoiceInfo,
+  location: LatLng,
 ): string {
   const items = lines
     .map((l) => {
       const base = `• ${l.product.name} (Talla ${l.size}) x${l.qty} — ${formatPrice(l.lineTotal)}`;
       const extras = [
+        `   Ver producto: ${SITE_URL}/producto/${l.product.slug}`,
         l.note ? `   Personalizado: "${l.note}"` : null,
         l.patches?.length ? `   Parches: ${l.patches.map((p) => p.name).join(", ")}` : null,
       ].filter(Boolean);
-      return extras.length > 0 ? `${base}\n${extras.join("\n")}` : base;
+      return `${base}\n${extras.join("\n")}`;
     })
     .join("\n");
+  const locationLine = `Ubicación de entrega: https://www.google.com/maps?q=${location.lat},${location.lng}`;
   const shippingLine = freeShipping
     ? "Envío: gratis"
     : "Envío: a coordinar según la zona";
   const invoiceLine = invoice.wantsInvoice
     ? `\n\nFactura: sí\nRazón social: ${invoice.razonSocial}\nRUC: ${invoice.ruc}`
     : "";
-  return `¡Hola! Quiero comprar:\n${items}\n\n${shippingLine}\nTotal: ${formatPrice(total)}${invoiceLine}`;
+  return `¡Hola! Quiero comprar:\n${items}\n\n${locationLine}\n${shippingLine}\nTotal: ${formatPrice(total)}${invoiceLine}`;
 }
 
 export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
@@ -66,18 +71,25 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
   const [wantsInvoice, setWantsInvoice] = useState(false);
   const [razonSocial, setRazonSocial] = useState("");
   const [ruc, setRuc] = useState("");
+  const [location, setLocation] = useState<LatLng | null>(null);
 
   const invoiceComplete = razonSocial.trim() !== "" && ruc.trim() !== "";
-  const canCheckout = !wantsInvoice || invoiceComplete;
+  const canCheckout = location !== null && (!wantsInvoice || invoiceComplete);
 
   const whatsappHref =
     whatsappNumber && canCheckout
       ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-          buildWhatsAppMessage(lines, total, freeShipping, {
-            wantsInvoice,
-            razonSocial: razonSocial.trim(),
-            ruc: ruc.trim(),
-          }),
+          buildWhatsAppMessage(
+            lines,
+            total,
+            freeShipping,
+            {
+              wantsInvoice,
+              razonSocial: razonSocial.trim(),
+              ruc: ruc.trim(),
+            },
+            location!,
+          ),
         )}`
       : null;
 
@@ -226,6 +238,11 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
               </div>
             </div>
 
+            <div className="stack gap-2">
+              <label className="label">Ubicación de entrega (obligatorio)</label>
+              <LocationPicker value={location} onChange={setLocation} height={220} />
+            </div>
+
             <div className="invoice-toggle-row">
               <label className="invoice-toggle">
                 <input
@@ -272,6 +289,10 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
                 <IconWhatsapp className="icon--sm" />
                 Continuar por WhatsApp
               </a>
+            ) : whatsappNumber && !location ? (
+              <p className="meta" style={{ textAlign: "center" }}>
+                Marcá tu ubicación en el mapa para continuar.
+              </p>
             ) : whatsappNumber && !canCheckout ? (
               <p className="meta" style={{ textAlign: "center" }}>
                 Completá razón social y RUC para continuar.
