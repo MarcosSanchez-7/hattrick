@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getAllProducts } from "@/lib/data";
 import { isOnSale, isSoldOut } from "@/lib/catalog";
@@ -15,6 +16,17 @@ import { SITE_URL, SITE_NAME } from "@/lib/site";
  */
 
 export const dynamic = "force-dynamic";
+
+/** Comparación a tiempo constante (mismo patrón que verifyPassword en
+ * lib/admin-auth.ts) — un `!==` directo deja un canal de tiempo que, en
+ * teoría, podría usarse para adivinar el token carácter por carácter. */
+function safeTokenEquals(received: string, expected: string): boolean {
+  const receivedBuf = Buffer.from(received);
+  const expectedBuf = Buffer.from(expected);
+  return (
+    receivedBuf.length === expectedBuf.length && timingSafeEqual(receivedBuf, expectedBuf)
+  );
+}
 
 function escapeXml(value: string): string {
   return value
@@ -46,7 +58,7 @@ export async function GET(
 ) {
   const { token } = await params;
   const expected = process.env.META_FEED_TOKEN;
-  if (!expected || token !== expected) {
+  if (!expected || !safeTokenEquals(token, expected)) {
     return new NextResponse("Not found", { status: 404 });
   }
 
