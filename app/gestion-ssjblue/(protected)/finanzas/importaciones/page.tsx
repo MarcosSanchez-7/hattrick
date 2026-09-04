@@ -5,19 +5,10 @@ import { getCurrentAdmin } from "@/lib/admin-session";
 import { ImportPurchasesTable } from "@/components/admin/ImportPurchasesTable";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter";
+import { daysAgoInParaguay, paraguayDayRangeToUtc, todayInParaguay } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Importaciones" };
-
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function daysAgoStr(days: number) {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
-}
 
 export default async function ImportPurchasesPage({
   searchParams,
@@ -29,13 +20,10 @@ export default async function ImportPurchasesPage({
   if (admin.role !== "superadmin") redirect("/gestion-ssjblue");
 
   const { from, to } = await searchParams;
-  const fromDate = from || daysAgoStr(90);
-  const toDate = to || todayStr();
+  const fromDate = from || daysAgoInParaguay(90);
+  const toDate = to || todayInParaguay();
 
-  const purchases = await getImportPurchases({
-    from: `${fromDate}T00:00:00`,
-    to: `${toDate}T23:59:59`,
-  });
+  const purchases = await getImportPurchases(paraguayDayRangeToUtc(fromDate, toDate));
 
   return (
     <>

@@ -3,13 +3,10 @@ import { getSales } from "@/lib/data";
 import { SalesTable } from "@/components/admin/SalesTable";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter";
+import { paraguayDayRangeToUtc, todayInParaguay } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Ventas" };
-
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export default async function VentasPage({
   searchParams,
@@ -17,13 +14,10 @@ export default async function VentasPage({
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
   const { from, to } = await searchParams;
-  const fromDate = from || todayStr();
+  const fromDate = from || todayInParaguay();
   const toDate = to || fromDate;
 
-  const sales = await getSales({
-    from: `${fromDate}T00:00:00`,
-    to: `${toDate}T23:59:59`,
-  });
+  const sales = await getSales(paraguayDayRangeToUtc(fromDate, toDate));
 
   return (
     <>

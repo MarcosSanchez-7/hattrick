@@ -13,6 +13,7 @@ import {
 import { formatPrice } from "@/lib/format";
 import { imageVariant } from "@/lib/image";
 import { IconTrash } from "@/components/ui/Icons";
+import { PARAGUAY_TZ } from "@/lib/timezone";
 
 const channelLabel = (value: string) =>
   SALE_CHANNELS.find((c) => c.value === value)?.label ?? value;
@@ -21,6 +22,7 @@ const shippingMethodLabel = (value: string) =>
   SHIPPING_METHODS.find((m) => m.value === value)?.label ?? value;
 
 const dateTimeFormatter = new Intl.DateTimeFormat("es-PY", {
+  timeZone: PARAGUAY_TZ,
   day: "2-digit",
   month: "2-digit",
   hour: "2-digit",

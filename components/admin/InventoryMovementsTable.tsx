@@ -1,4 +1,5 @@
 import type { InventoryMovement } from "@/lib/data";
+import { PARAGUAY_TZ } from "@/lib/timezone";
 
 const MOVEMENT_LABEL: Record<string, string> = {
   restock: "Reposición",
@@ -9,6 +10,7 @@ const MOVEMENT_LABEL: Record<string, string> = {
 };
 
 const dateTimeFormatter = new Intl.DateTimeFormat("es-PY", {
+  timeZone: PARAGUAY_TZ,
   day: "2-digit",
   month: "2-digit",
   hour: "2-digit",

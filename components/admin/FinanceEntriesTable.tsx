@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { FinanceEntry, FinanceEntryType } from "@/lib/data";
 import { formatPrice } from "@/lib/format";
 import { IconTrash } from "@/components/ui/Icons";
+import { PARAGUAY_TZ } from "@/lib/timezone";
 
 const TYPE_LABEL: Record<FinanceEntryType, string> = {
   ingreso: "Ingreso",
@@ -16,6 +17,7 @@ const TYPE_LABEL: Record<FinanceEntryType, string> = {
 };
 
 const dateFormatter = new Intl.DateTimeFormat("es-PY", {
+  timeZone: PARAGUAY_TZ,
   day: "2-digit",
   month: "2-digit",
   year: "numeric",

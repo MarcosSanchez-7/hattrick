@@ -6,10 +6,12 @@ import { useRouter } from "next/navigation";
 import type { CustomerWithStats } from "@/lib/data";
 import { formatPrice } from "@/lib/format";
 import { IconChevron, IconSearch, IconTrash } from "@/components/ui/Icons";
+import { PARAGUAY_TZ } from "@/lib/timezone";
 
 type SortBy = "" | "recent" | "name";
 
 const dateFormatter = new Intl.DateTimeFormat("es-PY", {
+  timeZone: PARAGUAY_TZ,
   day: "2-digit",
   month: "2-digit",
   year: "2-digit",

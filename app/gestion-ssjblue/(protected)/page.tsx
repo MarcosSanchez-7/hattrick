@@ -4,6 +4,13 @@ import { getAllCategories, getAllProducts, getSales } from "@/lib/data";
 import { formatPrice } from "@/lib/format";
 import { BarChart } from "@/components/admin/charts/BarChart";
 import { DonutChart } from "@/components/admin/charts/DonutChart";
+import {
+  currentMonthInParaguay,
+  monthsAgoInParaguay,
+  paraguayDayRangeToUtc,
+  todayInParaguay,
+  toParaguayDateString,
+} from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Panel" };
@@ -17,7 +24,7 @@ const MONTH_LABELS = [
 ];
 
 function monthKey(iso: string) {
-  return iso.slice(0, 7);
+  return toParaguayDateString(iso).slice(0, 7);
 }
 
 function monthLabel(ym: string) {
@@ -25,18 +32,11 @@ function monthLabel(ym: string) {
   return `${MONTH_LABELS[m - 1]} ${String(y).slice(2)}`;
 }
 
-function monthsAgoStr(months: number) {
-  const d = new Date();
-  d.setMonth(d.getMonth() - months);
-  d.setDate(1);
-  return d.toISOString().slice(0, 10);
-}
-
 export default async function AdminDashboard() {
   const [products, categories, recentSales] = await Promise.all([
     getAllProducts({ includeHidden: true }),
     getAllCategories({ includeHidden: true }),
-    getSales({ from: `${monthsAgoStr(5)}T00:00:00` }),
+    getSales({ from: paraguayDayRangeToUtc(monthsAgoInParaguay(5), todayInParaguay()).from }),
   ]);
 
   const onSale = products.filter(isOnSale).length;
@@ -47,16 +47,16 @@ export default async function AdminDashboard() {
     .flatMap((p) => p.variants ?? [])
     .filter((v) => v.stock > 0 && v.stock <= LOW_STOCK_THRESHOLD).length;
 
-  const now = new Date();
-  const currentMonthKey = now.toISOString().slice(0, 7);
+  const currentMonthKey = currentMonthInParaguay();
   const currentMonthSales = recentSales.filter((s) => monthKey(s.soldAt) === currentMonthKey);
   const vendidoEsteMes = currentMonthSales.reduce((acc, s) => acc + saleTotal(s), 0);
   const gananciaEsteMes = currentMonthSales.reduce((acc, s) => acc + saleProfit(s), 0);
 
+  const [currentYear, currentMonth] = currentMonthKey.split("-").map(Number);
   const months: string[] = [];
   for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+    const d = new Date(Date.UTC(currentYear, currentMonth - 1 - i, 1));
+    months.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`);
   }
   const ventasPorMes = new Map<string, number>();
   for (const s of recentSales) {

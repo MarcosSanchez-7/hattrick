@@ -8,6 +8,7 @@ import { DonutChart } from "@/components/admin/charts/DonutChart";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 import { AdminSectionMenu } from "@/components/admin/AdminSectionMenu";
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter";
+import { monthsAgoInParaguay, paraguayDayRangeToUtc, todayInParaguay } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Finanzas" };
@@ -22,16 +23,6 @@ function monthLabel(ym: string) {
   return `${MONTH_LABELS[m - 1]} ${String(y).slice(2)}`;
 }
 
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function monthsAgoStr(months: number) {
-  const d = new Date();
-  d.setMonth(d.getMonth() - months);
-  return d.toISOString().slice(0, 10);
-}
-
 export default async function FinancePage({
   searchParams,
 }: {
@@ -42,14 +33,11 @@ export default async function FinancePage({
   if (admin.role !== "superadmin") redirect("/gestion-ssjblue");
 
   const { from, to } = await searchParams;
-  const fromDate = from || monthsAgoStr(6);
-  const toDate = to || todayStr();
+  const fromDate = from || monthsAgoInParaguay(6);
+  const toDate = to || todayInParaguay();
 
   const [summary, inventoryValuation, liquidity] = await Promise.all([
-    getFinanceSummary({
-      from: `${fromDate}T00:00:00`,
-      to: `${toDate}T23:59:59`,
-    }),
+    getFinanceSummary(paraguayDayRangeToUtc(fromDate, toDate)),
     getInventoryValuation(),
     getLiquiditySummary(),
   ]);

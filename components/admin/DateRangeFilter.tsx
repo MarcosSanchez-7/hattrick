@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { todayInParaguay } from "@/lib/timezone";
 
 type Props = {
   /** Único por página, para no mezclar el rango guardado de Ventas con el de Finanzas, etc. */
@@ -58,8 +59,7 @@ export function DateRangeFilter({
       if (saved.from) {
         // "Hasta" nunca se restaura del guardado — siempre se recalcula a
         // hoy, así el admin nunca vuelve a un rango vencido sin darse cuenta.
-        const today = new Date().toISOString().slice(0, 10);
-        router.replace(`${pathname}?from=${saved.from}&to=${today}`);
+        router.replace(`${pathname}?from=${saved.from}&to=${todayInParaguay()}`);
       }
     } catch {
       window.localStorage.removeItem(storageId);

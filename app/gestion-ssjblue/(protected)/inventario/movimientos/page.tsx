@@ -2,19 +2,10 @@ import { getInventoryMovements } from "@/lib/data";
 import { InventoryMovementsTable } from "@/components/admin/InventoryMovementsTable";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter";
+import { daysAgoInParaguay, paraguayDayRangeToUtc, todayInParaguay } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Movimientos de stock" };
-
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function daysAgoStr(days: number) {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
-}
 
 export default async function InventoryMovementsPage({
   searchParams,
@@ -22,13 +13,10 @@ export default async function InventoryMovementsPage({
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
   const { from, to } = await searchParams;
-  const fromDate = from || daysAgoStr(30);
-  const toDate = to || todayStr();
+  const fromDate = from || daysAgoInParaguay(30);
+  const toDate = to || todayInParaguay();
 
-  const movements = await getInventoryMovements({
-    from: `${fromDate}T00:00:00`,
-    to: `${toDate}T23:59:59`,
-  });
+  const movements = await getInventoryMovements(paraguayDayRangeToUtc(fromDate, toDate));
 
   return (
     <>

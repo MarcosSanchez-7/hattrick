@@ -1,11 +1,13 @@
 import { saleProfit, saleTotal, SALE_CHANNELS, type Sale } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { imageVariant } from "@/lib/image";
+import { PARAGUAY_TZ } from "@/lib/timezone";
 
 const channelLabel = (value: string) =>
   SALE_CHANNELS.find((c) => c.value === value)?.label ?? value;
 
 const dateFormatter = new Intl.DateTimeFormat("es-PY", {
+  timeZone: PARAGUAY_TZ,
   day: "2-digit",
   month: "2-digit",
   year: "2-digit",

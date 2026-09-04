@@ -16,6 +16,7 @@ import { formatPrice } from "@/lib/format";
 import { IconClose, IconPlus, IconSearch } from "@/components/ui/Icons";
 import { LocationPicker, type LatLng } from "@/components/admin/LocationPicker";
 import { ProductVisual } from "@/components/product/ProductVisual";
+import { todayInParaguay, toParaguayDateString } from "@/lib/timezone";
 
 type TicketLine = {
   /** Clave única de la línea: el id de la variante para stock propio, o un id generado para dropshipping. */
@@ -47,10 +48,6 @@ function matches(product: Product, query: string) {
   const q = query.trim().toLowerCase();
   if (!q) return false;
   return product.name.toLowerCase().includes(q);
-}
-
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
 }
 
 /**
@@ -177,7 +174,7 @@ export function SaleForm({
   // y el servidor conserva la fecha/hora que ya tenía (o "ahora" si es alta
   // nueva) en vez de forzarla a mediodía.
   const initialSoldAtStr = useMemo(
-    () => (sale ? sale.soldAt.slice(0, 10) : todayStr()),
+    () => (sale ? toParaguayDateString(sale.soldAt) : todayInParaguay()),
     [sale],
   );
   const [soldAt, setSoldAt] = useState(initialSoldAtStr);
@@ -682,8 +679,8 @@ export function SaleForm({
               id="soldAt"
               type="date"
               value={soldAt}
-              max={todayStr()}
-              onChange={(e) => setSoldAt(e.target.value || todayStr())}
+              max={todayInParaguay()}
+              onChange={(e) => setSoldAt(e.target.value || todayInParaguay())}
             />
           </div>
           <div className="admin-field">

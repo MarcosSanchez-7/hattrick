@@ -32,6 +32,7 @@ import {
 import { slugify, uniqueSlug } from "@/lib/slug";
 import type { SiteSettingsKey } from "@/lib/settings";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { toParaguayDateString } from "@/lib/timezone";
 import {
   hashPassword,
   ROLE_LABELS,
@@ -2605,7 +2606,7 @@ export async function getFinanceSummary(range?: {
 
   const mensual = new Map<string, { ingresos: number; gastos: number }>();
   const addMonthly = (dateStr: string, field: "ingresos" | "gastos", amount: number) => {
-    const month = dateStr.slice(0, 7); // "YYYY-MM"
+    const month = toParaguayDateString(dateStr).slice(0, 7); // "YYYY-MM"
     const current = mensual.get(month) ?? { ingresos: 0, gastos: 0 };
     current[field] += amount;
     mensual.set(month, current);

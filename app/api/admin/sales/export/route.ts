@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DataError, getSales } from "@/lib/data";
 import { lineProfit, SALE_CHANNELS } from "@/lib/catalog";
+import { PARAGUAY_TZ, paraguayDayRangeToUtc } from "@/lib/timezone";
 
 const channelLabel = (value: string) =>
   SALE_CHANNELS.find((c) => c.value === value)?.label ?? value;
 
 const dateTimeFormatter = new Intl.DateTimeFormat("es-PY", {
+  timeZone: PARAGUAY_TZ,
   day: "2-digit",
   month: "2-digit",
   year: "numeric",
@@ -39,13 +41,13 @@ const UTF8_BOM = String.fromCharCode(0xfeff);
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const fromDate = searchParams.get("from") ?? undefined;
-    const toDate = searchParams.get("to") ?? fromDate;
+    const fromParam = searchParams.get("from") ?? undefined;
+    const toDate = searchParams.get("to") ?? fromParam;
+    const fromDate = fromParam ?? toDate;
 
-    const sales = await getSales({
-      from: fromDate ? `${fromDate}T00:00:00` : undefined,
-      to: toDate ? `${toDate}T23:59:59` : undefined,
-    });
+    const sales = await getSales(
+      fromDate && toDate ? paraguayDayRangeToUtc(fromDate, toDate) : {},
+    );
 
     const rows = sales.flatMap((sale) =>
       sale.items.map((item) => [
