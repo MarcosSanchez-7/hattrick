@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -32,8 +32,14 @@ const dateTimeFormatter = new Intl.DateTimeFormat("es-PY", {
 export function SalesTable({ sales }: { sales: Sale[] }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [channelFilter, setChannelFilter] = useState("");
 
-  const rows = sales.flatMap((sale) =>
+  const filteredSales = useMemo(
+    () => (channelFilter ? sales.filter((s) => s.channel === channelFilter) : sales),
+    [sales, channelFilter],
+  );
+
+  const rows = filteredSales.flatMap((sale) =>
     sale.items.map((item) => ({ sale, item })),
   );
 
@@ -66,18 +72,33 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
     <div className="admin-card">
       <div className="admin-card__head">
         <p className="h3" style={{ fontSize: "0.9375rem" }}>
-          {sales.length} venta{sales.length !== 1 ? "s" : ""} · {totalUnidades}{" "}
-          artículo{totalUnidades !== 1 ? "s" : ""}
+          {filteredSales.length} venta{filteredSales.length !== 1 ? "s" : ""} ·{" "}
+          {totalUnidades} artículo{totalUnidades !== 1 ? "s" : ""}
         </p>
+        <select
+          className="select"
+          value={channelFilter}
+          onChange={(e) => setChannelFilter(e.target.value)}
+          aria-label="Filtrar por canal"
+        >
+          <option value="">Todos los canales</option>
+          {SALE_CHANNELS.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
         <p className="h3" style={{ fontSize: "0.9375rem" }}>
           Total {formatPrice(totalVenta)} · Ganancia {formatPrice(totalGanancia)}
         </p>
       </div>
 
-      {rows.length === 0 ? (
+      {sales.length === 0 ? (
         <div className="admin-empty">
           No hay ventas registradas en este rango de fechas.
         </div>
+      ) : rows.length === 0 ? (
+        <div className="admin-empty">Ninguna venta coincide con el canal elegido.</div>
       ) : (
         <div className="admin-table-wrap">
           <table className="admin-table">
