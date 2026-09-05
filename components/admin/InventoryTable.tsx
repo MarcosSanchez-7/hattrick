@@ -31,6 +31,15 @@ const LOW_STOCK_THRESHOLD = 3;
 const totalStock = (p: Product) =>
   p.variants?.reduce((acc, v) => acc + v.stock, 0) ?? 0;
 
+/**
+ * `p.sizes` solo se llena para stockMode "propio" (a propósito, ver
+ * lib/catalog.ts) — un producto con control interno también tiene tallas
+ * reales en `p.variants`, pero acá adentro (panel admin) sí queremos
+ * filtrar/listar por esas tallas, a diferencia de la tienda pública.
+ */
+const productSizes = (p: Product) =>
+  p.variants?.length ? p.variants.map((v) => v.size) : p.sizes;
+
 type Adjusting = {
   variantId: string;
   productName: string;
@@ -79,7 +88,7 @@ export function InventoryTable({
   // en el mismo orden en que se cargan (adultos, luego niños) en vez de
   // alfabético (que mezclaría feo "10A, 12A, ... 4A, 6A, G, M, P, XL").
   const sizeOptions = useMemo(() => {
-    const present = new Set(products.flatMap((p) => p.sizes));
+    const present = new Set(products.flatMap(productSizes));
     const canonical = [...SIZES_ADULT, ...SIZES_KIDS].filter((s) => present.has(s));
     const rest = Array.from(present)
       .filter((s) => !canonical.includes(s))
@@ -89,7 +98,7 @@ export function InventoryTable({
 
   const filtered = useMemo(() => {
     let list = categoryFilter ? byCategoryTree(products, categories, categoryFilter) : products;
-    if (sizeFilter) list = list.filter((p) => p.sizes.includes(sizeFilter));
+    if (sizeFilter) list = list.filter((p) => productSizes(p).includes(sizeFilter));
     const q = query.trim().toLowerCase();
     if (q) {
       list = list.filter((p) =>
