@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getCategory } from "@/lib/catalog";
 import {
   DataError,
@@ -27,6 +28,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
   try {
     const body = await request.json();
     const category = await updateCategory(slug, body);
+    revalidatePath("/", "layout");
     return NextResponse.json(category);
   } catch (err) {
     if (err instanceof DataError) {
@@ -50,6 +52,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       );
     }
     await setCategoryVisibility(slug, body.isVisible);
+    revalidatePath("/", "layout");
     return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof DataError) {
@@ -66,6 +69,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
   const { slug } = await params;
   try {
     await deleteCategory(slug);
+    revalidatePath("/", "layout");
     return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof DataError) {

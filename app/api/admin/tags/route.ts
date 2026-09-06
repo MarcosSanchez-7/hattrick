@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createTag, DataError, getAllTags } from "@/lib/data";
 
 export async function GET() {
@@ -10,6 +11,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const tag = await createTag(body?.name, body?.color ?? "#2f2f2f");
+    revalidatePath("/", "layout");
     return NextResponse.json(tag, { status: 201 });
   } catch (err) {
     if (err instanceof DataError) {

@@ -17,7 +17,7 @@ import { CustomBanner } from "@/components/home/CustomBanner";
 import { ReviewsSection } from "@/components/home/ReviewsSection";
 import { ProductGrid } from "@/components/product/ProductCard";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { DataError, getSetting, updateSetting } from "@/lib/data";
 import {
   DEFAULT_BRANDING,
@@ -77,6 +78,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       );
     }
     await updateSetting(key, body);
+    revalidatePath("/", "layout");
     return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof DataError) {

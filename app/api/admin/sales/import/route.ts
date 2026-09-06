@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { DataError, importHistoricalSales, type SaleImportRow } from "@/lib/data";
 import { SALE_CHANNELS, type SaleChannel } from "@/lib/catalog";
 
@@ -206,6 +207,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await importHistoricalSales(parsed);
+    revalidatePath("/", "layout");
     return NextResponse.json({
       imported: result.imported,
       errors: [...errors, ...result.errors].sort((a, b) => a.row - b.row),

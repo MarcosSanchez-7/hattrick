@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/ofertas" },
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function OfertasPage() {
   const [allProducts, tags] = await Promise.all([getAllProducts(), getAllTags()]);
