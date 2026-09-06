@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getAllProducts, getAllTags } from "@/lib/data";
+import { getAllCategories, getAllProducts, getAllTags } from "@/lib/data";
 import { SearchPageClient } from "@/components/search/SearchPageClient";
 
 export const metadata: Metadata = {
@@ -16,7 +16,18 @@ export default async function BuscarPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q = "" } = await searchParams;
-  const [products, tags] = await Promise.all([getAllProducts(), getAllTags()]);
+  const [products, tags, categories] = await Promise.all([
+    getAllProducts(),
+    getAllTags(),
+    getAllCategories(),
+  ]);
 
-  return <SearchPageClient products={products} tags={tags} initialQuery={q.trim()} />;
+  return (
+    <SearchPageClient
+      products={products}
+      tags={tags}
+      categories={categories}
+      initialQuery={q.trim()}
+    />
+  );
 }

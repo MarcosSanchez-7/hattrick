@@ -3,11 +3,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { searchProducts, type Product, type Tag } from "@/lib/catalog";
+import {
+  categorySlugPath,
+  searchProducts,
+  topLevelCategories,
+  type Category,
+  type Product,
+  type Tag,
+} from "@/lib/catalog";
 import { ProductBrowser } from "@/components/product/ProductBrowser";
 import { IconSearch } from "@/components/ui/Icons";
 
-const POPULARES = ["Retro", "Real Madrid", "Selecciones", "Niños", "Amarillo"];
 const URL_SYNC_DELAY_MS = 400;
 
 /**
@@ -19,15 +25,18 @@ const URL_SYNC_DELAY_MS = 400;
 export function SearchPageClient({
   products,
   tags = [],
+  categories = [],
   initialQuery,
 }: {
   products: Product[];
   tags?: Tag[];
+  categories?: Category[];
   initialQuery: string;
 }) {
   const [query, setQuery] = useState(initialQuery);
   const router = useRouter();
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sections = topLevelCategories(categories);
 
   const results = useMemo(
     () => (query.trim() ? searchProducts(products, query) : []),
@@ -82,18 +91,19 @@ export function SearchPageClient({
             </button>
           </form>
 
-          <div className="search__suggests" style={{ marginTop: 16 }}>
-            {POPULARES.map((s) => (
-              <button
-                key={s}
-                type="button"
-                className="chip"
-                onClick={() => setQuery(s)}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
+          {sections.length > 0 ? (
+            <div className="search__suggests" style={{ marginTop: 16 }}>
+              {sections.map((c) => (
+                <Link
+                  key={c.slug}
+                  href={`/categoria/${categorySlugPath(categories, c.slug).join("/")}`}
+                  className="chip"
+                >
+                  {c.name}
+                </Link>
+              ))}
+            </div>
+          ) : null}
         </div>
       </header>
 
