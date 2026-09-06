@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { DataError, getSales, recordSale } from "@/lib/data";
 
 export async function GET(request: NextRequest) {
@@ -14,6 +15,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const id = await recordSale(body);
+    revalidatePath("/", "layout");
     return NextResponse.json({ id }, { status: 201 });
   } catch (err) {
     if (err instanceof DataError) {

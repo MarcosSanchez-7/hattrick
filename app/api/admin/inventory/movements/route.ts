@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { DataError, getInventoryMovements, registerStockAdjustment } from "@/lib/data";
 import { getCurrentAdmin } from "@/lib/admin-session";
 
@@ -20,6 +21,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     await registerStockAdjustment({ ...body, adminName: admin.name });
+    revalidatePath("/", "layout");
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (err) {
     if (err instanceof DataError) {

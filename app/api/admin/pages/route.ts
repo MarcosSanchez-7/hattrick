@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createPage, DataError, getAllPages } from "@/lib/data";
 
 export async function GET() {
@@ -10,6 +11,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const page = await createPage(body);
+    revalidatePath("/", "layout");
     return NextResponse.json(page, { status: 201 });
   } catch (err) {
     if (err instanceof DataError) {

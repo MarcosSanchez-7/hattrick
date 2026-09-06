@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { DataError, deletePage, getAllPages, updatePage } from "@/lib/data";
 
 type Params = { params: Promise<{ slug: string }> };
@@ -18,6 +19,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
   try {
     const body = await request.json();
     const page = await updatePage(slug, body);
+    revalidatePath("/", "layout");
     return NextResponse.json(page);
   } catch (err) {
     if (err instanceof DataError) {
@@ -34,6 +36,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
   const { slug } = await params;
   try {
     await deletePage(slug);
+    revalidatePath("/", "layout");
     return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof DataError) {

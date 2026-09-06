@@ -5,7 +5,7 @@ import { DEFAULT_CUSTOM_BANNER, DEFAULT_PERSONALIZATION_GALLERY } from "@/lib/se
 import { imageVariant } from "@/lib/image";
 import { CustomBanner } from "@/components/home/CustomBanner";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Personalización",

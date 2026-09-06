@@ -124,7 +124,7 @@ export function ProductDetail({
             number={!hasPhotos && view === 1 ? "10" : undefined}
             alt={alt}
             priority
-            size="full"
+            size="detail"
           />
           {thumbCount > 1 ? (
             <>
