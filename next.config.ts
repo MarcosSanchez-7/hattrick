@@ -16,7 +16,9 @@ import type { NextConfig } from "next";
  *   rompería cualquier imagen cargada así.
  * - Vercel Analytics (@vercel/analytics/next) sirve su script y manda sus
  *   eventos por /_vercel/insights/* en el propio dominio — no necesita
- *   entrada aparte, ya cubierto por 'self'.
+ *   entrada aparte, ya cubierto por 'self'. Vercel Speed Insights
+ *   (@vercel/speed-insights/next) usa el mismo patrón same-origin bajo
+ *   /_vercel/speed-insights/*, también cubierto por 'self'.
  *
  * script-src necesita 'unsafe-inline': Next.js App Router hidrata la página
  * con sus propios <script> inline (self.__next_f.push(...), el streaming de

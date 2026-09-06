@@ -2,14 +2,16 @@
 
 import { useEffect } from "react";
 import { Analytics, type BeforeSendEvent } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 /**
  * Modo interno: visitar el sitio con ?no-track=1 (una vez, por
  * navegador/dispositivo) guarda una cookie de 1 año que evita que ese
- * tráfico se cuente en Vercel Analytics — así las visitas del equipo
- * probando el sitio no ensucian las métricas ni consumen la cuota medida
- * de Web Analytics Events. ?no-track=0 la saca (por si hace falta volver
- * a trackear ese dispositivo, ej. un equipo compartido).
+ * tráfico se cuente en Vercel Analytics y Speed Insights — así las visitas
+ * del equipo probando el sitio no ensucian las métricas (ni las visitas
+ * ni los Core Web Vitals reales) ni consumen cuota medida. ?no-track=0 la
+ * saca (por si hace falta volver a trackear ese dispositivo, ej. un
+ * equipo compartido).
  *
  * beforeSend() corre en el navegador y no tiene acceso a la IP del
  * visitante — por eso el filtro es por cookie, no por IP.
@@ -48,11 +50,19 @@ export function AnalyticsWithOptOut() {
   }, []);
 
   return (
-    <Analytics
-      beforeSend={(event: BeforeSendEvent) => {
-        if (hasOptOutCookie()) return null;
-        return event;
-      }}
-    />
+    <>
+      <Analytics
+        beforeSend={(event: BeforeSendEvent) => {
+          if (hasOptOutCookie()) return null;
+          return event;
+        }}
+      />
+      <SpeedInsights
+        beforeSend={(event) => {
+          if (hasOptOutCookie()) return null;
+          return event;
+        }}
+      />
+    </>
   );
 }
