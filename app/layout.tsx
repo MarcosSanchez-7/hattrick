@@ -1,7 +1,17 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import { AnalyticsWithOptOut } from "@/components/analytics/AnalyticsWithOptOut";
 import "./globals.css";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
+
+// Auto-alojada en el build (sin fetch a fonts.googleapis.com/fonts.gstatic.com
+// en cada visita) — expone el rango de pesos como --font-inter, referenciado
+// desde --font-sans en globals.css.
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 const TITLE_DEFAULT = "Camisetas de Fútbol en Paraguay | HATTRICK";
 const DESCRIPTION =
@@ -49,7 +59,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es">
+    <html lang="es" className={inter.variable}>
       <body>
         {children}
         <AnalyticsWithOptOut />

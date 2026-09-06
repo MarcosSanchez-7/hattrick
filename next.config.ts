@@ -8,7 +8,9 @@ import type { NextConfig } from "next";
  * - OpenStreetMap (tile.*): tiles del mapa de clientes/ubicación de entrega.
  * - Nominatim: búsqueda de zona/barrio dentro del selector de ubicación.
  * - unpkg.com: íconos por defecto de Leaflet (ver components/admin/leafletIcons.ts).
- * - Google Fonts (googleapis/gstatic): tipografía Inter, importada en globals.css.
+ * - Google Fonts: NO hace falta (tipografía Inter self-hosted vía
+ *   next/font/google en app/layout.tsx, sin fetch a fonts.googleapis.com ni
+ *   fonts.gstatic.com en ninguna visita).
  * - img-src queda abierto a "https:" en general (no solo a Vercel Blob):
  *   ImageUploader.tsx permite pegar una URL externa a mano en vez de subir
  *   el archivo (ya usado en producción, ej. una imagen del Hero servida
@@ -52,8 +54,8 @@ const CSP = [
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   // 'unsafe-inline' porque el sitio usa style={{...}} inline extensamente
   // (no hay forma simple de pasar a nonces sin tocar cientos de componentes).
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self'",
   "img-src 'self' data: https:",
   "connect-src 'self' https://nominatim.openstreetmap.org https://*.public.blob.vercel-storage.com https://vercel.com",
   "object-src 'none'",
