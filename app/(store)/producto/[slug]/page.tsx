@@ -24,6 +24,16 @@ type Params = { slug: string };
 
 export const revalidate = 60;
 
+// Sin esto, revalidate=60 no hace nada en un segmento dinamico ([slug]) --
+// Next.js sigue tratando la ruta como 100% dinamica (sin cache real) si no
+// sabe de antemano que paths existen. Con esto, cada producto se pre-renderiza
+// en el build y despues se revalida cada 60s (ISR real), en vez de correr la
+// consulta a Supabase en cada visita.
+export async function generateStaticParams() {
+  const products = await getAllProducts();
+  return products.map((p) => ({ slug: p.slug }));
+}
+
 export async function generateMetadata({
   params,
 }: {

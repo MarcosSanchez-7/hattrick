@@ -18,6 +18,13 @@ type Params = { slug: string[] };
 
 export const revalidate = 60;
 
+// Sin esto, revalidate=60 no hace nada en un segmento dinamico ([...slug])
+// -- ver la misma nota en producto/[slug]/page.tsx.
+export async function generateStaticParams() {
+  const categories = await getAllCategories({ includeHidden: true });
+  return categories.map((c) => ({ slug: categorySlugPath(categories, c.slug) }));
+}
+
 export async function generateMetadata({
   params,
 }: {
