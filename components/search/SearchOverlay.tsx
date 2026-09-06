@@ -8,18 +8,6 @@ import { formatPrice } from "@/lib/format";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import { IconClose, IconSearch } from "@/components/ui/Icons";
 
-/** Solo se muestran si el cliente todavía no tiene búsquedas propias guardadas. */
-const FALLBACK_SUGGESTIONS = [
-  "Real Madrid",
-  "Retro",
-  "Selecciones",
-  "Barcelona",
-  "Mundial 2026",
-  "Niños",
-  "Premier League",
-  "Amarillo",
-];
-
 const RECENT_SEARCHES_KEY = "hattrick.recentSearches.v1";
 const MAX_RECENT_SEARCHES = 8;
 
@@ -127,15 +115,15 @@ export function SearchOverlay({
 
           <div className="search__body">
             {query.trim() === "" ? (
-              <>
-                <div
-                  className="row"
-                  style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}
-                >
-                  <p className="label" style={{ color: "var(--ink-muted)", margin: 0 }}>
-                    {recentSearches.length > 0 ? "Búsquedas recientes" : "Búsquedas frecuentes"}
-                  </p>
-                  {recentSearches.length > 0 ? (
+              recentSearches.length > 0 ? (
+                <>
+                  <div
+                    className="row"
+                    style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}
+                  >
+                    <p className="label" style={{ color: "var(--ink-muted)", margin: 0 }}>
+                      Búsquedas recientes
+                    </p>
                     <button
                       type="button"
                       className="link-underline meta"
@@ -143,21 +131,21 @@ export function SearchOverlay({
                     >
                       Borrar
                     </button>
-                  ) : null}
-                </div>
-                <div className="search__suggests">
-                  {(recentSearches.length > 0 ? recentSearches : FALLBACK_SUGGESTIONS).map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      className="chip"
-                      onClick={() => setQuery(s)}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </>
+                  </div>
+                  <div className="search__suggests">
+                    {recentSearches.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        className="chip"
+                        onClick={() => setQuery(s)}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : null
             ) : results.length === 0 ? (
               <p className="lead">
                 No hay resultados para <strong>«{query}»</strong>. Prueba con el
