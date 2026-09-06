@@ -9,7 +9,7 @@
 
 export const OWN_BLOB_HOST = /^https:\/\/[a-z0-9]+\.public\.blob\.vercel-storage\.com\//i;
 
-export type ImageSize = "thumb" | "card" | "full";
+export type ImageSize = "thumb" | "card" | "detail" | "full";
 
 export function imageVariant(url: string, size: ImageSize): string {
   // "full" es el archivo tal cual se guardó siempre, sin cambios. URLs que

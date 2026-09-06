@@ -14,6 +14,10 @@ const HEIC_MIME_TYPES = new Set(["image/heic", "image/heif"]);
 // de admin no piden el mismo archivo de hasta 2000px que la imagen grande.
 const CARD_MAX = 640;
 const THUMB_MAX = 160;
+// Imagen principal de la ficha de producto (ProductDetail.tsx): mucha menos
+// resolución que "full" (pensado para el feed de Meta y el zoom de parches),
+// suficiente para el ancho real en que se muestra en pantalla.
+const DETAIL_MAX = 1000;
 
 function isHeic(contentType: string, pathname: string) {
   return HEIC_MIME_TYPES.has(contentType) || /\.hei[cf]$/i.test(pathname);
@@ -92,6 +96,7 @@ export async function POST(request: NextRequest) {
     // ya rotado/decodificado, sin volver a descargar nada.
     let cardPayload: Buffer<ArrayBufferLike> | null = null;
     let thumbPayload: Buffer<ArrayBufferLike> | null = null;
+    let detailPayload: Buffer<ArrayBufferLike> | null = null;
 
     if (heic || CONVERTIBLE_TYPES.has(contentType)) {
       const rotated = sharp(working).rotate();
@@ -114,6 +119,11 @@ export async function POST(request: NextRequest) {
         .clone()
         .resize({ width: THUMB_MAX, height: THUMB_MAX, fit: "inside", withoutEnlargement: true })
         .webp({ quality: 75, effort: 4 })
+        .toBuffer();
+      detailPayload = await rotated
+        .clone()
+        .resize({ width: DETAIL_MAX, height: DETAIL_MAX, fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 82, effort: 4 })
         .toBuffer();
       outputExt = ".webp";
       outputContentType = "image/webp";
@@ -142,6 +152,10 @@ export async function POST(request: NextRequest) {
         .resize({ width: THUMB_MAX, height: THUMB_MAX, fit: "inside", withoutEnlargement: true })
         .webp({ quality: 75, effort: 4 })
         .toBuffer();
+      detailPayload = await sharp(working)
+        .resize({ width: DETAIL_MAX, height: DETAIL_MAX, fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 82, effort: 4 })
+        .toBuffer();
     } else {
       await del(rawUrl);
       return NextResponse.json(
@@ -151,9 +165,9 @@ export async function POST(request: NextRequest) {
     }
 
     const folderPath = folder ? `products/${folder}` : "products";
-    // Mismo id para las 3 variantes — imageVariant() (lib/image.ts) arma la
-    // URL de "-card"/"-thumb" insertando el sufijo antes de la extensión,
-    // así que el nombre base tiene que coincidir exacto entre las tres.
+    // Mismo id para las 4 variantes — imageVariant() (lib/image.ts) arma la
+    // URL de "-card"/"-thumb"/"-detail" insertando el sufijo antes de la
+    // extensión, así que el nombre base tiene que coincidir exacto entre todas.
     const id = randomUUID();
     const uploads: Promise<{ url: string }>[] = [
       put(`${folderPath}/${id}${outputExt}`, payload, {
@@ -174,6 +188,15 @@ export async function POST(request: NextRequest) {
     if (thumbPayload) {
       uploads.push(
         put(`${folderPath}/${id}-thumb.webp`, thumbPayload, {
+          access: "public",
+          contentType: "image/webp",
+          addRandomSuffix: false,
+        }),
+      );
+    }
+    if (detailPayload) {
+      uploads.push(
+        put(`${folderPath}/${id}-detail.webp`, detailPayload, {
           access: "public",
           contentType: "image/webp",
           addRandomSuffix: false,
