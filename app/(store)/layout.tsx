@@ -11,7 +11,11 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { WhatsAppButton } from "@/components/layout/WhatsAppButton";
 
-export const dynamic = "force-dynamic";
+// Mismo revalidate que las paginas hijas (ver app/(store)/page.tsx y
+// hermanas) -- un layout con force-dynamic anula el revalidate de sus
+// paginas hijas por mas que ellas lo declaren, asi que tiene que coincidir
+// acá tambien o el cache nunca se activa de verdad.
+export const revalidate = 60;
 
 export default async function StoreLayout({
   children,
