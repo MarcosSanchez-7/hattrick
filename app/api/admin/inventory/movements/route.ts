@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { DataError, getInventoryMovements, registerStockAdjustment } from "@/lib/data";
+import {
+  DataError,
+  getInventoryMovements,
+  getProductSlugByVariantId,
+  registerStockAdjustment,
+} from "@/lib/data";
 import { getCurrentAdmin } from "@/lib/admin-session";
 
 export async function GET(request: NextRequest) {
@@ -21,7 +26,10 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     await registerStockAdjustment({ ...body, adminName: admin.name });
-    revalidatePath("/", "layout");
+    // Solo afecta el stock de una variante -- invalidar únicamente esa
+    // ficha, no todo el sitio (ver la misma nota en sales/route.ts).
+    const slug = body?.variantId ? await getProductSlugByVariantId(body.variantId) : null;
+    if (slug) revalidatePath(`/producto/${slug}`);
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (err) {
     if (err instanceof DataError) {

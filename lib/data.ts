@@ -712,6 +712,36 @@ async function syncProductSuppliers(
   }
 }
 
+/** Solo el slug (para invalidar la página pública exacta con revalidatePath
+ * en vez de todo el sitio, ver app/api/admin/sales/route.ts y hermanas). */
+export async function getProductSlugsByIds(ids: string[]): Promise<string[]> {
+  const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
+  if (uniqueIds.length === 0) return [];
+  const { data, error } = await supabaseAdmin
+    .from("products")
+    .select("slug")
+    .in("id", uniqueIds);
+  if (error || !data) return [];
+  return data.map((p) => p.slug as string);
+}
+
+/** Slug del producto dueño de una variante (talla) — para invalidar solo esa
+ * ficha cuando se ajusta stock, en vez de todo el sitio. */
+export async function getProductSlugByVariantId(variantId: string): Promise<string | null> {
+  const { data: variant } = await supabaseAdmin
+    .from("product_variants")
+    .select("product_id")
+    .eq("id", variantId)
+    .maybeSingle();
+  if (!variant?.product_id) return null;
+  const { data: product } = await supabaseAdmin
+    .from("products")
+    .select("slug")
+    .eq("id", variant.product_id)
+    .maybeSingle();
+  return (product?.slug as string) ?? null;
+}
+
 export async function createProduct(input: ProductInput): Promise<Product> {
   assertValidProduct(input);
 

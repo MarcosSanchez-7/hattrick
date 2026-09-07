@@ -5,6 +5,7 @@ import {
   DataError,
   deleteProduct,
   getAllProducts,
+  getProductSlugsByIds,
   setProductVisibility,
   updateProduct,
 } from "@/lib/data";
@@ -23,12 +24,22 @@ export async function GET(_request: NextRequest, { params }: Params) {
   return NextResponse.json(product);
 }
 
+// Solo invalida lo que ese producto realmente puede afectar, no todo el
+// sitio (ver la misma nota en sales/route.ts) -- home/novedades/ofertas por
+// si aparece en algún listado, y su propia ficha.
+function revalidateProductPages(slug: string) {
+  revalidatePath("/");
+  revalidatePath("/novedades");
+  revalidatePath("/ofertas");
+  revalidatePath(`/producto/${slug}`);
+}
+
 export async function PUT(request: NextRequest, { params }: Params) {
   const { id } = await params;
   try {
     const body = await request.json();
     const product = await updateProduct(id, body);
-    revalidatePath("/", "layout");
+    revalidateProductPages(product.slug);
     return NextResponse.json(product);
   } catch (err) {
     if (err instanceof DataError) {
@@ -51,8 +62,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         { status: 400 },
       );
     }
+    const [slug] = await getProductSlugsByIds([id]);
     await setProductVisibility(id, body.isVisible);
-    revalidatePath("/", "layout");
+    if (slug) revalidateProductPages(slug);
     return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof DataError) {
@@ -68,8 +80,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 export async function DELETE(_request: NextRequest, { params }: Params) {
   const { id } = await params;
   try {
+    const [slug] = await getProductSlugsByIds([id]);
     await deleteProduct(id);
-    revalidatePath("/", "layout");
+    if (slug) revalidateProductPages(slug);
     return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof DataError) {

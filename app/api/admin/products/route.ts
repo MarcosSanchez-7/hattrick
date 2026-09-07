@@ -11,7 +11,13 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const product = await createProduct(body);
-    revalidatePath("/", "layout");
+    // Un producto nuevo puede aparecer en home/novedades/ofertas y tiene su
+    // propia ficha -- invalidar solo eso es mucho más rápido que todo el
+    // sitio (ver la misma nota en sales/route.ts).
+    revalidatePath("/");
+    revalidatePath("/novedades");
+    revalidatePath("/ofertas");
+    revalidatePath(`/producto/${product.slug}`);
     return NextResponse.json(product, { status: 201 });
   } catch (err) {
     if (err instanceof DataError) {
