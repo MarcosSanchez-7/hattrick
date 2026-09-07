@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CONSULT_SIZE_LABEL,
   discountPercent,
@@ -75,6 +75,19 @@ export function ProductDetail({
   const alt = product.name;
 
   const goTo = (i: number) => setView((i + thumbCount) % thumbCount);
+
+  // Precarga el resto de las fotos de la galería en cuanto se abre la ficha
+  // (mismo tamaño "detail" que pide la vista principal, ver ProductVisual) —
+  // sin esto, cada click en la flecha/miniatura dispara una descarga nueva
+  // recién en ese momento, y se siente como lentitud/lag al navegar.
+  useEffect(() => {
+    if (!hasPhotos) return;
+    for (const url of product.images!) {
+      const img = new Image();
+      img.src = imageVariant(url, "detail");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
 
   const availablePatches = product.patches?.filter(isPatchAvailable) ?? [];
   const togglePatch = (id: string) => {
