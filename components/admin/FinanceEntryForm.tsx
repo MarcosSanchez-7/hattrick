@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FinanceAccount, FinanceEntry, FinanceEntryType } from "@/lib/data";
+import { todayInParaguay, toParaguayDateString } from "@/lib/timezone";
 
 const TYPES: { value: FinanceEntryType; label: string }[] = [
   { value: "ingreso", label: "Ingreso (otro, no de una venta)" },
@@ -11,10 +12,6 @@ const TYPES: { value: FinanceEntryType; label: string }[] = [
   { value: "capital_retiro", label: "Retiro de capital" },
   { value: "importacion", label: "Importación" },
 ];
-
-function toDateInput(iso: string) {
-  return iso.slice(0, 10);
-}
 
 export function FinanceEntryForm({
   entry,
@@ -31,7 +28,7 @@ export function FinanceEntryForm({
   const [amount, setAmount] = useState(entry ? String(entry.amount) : "");
   const [accountId, setAccountId] = useState(entry?.accountId ?? "");
   const [occurredAt, setOccurredAt] = useState(
-    entry ? toDateInput(entry.occurredAt) : toDateInput(new Date().toISOString()),
+    entry ? toParaguayDateString(entry.occurredAt) : todayInParaguay(),
   );
   const [note, setNote] = useState(entry?.note ?? "");
   const [submitting, setSubmitting] = useState(false);
@@ -59,7 +56,7 @@ export function FinanceEntryForm({
             category: category.trim() || undefined,
             amount: amountNum,
             accountId: accountId || undefined,
-            occurredAt: new Date(`${occurredAt}T12:00:00`).toISOString(),
+            occurredAt: `${occurredAt}T12:00:00`,
             note: note.trim() || undefined,
           }),
         },

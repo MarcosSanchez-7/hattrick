@@ -12,10 +12,7 @@ import {
 } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import type { ImportCourier, ImportPurchase } from "@/lib/data";
-
-function toDateInput(iso: string) {
-  return iso.slice(0, 10);
-}
+import { todayInParaguay, toParaguayDateString } from "@/lib/timezone";
 
 export function ImportPurchaseForm({
   purchase,
@@ -36,7 +33,7 @@ export function ImportPurchaseForm({
   const [courierId, setCourierId] = useState(purchase?.courierId ?? couriers[0]?.id ?? "");
   const [taxRate, setTaxRate] = useState(purchase ? String(purchase.taxRate) : "10");
   const [purchasedAt, setPurchasedAt] = useState(
-    purchase ? toDateInput(purchase.purchasedAt) : toDateInput(new Date().toISOString()),
+    purchase ? toParaguayDateString(purchase.purchasedAt) : todayInParaguay(),
   );
   const [note, setNote] = useState(purchase?.note ?? "");
   const [submitting, setSubmitting] = useState(false);
@@ -94,7 +91,7 @@ export function ImportPurchaseForm({
             weightKg: calcInput.weightKg,
             courierId,
             taxRate: calcInput.taxRate,
-            purchasedAt: new Date(`${purchasedAt}T12:00:00`).toISOString(),
+            purchasedAt: `${purchasedAt}T12:00:00`,
             note: note.trim() || undefined,
           }),
         },

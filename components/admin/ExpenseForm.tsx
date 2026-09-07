@@ -3,15 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ExpenseKind, FinanceAccount, FinanceEntry } from "@/lib/data";
+import { todayInParaguay, toParaguayDateString } from "@/lib/timezone";
 
 const KINDS: { value: ExpenseKind; label: string; help: string }[] = [
   { value: "fijo", label: "Fijo", help: "Se repite mes a mes (alquiler, sueldos, internet…)." },
   { value: "variable", label: "Variable", help: "Cambia cada vez (luz, insumos puntuales…)." },
 ];
-
-function toDateInput(iso: string) {
-  return iso.slice(0, 10);
-}
 
 export function ExpenseForm({
   expense,
@@ -28,7 +25,7 @@ export function ExpenseForm({
   const [amount, setAmount] = useState(expense ? String(expense.amount) : "");
   const [accountId, setAccountId] = useState(expense?.accountId ?? "");
   const [occurredAt, setOccurredAt] = useState(
-    expense ? toDateInput(expense.occurredAt) : toDateInput(new Date().toISOString()),
+    expense ? toParaguayDateString(expense.occurredAt) : todayInParaguay(),
   );
   const [note, setNote] = useState(expense?.note ?? "");
   const [submitting, setSubmitting] = useState(false);
@@ -61,7 +58,7 @@ export function ExpenseForm({
             category: category.trim(),
             amount: amountNum,
             accountId: accountId || undefined,
-            occurredAt: new Date(`${occurredAt}T12:00:00`).toISOString(),
+            occurredAt: `${occurredAt}T12:00:00`,
             note: note.trim() || undefined,
           }),
         },

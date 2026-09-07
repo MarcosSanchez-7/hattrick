@@ -3,10 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { MerchandisePurchase } from "@/lib/data";
-
-function toDateInput(iso: string) {
-  return iso.slice(0, 10);
-}
+import { todayInParaguay, toParaguayDateString } from "@/lib/timezone";
 
 export function PurchaseForm({ purchase }: { purchase?: MerchandisePurchase }) {
   const router = useRouter();
@@ -17,7 +14,7 @@ export function PurchaseForm({ purchase }: { purchase?: MerchandisePurchase }) {
   const [unitCost, setUnitCost] = useState(purchase ? String(purchase.unitCost) : "");
   const [supplier, setSupplier] = useState(purchase?.supplier ?? "");
   const [purchasedAt, setPurchasedAt] = useState(
-    purchase ? toDateInput(purchase.purchasedAt) : toDateInput(new Date().toISOString()),
+    purchase ? toParaguayDateString(purchase.purchasedAt) : todayInParaguay(),
   );
   const [note, setNote] = useState(purchase?.note ?? "");
   const [submitting, setSubmitting] = useState(false);
@@ -61,7 +58,7 @@ export function PurchaseForm({ purchase }: { purchase?: MerchandisePurchase }) {
             quantity: quantityNum,
             unitCost: unitCostNum,
             supplier: supplier.trim() || undefined,
-            purchasedAt: new Date(`${purchasedAt}T12:00:00`).toISOString(),
+            purchasedAt: `${purchasedAt}T12:00:00`,
             note: note.trim() || undefined,
           }),
         },
