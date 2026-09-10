@@ -118,13 +118,24 @@ export function InventoryTable({
       list.push(p);
       bySlug.set(p.category, list);
     }
-    const ordered: { slug: string; name: string; items: Product[] }[] = [];
+    const ordered: { slug: string; name: string; items: Product[]; stockTotal: number }[] = [];
     for (const c of categories) {
       const items = bySlug.get(c.slug);
-      if (items?.length) ordered.push({ slug: c.slug, name: c.name, items });
+      if (items?.length) {
+        const stockTotal = items.reduce((acc, p) => acc + totalStock(p), 0);
+        ordered.push({ slug: c.slug, name: c.name, items, stockTotal });
+      }
     }
     return ordered;
   }, [filtered, categories]);
+
+  // Suma sobre el catálogo completo (no el filtrado), igual criterio que el
+  // conteo de "N productos" de arriba — es una foto del inventario total,
+  // no cambia con los filtros de la tabla.
+  const totalStockCount = useMemo(
+    () => products.reduce((acc, p) => acc + totalStock(p), 0),
+    [products],
+  );
 
   const toggleExpanded = (slug: string) => {
     setExpanded((prev) => {
@@ -204,6 +215,8 @@ export function InventoryTable({
       <div className="admin-card__head">
         <p className="h3" style={{ fontSize: "0.9375rem" }}>
           {products.length} producto{products.length !== 1 ? "s" : ""}
+          {" · "}
+          {totalStockCount} uds. en stock
         </p>
         <div className="row gap-2" style={{ flexWrap: "wrap" }}>
           <select
@@ -277,6 +290,8 @@ export function InventoryTable({
                 <span>{group.name}</span>
                 <span className="meta">
                   {group.items.length} producto{group.items.length !== 1 ? "s" : ""}
+                  {" · "}
+                  {group.stockTotal} uds.
                 </span>
                 <IconChevron className="icon--sm" />
               </button>
