@@ -31,6 +31,11 @@ const LOW_STOCK_THRESHOLD = 3;
 const totalStock = (p: Product) =>
   p.variants?.reduce((acc, v) => acc + v.stock, 0) ?? 0;
 
+/** Valor a costo del stock de un producto — mismo criterio que "Invertido"
+ * en el detalle de cada fila y que getInventoryValuation() en Finanzas. */
+const stockCost = (p: Product) =>
+  p.costPrice != null ? p.costPrice * totalStock(p) : 0;
+
 /**
  * `p.sizes` solo se llena para stockMode "propio" (a propósito, ver
  * lib/catalog.ts) — un producto con control interno también tiene tallas
@@ -118,12 +123,19 @@ export function InventoryTable({
       list.push(p);
       bySlug.set(p.category, list);
     }
-    const ordered: { slug: string; name: string; items: Product[]; stockTotal: number }[] = [];
+    const ordered: {
+      slug: string;
+      name: string;
+      items: Product[];
+      stockTotal: number;
+      costTotal: number;
+    }[] = [];
     for (const c of categories) {
       const items = bySlug.get(c.slug);
       if (items?.length) {
         const stockTotal = items.reduce((acc, p) => acc + totalStock(p), 0);
-        ordered.push({ slug: c.slug, name: c.name, items, stockTotal });
+        const costTotal = items.reduce((acc, p) => acc + stockCost(p), 0);
+        ordered.push({ slug: c.slug, name: c.name, items, stockTotal, costTotal });
       }
     }
     return ordered;
@@ -134,6 +146,11 @@ export function InventoryTable({
   // no cambia con los filtros de la tabla.
   const totalStockCount = useMemo(
     () => products.reduce((acc, p) => acc + totalStock(p), 0),
+    [products],
+  );
+
+  const totalStockCost = useMemo(
+    () => products.reduce((acc, p) => acc + stockCost(p), 0),
     [products],
   );
 
@@ -217,6 +234,7 @@ export function InventoryTable({
           {products.length} producto{products.length !== 1 ? "s" : ""}
           {" · "}
           {totalStockCount} uds. en stock
+          {!readOnly ? <> · {formatPrice(totalStockCost)} a costo</> : null}
         </p>
         <div className="row gap-2" style={{ flexWrap: "wrap" }}>
           <select
@@ -292,6 +310,7 @@ export function InventoryTable({
                   {group.items.length} producto{group.items.length !== 1 ? "s" : ""}
                   {" · "}
                   {group.stockTotal} uds.
+                  {!readOnly ? <> · {formatPrice(group.costTotal)}</> : null}
                 </span>
                 <IconChevron className="icon--sm" />
               </button>
