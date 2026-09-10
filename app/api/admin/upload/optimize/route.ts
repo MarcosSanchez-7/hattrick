@@ -18,6 +18,11 @@ const THUMB_MAX = 160;
 // resolución que "full" (pensado para el feed de Meta y el zoom de parches),
 // suficiente para el ancho real en que se muestra en pantalla.
 const DETAIL_MAX = 1000;
+// "full" ya no se usa como imagen principal de la ficha (eso pasó a
+// "detail") -- hoy solo la consumen el feed de Meta, el zoom de un parche y
+// un par de carruseles, ninguno necesita 2000px. Bajarla a 1400 corta a la
+// mitad su peso (era el 73% del storage del Blob) sin pérdida visible ahí.
+const FULL_MAX = 1400;
 
 function isHeic(contentType: string, pathname: string) {
   return HEIC_MIME_TYPES.has(contentType) || /\.hei[cf]$/i.test(pathname);
@@ -103,8 +108,8 @@ export async function POST(request: NextRequest) {
       payload = await rotated
         .clone()
         .resize({
-          width: 2000,
-          height: 2000,
+          width: FULL_MAX,
+          height: FULL_MAX,
           fit: "inside",
           withoutEnlargement: true,
         })

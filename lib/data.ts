@@ -31,6 +31,7 @@ import {
   type ImportCostInput,
 } from "@/lib/catalog";
 import { slugify, uniqueSlug } from "@/lib/slug";
+import { deleteImagesWithVariants } from "@/lib/blob";
 import type { SiteSettingsKey } from "@/lib/settings";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { toParaguayDateString } from "@/lib/timezone";
@@ -838,6 +839,13 @@ export async function updateProduct(
     ? uniqueSlug(input.slug, taken)
     : rows.find((p) => p.id === id)!.slug;
 
+  const { data: oldRow, error: oldError } = await supabaseAdmin
+    .from("products")
+    .select("images")
+    .eq("id", id)
+    .single();
+  if (oldError) fail(`No se pudo releer el producto: ${oldError.message}`);
+
   const { error } = await supabaseAdmin
     .from("products")
     .update({ slug, ...productToRow(input) })
@@ -849,6 +857,13 @@ export async function updateProduct(
     }
     fail(`No se pudo actualizar el producto: ${error.message}`);
   }
+
+  // Fotos que salieron de la galería (reemplazadas o sacadas a mano) --
+  // sin esto el blob queda huérfano para siempre (ver lib/blob.ts).
+  const oldImages = (oldRow as { images: string[] | null }).images ?? [];
+  const newImages = input.images ?? [];
+  const removedImages = oldImages.filter((u) => !newImages.includes(u));
+  await deleteImagesWithVariants(removedImages);
 
   // Siempre se llama (incluso sin tracking) para dejar en 0 cualquier talla
   // que hubiera quedado de un cambio de tipo de stock o de control interno
@@ -870,13 +885,15 @@ export async function deleteProduct(id: string): Promise<void> {
     .from("products")
     .delete()
     .eq("id", id)
-    .select("id");
+    .select("id, images");
   if (error) {
     fail(`No se pudo eliminar el producto: ${error.message}`);
   }
   if (!data || data.length === 0) {
     throw new DataError("Producto no encontrado.", 404);
   }
+  const images = (data[0] as { images: string[] | null }).images ?? [];
+  await deleteImagesWithVariants(images);
 }
 
 // ── Categorías ───────────────────────────────────────────────────────────
@@ -952,6 +969,9 @@ export async function updateCategory(
     );
   }
 
+  const oldImage = categories.find((c) => c.slug === slug)?.image ?? null;
+  const newImage = input.image ?? null;
+
   // El slug es la clave usada por los productos: no se permite cambiarlo.
   const { data, error } = await supabaseAdmin
     .from("categories")
@@ -959,7 +979,7 @@ export async function updateCategory(
       name: input.name,
       tagline: input.tagline,
       description: input.description,
-      image: input.image ?? null,
+      image: newImage,
       is_visible: input.isVisible ?? true,
       parent_slug: parentSlug,
       notices: input.notices?.length ? input.notices : null,
@@ -970,6 +990,9 @@ export async function updateCategory(
 
   if (error) fail(`No se pudo actualizar la categoría: ${error.message}`);
   if (!data) throw new DataError("Categoría no encontrada.", 404);
+
+  if (oldImage && oldImage !== newImage) await deleteImagesWithVariants([oldImage]);
+
   return rowToCategory(data as CategoryRow);
 }
 
@@ -1002,11 +1025,13 @@ export async function deleteCategory(slug: string): Promise<void> {
     .from("categories")
     .delete()
     .eq("slug", slug)
-    .select("slug");
+    .select("slug, image");
   if (error) fail(`No se pudo eliminar la categoría: ${error.message}`);
   if (!data || data.length === 0) {
     throw new DataError("Categoría no encontrada.", 404);
   }
+  const image = (data[0] as { image: string | null }).image;
+  if (image) await deleteImagesWithVariants([image]);
 }
 
 // ── Etiquetas ────────────────────────────────────────────────────────────
@@ -3309,6 +3334,13 @@ export async function createPatch(input: PatchInput): Promise<Patch> {
 export async function updatePatch(id: string, input: PatchInput): Promise<Patch> {
   assertValidPatch(input);
 
+  const { data: oldRow, error: oldError } = await supabaseAdmin
+    .from("patches")
+    .select("images")
+    .eq("id", id)
+    .single();
+  if (oldError) fail(`No se pudo releer el parche: ${oldError.message}`);
+
   const { data, error } = await supabaseAdmin
     .from("patches")
     .update({
@@ -3325,6 +3357,12 @@ export async function updatePatch(id: string, input: PatchInput): Promise<Patch>
 
   if (error) fail(`No se pudo actualizar el parche: ${error.message}`);
   if (!data) throw new DataError("Parche no encontrado.", 404);
+
+  const oldImages = (oldRow as { images: string[] | null }).images ?? [];
+  const newImages = input.images ?? [];
+  const removedImages = oldImages.filter((u) => !newImages.includes(u));
+  await deleteImagesWithVariants(removedImages);
+
   return rowToPatch(data as PatchRow);
 }
 
@@ -3333,9 +3371,11 @@ export async function deletePatch(id: string): Promise<void> {
     .from("patches")
     .delete()
     .eq("id", id)
-    .select("id");
+    .select("id, images");
   if (error) fail(`No se pudo eliminar el parche: ${error.message}`);
   if (!data || data.length === 0) throw new DataError("Parche no encontrado.", 404);
+  const images = (data[0] as { images: string[] | null }).images ?? [];
+  await deleteImagesWithVariants(images);
 }
 
 export { slugify };
