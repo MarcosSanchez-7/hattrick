@@ -1596,3 +1596,148 @@ alter function update_sale(text, text, text, text, jsonb, timestamptz, text, tex
 -- cualquiera con la anon key (aunque al ser "returns trigger" fallaba si se
 -- llamaba fuera de un trigger real). Se le saca ese acceso público.
 revoke execute on function public.handle_new_customer() from public;
+
+-- ── Sincroniza product_suppliers.quantity con las ventas (2026-09-10) ──────
+-- product_suppliers.quantity (columna agregada por separado) es cuántas
+-- unidades se compraron a cada proveedor, para desglosar el costo real de
+-- stock en Inventario en vez de un costPrice plano. Sin esto se desactualiza
+-- con cada venta: se vende una unidad "de Pao" pero el desglose seguía
+-- mostrando la misma cantidad.
+create or replace function create_sale_inventory_movement()
+returns trigger as $$
+declare
+  v_channel text;
+begin
+  select channel into v_channel from sales where id = new.sale_id;
+  insert into inventory_movements (variant_id, movement_type, quantity_delta, sale_item_id)
+  values (
+    new.variant_id,
+    case when v_channel = 'web' then 'sale_online' else 'sale_in_store' end,
+    -new.quantity,
+    new.id
+  );
+
+  if new.supplier_id_snapshot is not null and new.product_id_snapshot is not null then
+    update product_suppliers
+    set quantity = greatest(0, quantity - new.quantity)
+    where product_id = new.product_id_snapshot
+      and supplier_id = new.supplier_id_snapshot;
+  end if;
+
+  return new;
+end;
+$$ language plpgsql;
+
+-- update_sale: misma firma de siempre, ahora también repone
+-- product_suppliers.quantity de las líneas viejas antes de reemplazarlas
+-- (las líneas nuevas se descuentan solas vía el trigger de arriba, al
+-- insertarse en sale_items).
+create or replace function update_sale(
+  p_id text,
+  p_channel text,
+  p_staff_name text,
+  p_customer_note text,
+  p_items jsonb,
+  p_sold_at timestamptz default null,
+  p_customer_name text default null,
+  p_customer_phone text default null,
+  p_destination_city text default null,
+  p_shipping_method text default null,
+  p_customer_id text default null,
+  p_shipping_method_detail text default null,
+  p_destination_neighborhood text default null
+)
+returns text
+language plpgsql
+as $$
+declare
+  v_item jsonb;
+  v_old_item record;
+begin
+  for v_old_item in
+    select variant_id, quantity, supplier_id_snapshot, product_id_snapshot from sale_items
+    where sale_id = p_id and variant_id is not null
+  loop
+    insert into inventory_movements (variant_id, movement_type, quantity_delta, note)
+    values (
+      v_old_item.variant_id,
+      'return',
+      v_old_item.quantity,
+      'Reposición de stock por edición de venta'
+    );
+
+    if v_old_item.supplier_id_snapshot is not null and v_old_item.product_id_snapshot is not null then
+      update product_suppliers
+      set quantity = quantity + v_old_item.quantity
+      where product_id = v_old_item.product_id_snapshot
+        and supplier_id = v_old_item.supplier_id_snapshot;
+    end if;
+  end loop;
+
+  delete from sale_items where sale_id = p_id;
+
+  update sales set
+    channel = p_channel,
+    staff_name = p_staff_name,
+    customer_note = p_customer_note,
+    sold_at = coalesce(p_sold_at, sold_at),
+    customer_name = p_customer_name,
+    customer_phone = p_customer_phone,
+    destination_city = p_destination_city,
+    shipping_method = p_shipping_method,
+    customer_id = p_customer_id,
+    shipping_method_detail = p_shipping_method_detail,
+    destination_neighborhood = p_destination_neighborhood
+  where id = p_id;
+
+  if not found then
+    raise exception 'Venta % no encontrada', p_id;
+  end if;
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    insert into sale_items (
+      sale_id, variant_id, quantity, unit_price, cost_price,
+      product_name_snapshot, size_snapshot, product_id_snapshot, item_note,
+      supplier_id_snapshot, supplier_name_snapshot
+    )
+    values (
+      p_id,
+      nullif(v_item->>'variant_id', ''),
+      (v_item->>'quantity')::integer,
+      (v_item->>'unit_price')::numeric,
+      coalesce((v_item->>'cost_price')::numeric, 0),
+      v_item->>'product_name_snapshot',
+      v_item->>'size_snapshot',
+      nullif(v_item->>'product_id_snapshot', ''),
+      v_item->>'item_note',
+      nullif(v_item->>'supplier_id_snapshot', ''),
+      v_item->>'supplier_name_snapshot'
+    );
+  end loop;
+
+  return p_id;
+end;
+$$;
+
+-- Repone product_suppliers.quantity al eliminar una venta (llamado desde
+-- deleteSale en lib/data.ts, línea por línea, junto con el 'return' de
+-- inventory_movements que ya se insertaba desde código de la app).
+create or replace function restore_supplier_quantity(
+  p_product_id text,
+  p_supplier_id text,
+  p_quantity integer
+)
+returns void
+language plpgsql
+as $$
+begin
+  update product_suppliers
+  set quantity = quantity + p_quantity
+  where product_id = p_product_id and supplier_id = p_supplier_id;
+end;
+$$;
+
+alter function create_sale_inventory_movement() set search_path = public;
+alter function update_sale(text, text, text, text, jsonb, timestamptz, text, text, text, text, text, text, text) set search_path = public;
+alter function restore_supplier_quantity(text, text, integer) set search_path = public;

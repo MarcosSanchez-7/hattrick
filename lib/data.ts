@@ -1753,12 +1753,17 @@ export async function updateSale(id: string, input: SaleInput): Promise<string> 
 export async function deleteSale(id: string): Promise<void> {
   const { data: items, error: itemsError } = await supabaseAdmin
     .from("sale_items")
-    .select("variant_id, quantity")
+    .select("variant_id, quantity, supplier_id_snapshot, product_id_snapshot")
     .eq("sale_id", id);
   if (itemsError) fail(`No se pudo leer la venta: ${itemsError.message}`);
   if (!items || items.length === 0) throw new DataError("Venta no encontrada.", 404);
 
-  for (const item of items as { variant_id: string | null; quantity: number }[]) {
+  for (const item of items as {
+    variant_id: string | null;
+    quantity: number;
+    supplier_id_snapshot: string | null;
+    product_id_snapshot: string | null;
+  }[]) {
     if (!item.variant_id) continue;
     const { error } = await supabaseAdmin.from("inventory_movements").insert({
       variant_id: item.variant_id,
@@ -1767,6 +1772,17 @@ export async function deleteSale(id: string): Promise<void> {
       note: "Reposición de stock por eliminación de venta",
     });
     if (error) fail(`No se pudo reponer el stock: ${error.message}`);
+
+    if (item.supplier_id_snapshot && item.product_id_snapshot) {
+      const { error: supplierError } = await supabaseAdmin.rpc("restore_supplier_quantity", {
+        p_product_id: item.product_id_snapshot,
+        p_supplier_id: item.supplier_id_snapshot,
+        p_quantity: item.quantity,
+      });
+      if (supplierError) {
+        fail(`No se pudo reponer el stock del proveedor: ${supplierError.message}`);
+      }
+    }
   }
 
   const { error } = await supabaseAdmin.from("sales").delete().eq("id", id);
