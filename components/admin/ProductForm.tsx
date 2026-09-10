@@ -107,6 +107,7 @@ function toFormState(product?: Product): FormState {
     suppliers: (product?.suppliers ?? []).map((s) => ({
       supplierId: s.supplierId,
       unitCost: String(s.unitCost),
+      quantity: s.quantity ? String(s.quantity) : "",
     })),
     colorPrimary: product?.colors.primary ?? "#111111",
     colorSecondary: product?.colors.secondary ?? "#f2f2f2",
@@ -272,7 +273,11 @@ export function ProductForm({
       suppliers: isPropio
         ? form.suppliers
             .filter((s) => Number(s.unitCost) > 0)
-            .map((s) => ({ supplierId: s.supplierId, unitCost: Number(s.unitCost) }))
+            .map((s) => ({
+              supplierId: s.supplierId,
+              unitCost: Number(s.unitCost),
+              quantity: Math.max(0, Math.round(Number(s.quantity) || 0)),
+            }))
         : [],
       colors: {
         primary: form.colorPrimary,

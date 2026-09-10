@@ -11,6 +11,7 @@ import {
   orderCategoriesTree,
   SIZES_ADULT,
   SIZES_KIDS,
+  stockCostValue,
   type Category,
   type Product,
 } from "@/lib/catalog";
@@ -30,11 +31,6 @@ const LOW_STOCK_THRESHOLD = 3;
 
 const totalStock = (p: Product) =>
   p.variants?.reduce((acc, v) => acc + v.stock, 0) ?? 0;
-
-/** Valor a costo del stock de un producto — mismo criterio que "Invertido"
- * en el detalle de cada fila y que getInventoryValuation() en Finanzas. */
-const stockCost = (p: Product) =>
-  p.costPrice != null ? p.costPrice * totalStock(p) : 0;
 
 /**
  * `p.sizes` solo se llena para stockMode "propio" (a propósito, ver
@@ -134,7 +130,7 @@ export function InventoryTable({
       const items = bySlug.get(c.slug);
       if (items?.length) {
         const stockTotal = items.reduce((acc, p) => acc + totalStock(p), 0);
-        const costTotal = items.reduce((acc, p) => acc + stockCost(p), 0);
+        const costTotal = items.reduce((acc, p) => acc + stockCostValue(p), 0);
         ordered.push({ slug: c.slug, name: c.name, items, stockTotal, costTotal });
       }
     }
@@ -150,7 +146,7 @@ export function InventoryTable({
   );
 
   const totalStockCost = useMemo(
-    () => products.reduce((acc, p) => acc + stockCost(p), 0),
+    () => products.reduce((acc, p) => acc + stockCostValue(p), 0),
     [products],
   );
 
@@ -387,7 +383,8 @@ function ProductRowsTable({
             const isStockOpen = expandedStock.has(p.id);
             const isMobileOpen = expandedMobile.has(p.id);
             const stock = totalStock(p);
-            const invested = p.costPrice != null ? p.costPrice * stock : null;
+            const invested = stockCostValue(p) || null;
+            const supplierBreakdown = p.suppliers?.filter((s) => s.quantity > 0) ?? [];
             return (
               <tr key={p.id} data-expanded={isMobileOpen ? "true" : "false"}>
                 <td>
@@ -502,6 +499,16 @@ function ProductRowsTable({
                           {!readOnly && invested != null ? (
                             <p className="meta" style={{ marginTop: 6 }}>
                               Invertido: {formatPrice(invested)}
+                            </p>
+                          ) : null}
+                          {!readOnly && supplierBreakdown.length > 1 ? (
+                            <p className="meta" style={{ marginTop: 2 }}>
+                              {supplierBreakdown
+                                .map(
+                                  (s) =>
+                                    `${s.quantity} uds. ${s.supplierName} a ${formatPrice(s.unitCost)}`,
+                                )
+                                .join(" · ")}
                             </p>
                           ) : null}
                         </div>

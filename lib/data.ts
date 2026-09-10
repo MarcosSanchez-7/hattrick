@@ -26,6 +26,7 @@ import {
   normalizePhone,
   saleTotal,
   SIZES_ADULT,
+  stockCostValue,
   wouldCreateCycle,
   type ImportCostInput,
 } from "@/lib/catalog";
@@ -578,7 +579,7 @@ export type ProductInput = Omit<
   patchIds?: string[];
   /** Proveedores + precio de compra para este producto (solo se usa cuando
    * stockMode === "propio"). El nombre se resuelve al leer, acá alcanza el id. */
-  suppliers?: { supplierId: string; unitCost: number }[];
+  suppliers?: { supplierId: string; unitCost: number; quantity: number }[];
 };
 
 function assertValidProduct(input: ProductInput) {
@@ -641,13 +642,14 @@ async function fetchSuppliersByProduct(
 
   const { data, error } = await supabaseAdmin
     .from("product_suppliers")
-    .select("product_id, unit_cost, suppliers(id, name)")
+    .select("product_id, unit_cost, quantity, suppliers(id, name)")
     .in("product_id", productIds);
   if (error) fail(`No se pudieron cargar los proveedores del producto: ${error.message}`);
 
   const rows = data as unknown as {
     product_id: string;
     unit_cost: number | string;
+    quantity: number;
     suppliers: { id: string; name: string } | { id: string; name: string }[] | null;
   }[];
   for (const row of rows) {
@@ -659,6 +661,7 @@ async function fetchSuppliersByProduct(
       supplierId: supplier.id,
       supplierName: supplier.name,
       unitCost: Number(row.unit_cost),
+      quantity: Number(row.quantity) || 0,
     });
     map.set(row.product_id, list);
   }
@@ -684,11 +687,12 @@ async function syncProductPatches(productId: string, patchIds: string[]): Promis
   }
 }
 
-/** Reemplazo completo (no diff): es una lista de precios, no cantidad de
- * stock — no hay ledger que preservar, a diferencia de syncProductVariants. */
+/** Reemplazo completo (no diff): es una lista de precios/composición de
+ * stock por proveedor, no un ledger de movimientos — no hay historial que
+ * preservar, a diferencia de syncProductVariants. */
 async function syncProductSuppliers(
   productId: string,
-  suppliers: { supplierId: string; unitCost: number }[],
+  suppliers: { supplierId: string; unitCost: number; quantity: number }[],
 ): Promise<void> {
   const { error: deleteError } = await supabaseAdmin
     .from("product_suppliers")
@@ -705,6 +709,7 @@ async function syncProductSuppliers(
       product_id: productId,
       supplier_id: s.supplierId,
       unit_cost: s.unitCost,
+      quantity: s.quantity,
     })),
   );
   if (insertError) {
@@ -2735,7 +2740,7 @@ export async function getInventoryValuation(): Promise<InventoryValuation> {
     const stock = p.variants.reduce((acc, v) => acc + v.stock, 0);
     totalUnits += stock;
     retailValue += p.price * stock;
-    if (p.costPrice != null) costValue += p.costPrice * stock;
+    costValue += stockCostValue(p);
   }
 
   return { costValue, retailValue, totalUnits };

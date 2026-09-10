@@ -98,7 +98,23 @@ export type ProductSupplier = {
   supplierId: string;
   supplierName: string;
   unitCost: number;
+  /** Unidades compradas a este proveedor a este costo (0 = solo precio de
+   * referencia, sin stock atribuido). Es por producto, no por talla. */
+  quantity: number;
 };
+
+/** Costo real del stock de un producto: si tiene proveedores con cantidad
+ * cargada, usa esa composición real (distintos lotes a distinto costo) en
+ * vez del costPrice plano — más preciso cuando se compró a 2+ proveedores
+ * a precios distintos. Mismo criterio usado en Inventario y Finanzas. */
+export function stockCostValue(p: Product): number {
+  const withQty = p.suppliers?.filter((s) => s.quantity > 0) ?? [];
+  if (withQty.length > 0) {
+    return withQty.reduce((acc, s) => acc + s.unitCost * s.quantity, 0);
+  }
+  const stock = p.variants?.reduce((acc, v) => acc + v.stock, 0) ?? 0;
+  return p.costPrice != null ? p.costPrice * stock : 0;
+}
 
 export type NoticeIcon = "truck" | "print" | "return" | "shield";
 

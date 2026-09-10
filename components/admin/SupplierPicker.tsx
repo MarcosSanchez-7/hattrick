@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Supplier } from "@/lib/catalog";
 
-export type SelectedSupplier = { supplierId: string; unitCost: string };
+export type SelectedSupplier = { supplierId: string; unitCost: string; quantity: string };
 
 /**
  * Chips de proveedores (toggle) + precio de compra por cada uno
@@ -30,13 +30,19 @@ export function SupplierPicker({
     onChange(
       included
         ? value.filter((v) => v.supplierId !== supplierId)
-        : [...value, { supplierId, unitCost: "" }],
+        : [...value, { supplierId, unitCost: "", quantity: "" }],
     );
   };
 
   const setCost = (supplierId: string, unitCost: string) => {
     onChange(
       value.map((v) => (v.supplierId === supplierId ? { ...v, unitCost } : v)),
+    );
+  };
+
+  const setQuantity = (supplierId: string, quantity: string) => {
+    onChange(
+      value.map((v) => (v.supplierId === supplierId ? { ...v, quantity } : v)),
     );
   };
 
@@ -54,7 +60,7 @@ export function SupplierPicker({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "No se pudo crear el proveedor.");
       onCatalogChange([...catalog, data]);
-      onChange([...value, { supplierId: data.id, unitCost: "" }]);
+      onChange([...value, { supplierId: data.id, unitCost: "", quantity: "" }]);
       setNewSupplier("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado.");
@@ -83,16 +89,28 @@ export function SupplierPicker({
                 {supplier.name}
               </label>
               {selected ? (
-                <input
-                  type="number"
-                  min="0"
-                  step="1000"
-                  className="admin-variant-qty"
-                  value={selected.unitCost}
-                  onChange={(e) => setCost(supplier.id, e.target.value)}
-                  placeholder="Precio de compra"
-                  aria-label={`Precio de compra a ${supplier.name}`}
-                />
+                <>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    className="admin-variant-qty"
+                    value={selected.unitCost}
+                    onChange={(e) => setCost(supplier.id, e.target.value)}
+                    placeholder="Precio de compra"
+                    aria-label={`Precio de compra a ${supplier.name}`}
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    className="admin-variant-qty"
+                    value={selected.quantity}
+                    onChange={(e) => setQuantity(supplier.id, e.target.value)}
+                    placeholder="Uds. compradas"
+                    aria-label={`Unidades compradas a ${supplier.name}`}
+                  />
+                </>
               ) : null}
             </div>
           );
