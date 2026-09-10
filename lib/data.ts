@@ -60,6 +60,19 @@ function fail(message: string, status = 500): never {
   throw new DataError(message, status);
 }
 
+/** Tamaño de lote para consultas .in("product_id", ids) sobre el catálogo
+ * completo (70+ productos) — partir en lotes más chicos, corridos en
+ * paralelo, evita mandar una sola consulta gigante que puede saturar el
+ * pool de conexiones de PostgREST (visto en producción: 504 Gateway
+ * Timeout en product_patches con todos los ids de una sola vez). */
+const SUPABASE_IN_CHUNK_SIZE = 20;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
 // ── Filas de Postgres <-> tipos de la app ──────────────────────────────────
 
 type ProductRow = {
@@ -88,6 +101,13 @@ type ProductRow = {
   created_at: string;
 };
 
+/** Columnas realmente usadas de "products" — deja afuera "sizes"/"sold_out"
+ * (legacy, reemplazadas por product_variants, siempre null hoy) y
+ * "updated_at" (no se lee). Evita traer de más en getAllProducts(), que
+ * puede devolver el catálogo entero (70+ filas). */
+const PRODUCT_COLUMNS =
+  "id, slug, name, category, price, compare_at, cost_price, wholesale_price, is_new, rating, reviews, color_primary, color_secondary, color_accent, pattern, description, tags, images, stock_mode, internal_control, is_visible, is_customizable, created_at" as const;
+
 type VariantRow = {
   id: string;
   product_id: string;
@@ -105,6 +125,12 @@ type CategoryRow = {
   parent_slug: string | null;
   notices: ProductNotice[] | null;
 };
+
+/** Columnas realmente usadas de "categories" (ver rowToCategory) —
+ * created_at queda afuera a propósito: solo se usa para el .order(), que en
+ * PostgREST no requiere que la columna esté en el select. */
+const CATEGORY_COLUMNS =
+  "slug, name, tagline, description, image, is_visible, parent_slug, notices" as const;
 
 /** P/M/G/XL/XXL primero, en ese orden; cualquier talla no reconocida va al final. */
 function sizeRank(size: string): number {
@@ -194,13 +220,18 @@ async function fetchVariantsByProduct(
   const map = new Map<string, VariantRow[]>();
   if (productIds.length === 0) return map;
 
-  const { data, error } = await supabaseAdmin
-    .from("product_variants")
-    .select("*")
-    .in("product_id", productIds);
-  if (error) fail(`No se pudieron cargar las tallas y el stock: ${error.message}`);
+  const batches = await Promise.all(
+    chunk(productIds, SUPABASE_IN_CHUNK_SIZE).map(async (ids) => {
+      const { data, error } = await supabaseAdmin
+        .from("product_variants")
+        .select("id, product_id, size, stock_on_hand")
+        .in("product_id", ids);
+      if (error) fail(`No se pudieron cargar las tallas y el stock: ${error.message}`);
+      return data as VariantRow[];
+    }),
+  );
 
-  for (const row of data as VariantRow[]) {
+  for (const row of batches.flat()) {
     const list = map.get(row.product_id) ?? [];
     list.push(row);
     map.set(row.product_id, list);
@@ -236,17 +267,21 @@ async function fetchPatchesByProduct(
   const map = new Map<string, Patch[]>();
   if (productIds.length === 0) return map;
 
-  const { data, error } = await supabaseAdmin
-    .from("product_patches")
-    .select("product_id, patches(*)")
-    .in("product_id", productIds);
-  if (error) fail(`No se pudieron cargar los parches del producto: ${error.message}`);
+  const batches = await Promise.all(
+    chunk(productIds, SUPABASE_IN_CHUNK_SIZE).map(async (ids) => {
+      const { data, error } = await supabaseAdmin
+        .from("product_patches")
+        .select("product_id, patches(*)")
+        .in("product_id", ids);
+      if (error) fail(`No se pudieron cargar los parches del producto: ${error.message}`);
+      return data as unknown as {
+        product_id: string;
+        patches: PatchRow | PatchRow[] | null;
+      }[];
+    }),
+  );
 
-  const rows = data as unknown as {
-    product_id: string;
-    patches: PatchRow | PatchRow[] | null;
-  }[];
-  for (const row of rows) {
+  for (const row of batches.flat()) {
     if (!row.patches) continue;
     const patchRows = Array.isArray(row.patches) ? row.patches : [row.patches];
     const list = map.get(row.product_id) ?? [];
@@ -259,7 +294,7 @@ async function fetchPatchesByProduct(
 async function fetchProductWithVariants(id: string): Promise<Product> {
   const { data, error } = await supabaseAdmin
     .from("products")
-    .select("*")
+    .select(PRODUCT_COLUMNS)
     .eq("id", id)
     .single();
   if (error) fail(`No se pudo releer el producto: ${error.message}`);
@@ -292,7 +327,7 @@ async function fetchProductWithVariants(id: string): Promise<Product> {
 export async function getAllProducts(
   opts: { includeHidden?: boolean } = {},
 ): Promise<Product[]> {
-  let query = supabaseAdmin.from("products").select("*").order("created_at", {
+  let query = supabaseAdmin.from("products").select(PRODUCT_COLUMNS).order("created_at", {
     ascending: true,
   });
   if (!opts.includeHidden) query = query.eq("is_visible", true);
@@ -338,7 +373,7 @@ export async function getAllProducts(
 export async function getAllCategories(
   opts: { includeHidden?: boolean } = {},
 ): Promise<Category[]> {
-  let query = supabaseAdmin.from("categories").select("*").order("created_at", {
+  let query = supabaseAdmin.from("categories").select(CATEGORY_COLUMNS).order("created_at", {
     ascending: true,
   });
   if (!opts.includeHidden) query = query.eq("is_visible", true);
@@ -640,19 +675,23 @@ async function fetchSuppliersByProduct(
   const map = new Map<string, ProductSupplier[]>();
   if (productIds.length === 0) return map;
 
-  const { data, error } = await supabaseAdmin
-    .from("product_suppliers")
-    .select("product_id, unit_cost, quantity, suppliers(id, name)")
-    .in("product_id", productIds);
-  if (error) fail(`No se pudieron cargar los proveedores del producto: ${error.message}`);
+  const batches = await Promise.all(
+    chunk(productIds, SUPABASE_IN_CHUNK_SIZE).map(async (ids) => {
+      const { data, error } = await supabaseAdmin
+        .from("product_suppliers")
+        .select("product_id, unit_cost, quantity, suppliers(id, name)")
+        .in("product_id", ids);
+      if (error) fail(`No se pudieron cargar los proveedores del producto: ${error.message}`);
+      return data as unknown as {
+        product_id: string;
+        unit_cost: number | string;
+        quantity: number;
+        suppliers: { id: string; name: string } | { id: string; name: string }[] | null;
+      }[];
+    }),
+  );
 
-  const rows = data as unknown as {
-    product_id: string;
-    unit_cost: number | string;
-    quantity: number;
-    suppliers: { id: string; name: string } | { id: string; name: string }[] | null;
-  }[];
-  for (const row of rows) {
+  for (const row of batches.flat()) {
     if (!row.suppliers) continue;
     const supplier = Array.isArray(row.suppliers) ? row.suppliers[0] : row.suppliers;
     if (!supplier) continue;
