@@ -44,6 +44,14 @@ export const metadata: Metadata = {
     title: TITLE_DEFAULT,
     description: DESCRIPTION,
   },
+  // Verificación de dominio en Meta Business Manager (Portfolio comercial >
+  // Dominios) -- necesaria para el catálogo de WhatsApp y, a futuro, para
+  // que el Pixel/Conversions API se atribuyan a un dominio verificado.
+  verification: {
+    other: {
+      "facebook-domain-verification": "q4qo6c7kk8jsdpxfk071fjjj4wapiq",
+    },
+  },
 };
 
 // Sin esto, Android Chrome puede aplicar su "tema oscuro forzado" a la
