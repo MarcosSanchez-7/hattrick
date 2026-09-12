@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 export function AdminLoginForm() {
   const router = useRouter();
@@ -47,9 +48,8 @@ export function AdminLoginForm() {
       </div>
       <div className="admin-field">
         <label htmlFor="password">Contraseña</label>
-        <input
+        <PasswordInput
           id="password"
-          type="password"
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}

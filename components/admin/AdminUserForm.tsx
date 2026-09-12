@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AdminRole } from "@/lib/admin-auth";
 import type { AdminUser } from "@/lib/data";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 const ROLES: { value: AdminRole; label: string; help: string }[] = [
   { value: "superadmin", label: "Superadmin", help: "Acceso total, incluida la gestión de usuarios." },
@@ -114,9 +115,8 @@ export function AdminUserForm({ user }: { user?: AdminUser }) {
           <label htmlFor="password">
             {isEdit ? "Nueva contraseña" : "Contraseña"}
           </label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             required={!isEdit}
             minLength={8}
             value={password}

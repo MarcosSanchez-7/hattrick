@@ -3122,6 +3122,7 @@ textarea {
 .admin-field input[type='number'],
 .admin-field input[type='search'],
 .admin-field input[type='date'],
+.admin-field input[type='password'],
 .admin-field select,
 .admin-field textarea {
   border: 1px solid var(--line);
@@ -3133,6 +3134,38 @@ textarea {
   font-family: inherit;
   background: var(--surface);
   width: 100%;
+}
+
+/* Wrapper del PasswordInput (components/ui/PasswordInput.tsx) -- el botón
+   de mostrar/ocultar (ojito) se posiciona flotando sobre el input, así que
+   el input necesita el padding derecho corrido para no quedar tapado. */
+.admin-password-field {
+  position: relative;
+  display: flex;
+}
+
+.admin-password-field input[type='password'],
+.admin-password-field input[type='text'] {
+  padding-right: 40px;
+}
+
+.admin-password-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+}
+
+.admin-password-toggle:hover {
+  color: var(--ink);
 }
 
 .admin-field textarea {

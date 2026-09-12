@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 export function AdminSetupForm() {
   const router = useRouter();
@@ -70,9 +71,8 @@ export function AdminSetupForm() {
       </div>
       <div className="admin-field">
         <label htmlFor="password">Contraseña</label>
-        <input
+        <PasswordInput
           id="password"
-          type="password"
           required
           minLength={8}
           value={password}
@@ -82,9 +82,8 @@ export function AdminSetupForm() {
       </div>
       <div className="admin-field">
         <label htmlFor="confirmPassword">Confirmar contraseña</label>
-        <input
+        <PasswordInput
           id="confirmPassword"
-          type="password"
           required
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
