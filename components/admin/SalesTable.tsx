@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -14,7 +14,7 @@ import {
 } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { imageVariant } from "@/lib/image";
-import { IconTrash } from "@/components/ui/Icons";
+import { IconChevron, IconDocument, IconTrash } from "@/components/ui/Icons";
 import { PARAGUAY_TZ } from "@/lib/timezone";
 
 const channelLabel = (value: string) =>
@@ -85,6 +85,16 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [channelFilter, setChannelFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+
+  const toggleExpanded = (itemId: number) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+  };
 
   const filteredSales = useMemo(
     () =>
@@ -197,10 +207,22 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                       ? shippingMethodLabel(sale.shippingMethod)
                       : null,
                 ].filter(Boolean);
+                const isExpanded = expandedIds.has(item.id);
                 return (
-                <tr key={item.id}>
+                <Fragment key={item.id}>
+                <tr>
                   <td>
                     <div className="row gap-2" style={{ alignItems: "center" }}>
+                      <button
+                        type="button"
+                        className="admin-table__expand-btn"
+                        data-open={isExpanded ? "true" : "false"}
+                        onClick={() => toggleExpanded(item.id)}
+                        aria-label={isExpanded ? "Ocultar detalles" : "Ver detalles"}
+                        aria-expanded={isExpanded}
+                      >
+                        <IconChevron className="icon--sm" />
+                      </button>
                       {item.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -223,6 +245,14 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                           {item.note ? ` · ${item.note}` : ""}
                         </div>
                       </div>
+                      {sale.customerNote ? (
+                        <span
+                          className="admin-table__note-flag"
+                          title={`Nota: ${sale.customerNote}`}
+                        >
+                          <IconDocument className="icon--sm" />
+                        </span>
+                      ) : null}
                     </div>
                   </td>
                   <td className="meta" data-label="Fecha">
@@ -287,6 +317,23 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                     </div>
                   </td>
                 </tr>
+                {isExpanded ? (
+                  <tr>
+                    <td colSpan={10} className="admin-table__expand-panel">
+                      <div className="row gap-4" style={{ flexWrap: "wrap" }}>
+                        <div>
+                          <span className="label">Vendedor</span>
+                          <p className="meta">{sale.staffName || "—"}</p>
+                        </div>
+                        <div>
+                          <span className="label">Nota</span>
+                          <p className="meta">{sale.customerNote || "—"}</p>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ) : null}
+                </Fragment>
                 );
               })}
             </tbody>

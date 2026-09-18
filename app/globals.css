@@ -3001,6 +3001,51 @@ textarea {
   color: var(--success);
 }
 
+/* Fila desplegable de SalesTable.tsx -- flecha para ver Vendedor/Nota sin
+   ir a la ficha completa de la venta. */
+.admin-table__expand-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+  transition: transform 0.18s var(--ease), border-color 0.18s var(--ease);
+}
+
+.admin-table__expand-btn:hover {
+  border-color: var(--ink);
+}
+
+.admin-table__expand-btn[data-open='true'] {
+  transform: rotate(180deg);
+}
+
+.admin-table__expand-panel {
+  background: var(--surface-soft);
+}
+
+.admin-table__expand-panel .label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  margin-bottom: 2px;
+}
+
+/* Ícono que marca, sin desplegar la fila, que la venta tiene una nota
+   cargada (sale.customerNote) -- ayuda a detectarlas de un vistazo. */
+.admin-table__note-flag {
+  display: inline-flex;
+  flex: none;
+  color: var(--ink);
+  cursor: help;
+}
+
 /* Envuelve la celda de producto para poder desplegar la fila en mobile
    (ver @media 640px) — en desktop no tiene ningún efecto visual: se
    comporta como si sus hijos fueran directos de la celda. */
