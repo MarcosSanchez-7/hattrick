@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   SALE_CHANNELS,
+  SALE_STATUSES,
   SHIPPING_METHODS,
   lineProfit,
   lineTotal,
   type Sale,
+  type SaleStatus,
 } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { imageVariant } from "@/lib/image";
@@ -20,6 +22,55 @@ const channelLabel = (value: string) =>
 
 const shippingMethodLabel = (value: string) =>
   SHIPPING_METHODS.find((m) => m.value === value)?.label ?? value;
+
+/** Pastilla de color por estado (ver .admin-status-select--* en globals.css). */
+function SaleStatusSelect({
+  saleId,
+  status,
+  onChanged,
+}: {
+  saleId: string;
+  status: SaleStatus;
+  onChanged: () => void;
+}) {
+  const [pending, setPending] = useState(false);
+
+  const handleChange = async (next: SaleStatus) => {
+    setPending(true);
+    try {
+      const res = await fetch(`/api/admin/sales/${saleId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: next }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "No se pudo actualizar el estado.");
+      }
+      onChanged();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Error inesperado.");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <select
+      className={`admin-status-select admin-status-select--${status}`}
+      value={status}
+      disabled={pending}
+      onChange={(e) => handleChange(e.target.value as SaleStatus)}
+      aria-label="Estado de la venta"
+    >
+      {SALE_STATUSES.map((s) => (
+        <option key={s.value} value={s.value}>
+          {s.label}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 const dateTimeFormatter = new Intl.DateTimeFormat("es-PY", {
   timeZone: PARAGUAY_TZ,
@@ -33,10 +84,16 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [channelFilter, setChannelFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   const filteredSales = useMemo(
-    () => (channelFilter ? sales.filter((s) => s.channel === channelFilter) : sales),
-    [sales, channelFilter],
+    () =>
+      sales.filter(
+        (s) =>
+          (!channelFilter || s.channel === channelFilter) &&
+          (!statusFilter || s.status === statusFilter),
+      ),
+    [sales, channelFilter, statusFilter],
   );
 
   const rows = filteredSales.flatMap((sale) =>
@@ -88,6 +145,19 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
             </option>
           ))}
         </select>
+        <select
+          className="select"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          aria-label="Filtrar por estado"
+        >
+          <option value="">Todos los estados</option>
+          {SALE_STATUSES.map((s) => (
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
+          ))}
+        </select>
         <p className="h3" style={{ fontSize: "0.9375rem" }}>
           Total {formatPrice(totalVenta)} · Ganancia {formatPrice(totalGanancia)}
         </p>
@@ -98,7 +168,7 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
           No hay ventas registradas en este rango de fechas.
         </div>
       ) : rows.length === 0 ? (
-        <div className="admin-empty">Ninguna venta coincide con el canal elegido.</div>
+        <div className="admin-empty">Ninguna venta coincide con los filtros elegidos.</div>
       ) : (
         <div className="admin-table-wrap">
           <table className="admin-table">
@@ -111,6 +181,7 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                 <th>Precio venta</th>
                 <th>Ganancia</th>
                 <th>Canal</th>
+                <th>Estado</th>
                 <th>Cliente</th>
                 <th aria-label="Acciones" />
               </tr>
@@ -163,6 +234,13 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                   <td data-label="Ganancia">{formatPrice(lineProfit(item))}</td>
                   <td data-label="Canal">
                     <span className="meta">{channelLabel(sale.channel)}</span>
+                  </td>
+                  <td data-label="Estado">
+                    <SaleStatusSelect
+                      saleId={sale.id}
+                      status={sale.status}
+                      onChanged={() => router.refresh()}
+                    />
                   </td>
                   <td data-label="Cliente">
                     {sale.customerName || deliveryBits.length > 0 ? (

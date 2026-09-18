@@ -200,9 +200,23 @@ export const SHIPPING_METHODS: { value: ShippingMethod; label: string }[] = [
   { value: "otro", label: "Otro" },
 ];
 
+/**
+ * Estado de entrega/cobro de la venta -- independiente del canal o de los
+ * artículos, se actualiza a mano a medida que avanza (se señó, se cobró el
+ * resto, se entregó). "pendiente" es el default de toda venta nueva.
+ */
+export type SaleStatus = "pendiente" | "senado" | "entregado";
+
+export const SALE_STATUSES: { value: SaleStatus; label: string }[] = [
+  { value: "pendiente", label: "Pendiente" },
+  { value: "senado", label: "Señado" },
+  { value: "entregado", label: "Entregado" },
+];
+
 export type Sale = {
   id: string;
   channel: SaleChannel;
+  status: SaleStatus;
   staffName?: string | null;
   customerNote?: string | null;
   customerName?: string | null;

@@ -13,6 +13,7 @@ import type {
   Sale,
   SaleChannel,
   SaleLine,
+  SaleStatus,
   ShippingMethod,
   StockMode,
   Supplier,
@@ -1447,6 +1448,7 @@ type SaleItemRow = {
 type SaleRow = {
   id: string;
   channel: SaleChannel;
+  status: SaleStatus;
   staff_name: string | null;
   customer_note: string | null;
   customer_name: string | null;
@@ -1461,7 +1463,7 @@ type SaleRow = {
 };
 
 const SALE_SELECT =
-  "id, channel, staff_name, customer_note, customer_name, customer_phone, destination_city, destination_neighborhood, shipping_method, shipping_method_detail, customer_id, sold_at, sale_items(id, variant_id, quantity, unit_price, cost_price, product_name_snapshot, size_snapshot, product_id_snapshot, item_note, supplier_id_snapshot, supplier_name_snapshot, product_variants(size, product_id, products(name, images)))";
+  "id, channel, status, staff_name, customer_note, customer_name, customer_phone, destination_city, destination_neighborhood, shipping_method, shipping_method_detail, customer_id, sold_at, sale_items(id, variant_id, quantity, unit_price, cost_price, product_name_snapshot, size_snapshot, product_id_snapshot, item_note, supplier_id_snapshot, supplier_name_snapshot, product_variants(size, product_id, products(name, images)))";
 
 function rowToSale(row: SaleRow): Sale {
   // product_name_snapshot/size_snapshot solo existen en ventas importadas
@@ -1489,6 +1491,7 @@ function rowToSale(row: SaleRow): Sale {
   return {
     id: row.id,
     channel: row.channel,
+    status: row.status,
     staffName: row.staff_name,
     customerNote: row.customer_note,
     customerName: row.customer_name,
@@ -1851,6 +1854,25 @@ export async function deleteSale(id: string): Promise<void> {
 
   const { error } = await supabaseAdmin.from("sales").delete().eq("id", id);
   if (error) fail(`No se pudo eliminar la venta: ${error.message}`);
+}
+
+const VALID_SALE_STATUSES: SaleStatus[] = ["pendiente", "senado", "entregado"];
+
+/** Cambio rápido de estado de entrega/cobro, separado de updateSale a
+ * propósito: no requiere reenviar los artículos ni pasar por el RPC que
+ * mueve stock -- mismo patrón que setProductVisibility (PATCH liviano vs.
+ * PUT completo). */
+export async function updateSaleStatus(id: string, status: SaleStatus): Promise<void> {
+  if (!VALID_SALE_STATUSES.includes(status)) {
+    throw new DataError("Estado de venta inválido.", 400);
+  }
+  const { data, error } = await supabaseAdmin
+    .from("sales")
+    .update({ status })
+    .eq("id", id)
+    .select("id");
+  if (error) fail(`No se pudo actualizar el estado de la venta: ${error.message}`);
+  if (!data || data.length === 0) throw new DataError("Venta no encontrada.", 404);
 }
 
 export type SaleImportRow = {

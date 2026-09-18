@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { DataError, deleteSale, getProductSlugsByIds, getSaleById, updateSale } from "@/lib/data";
+import {
+  DataError,
+  deleteSale,
+  getProductSlugsByIds,
+  getSaleById,
+  updateSale,
+  updateSaleStatus,
+} from "@/lib/data";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -29,6 +36,23 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
     return NextResponse.json(
       { error: "No se pudo actualizar la venta." },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest, { params }: Params) {
+  const { id } = await params;
+  try {
+    const body = await request.json();
+    await updateSaleStatus(id, body?.status);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    if (err instanceof DataError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    return NextResponse.json(
+      { error: "No se pudo actualizar el estado de la venta." },
       { status: 500 },
     );
   }

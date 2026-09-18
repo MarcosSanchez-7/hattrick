@@ -2959,6 +2959,44 @@ textarea {
   min-width: 220px;
 }
 
+/* Select de estado de venta (SalesTable.tsx) -- se ve como una pastilla de
+   color en vez de un <select> normal, para poder distinguir de un vistazo
+   en qué estado está cada venta sin abrir cada fila. */
+.admin-status-select {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 4px 28px 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px;
+}
+
+.admin-status-select:focus {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.admin-status-select--pendiente {
+  background-color: #fdf1d6;
+  color: #8a5a00;
+}
+
+.admin-status-select--senado {
+  background-color: #dbe9fb;
+  color: #1b4a8a;
+}
+
+.admin-status-select--entregado {
+  background-color: #dcf1e3;
+  color: var(--success);
+}
+
 /* Envuelve la celda de producto para poder desplegar la fila en mobile
    (ver @media 640px) — en desktop no tiene ningún efecto visual: se
    comporta como si sus hijos fueran directos de la celda. */
