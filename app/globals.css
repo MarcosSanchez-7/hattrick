@@ -2648,7 +2648,11 @@ textarea {
 
 .admin-content {
   padding: var(--sp-6);
-  max-width: 1240px;
+  /* Antes 1240px -- en pantallas anchas dejaba un margen muerto grande a
+     los costados, justo donde más se necesita el espacio (tablas con
+     muchas columnas, ej. Ventas). 1800px sigue centrando en monitores
+     ultra anchos sin desperdiciar espacio en los tamaños comunes. */
+  max-width: 1800px;
   margin-inline: auto;
   width: 100%;
 }
