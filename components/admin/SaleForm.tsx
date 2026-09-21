@@ -560,7 +560,25 @@ export function SaleForm({
                       <td>
                         {(() => {
                           const lineProduct = products.find((p) => p.id === l.productId);
-                          const options = lineProduct?.suppliers ?? [];
+                          // Solo se ofrecen los proveedores que tienen stock
+                          // cargado de ESTA talla puntual (ver
+                          // ProductSupplierSizeStock) -- el precio sigue
+                          // saliendo de la lista de precios por proveedor.
+                          const options = (lineProduct?.supplierSizeStock ?? [])
+                            .filter((s) => s.size === l.size && s.quantity > 0)
+                            .map((s) => {
+                              const price = lineProduct?.suppliers?.find(
+                                (p) => p.supplierId === s.supplierId,
+                              );
+                              return price
+                                ? {
+                                    supplierId: s.supplierId,
+                                    supplierName: s.supplierName,
+                                    unitCost: price.unitCost,
+                                  }
+                                : null;
+                            })
+                            .filter((s): s is NonNullable<typeof s> => s !== null);
                           if (options.length === 0) {
                             return <span className="meta">—</span>;
                           }

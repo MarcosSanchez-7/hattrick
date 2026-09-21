@@ -107,7 +107,11 @@ function toFormState(product?: Product): FormState {
     suppliers: (product?.suppliers ?? []).map((s) => ({
       supplierId: s.supplierId,
       unitCost: String(s.unitCost),
-      quantity: s.quantity ? String(s.quantity) : "",
+      sizeQuantities: Object.fromEntries(
+        (product?.supplierSizeStock ?? [])
+          .filter((x) => x.supplierId === s.supplierId)
+          .map((x) => [x.size, String(x.quantity)]),
+      ),
     })),
     colorPrimary: product?.colors.primary ?? "#111111",
     colorSecondary: product?.colors.secondary ?? "#f2f2f2",
@@ -273,11 +277,19 @@ export function ProductForm({
       suppliers: isPropio
         ? form.suppliers
             .filter((s) => Number(s.unitCost) > 0)
-            .map((s) => ({
-              supplierId: s.supplierId,
-              unitCost: Number(s.unitCost),
-              quantity: Math.max(0, Math.round(Number(s.quantity) || 0)),
-            }))
+            .map((s) => ({ supplierId: s.supplierId, unitCost: Number(s.unitCost) }))
+        : [],
+      supplierSizeStock: isPropio
+        ? form.suppliers
+            .filter((s) => Number(s.unitCost) > 0)
+            .flatMap((s) =>
+              Object.entries(s.sizeQuantities).map(([size, qty]) => ({
+                supplierId: s.supplierId,
+                size,
+                quantity: Math.max(0, Math.round(Number(qty) || 0)),
+              })),
+            )
+            .filter((e) => e.quantity > 0)
         : [],
       colors: {
         primary: form.colorPrimary,
@@ -561,6 +573,9 @@ export function ProductForm({
             value={form.suppliers}
             onChange={(next) => update("suppliers", next)}
             onCatalogChange={setSuppliersCatalog}
+            sizes={Object.keys(form.variantQuantities).sort(
+              (a, b) => SIZES_ADULT.indexOf(a) - SIZES_ADULT.indexOf(b),
+            )}
           />
         </div>
       ) : null}

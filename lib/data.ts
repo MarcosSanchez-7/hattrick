@@ -9,6 +9,7 @@ import type {
   Product,
   ProductNotice,
   ProductSupplier,
+  ProductSupplierSizeStock,
   ProductVariant,
   Sale,
   SaleChannel,
@@ -144,8 +145,15 @@ function rowToProduct(
   row: ProductRow,
   variantRows: VariantRow[],
   patches: Patch[] = [],
-  suppliers: ProductSupplier[] = [],
+  supplierPrices: { supplierId: string; supplierName: string; unitCost: number }[] = [],
+  supplierSizeStock: ProductSupplierSizeStock[] = [],
 ): Product {
+  const suppliers: ProductSupplier[] = supplierPrices.map((s) => ({
+    ...s,
+    quantity: supplierSizeStock
+      .filter((x) => x.supplierId === s.supplierId)
+      .reduce((acc, x) => acc + x.quantity, 0),
+  }));
   const isPropio = row.stock_mode === "propio";
   // Con control interno activado se cargan variantes aunque no sea "propio"
   // — pero solo para uso del panel admin, nunca para lo que ve el cliente.
@@ -194,6 +202,7 @@ function rowToProduct(
     isCustomizable: row.is_customizable,
     patches,
     suppliers,
+    supplierSizeStock,
   };
 }
 
@@ -302,18 +311,20 @@ async function fetchProductWithVariants(id: string): Promise<Product> {
   if (error) fail(`No se pudo releer el producto: ${error.message}`);
 
   const row = data as ProductRow;
-  const [variantMap, patchMap, supplierMap] = await Promise.all([
+  const [variantMap, patchMap, supplierMap, supplierSizeMap] = await Promise.all([
     fetchVariantsByProduct(
       row.stock_mode === "propio" || row.internal_control ? [row.id] : [],
     ),
     fetchPatchesByProduct([row.id]),
     fetchSuppliersByProduct([row.id]),
+    fetchSupplierSizesByProduct([row.id]),
   ]);
   return rowToProduct(
     row,
     variantMap.get(row.id) ?? [],
     patchMap.get(row.id) ?? [],
     supplierMap.get(row.id) ?? [],
+    supplierSizeMap.get(row.id) ?? [],
   );
 }
 
@@ -356,10 +367,11 @@ export async function getAllProducts(
     .filter((r) => r.stock_mode === "propio" || r.internal_control)
     .map((r) => r.id);
   const allIds = rows.map((r) => r.id);
-  const [variantMap, patchMap, supplierMap] = await Promise.all([
+  const [variantMap, patchMap, supplierMap, supplierSizeMap] = await Promise.all([
     fetchVariantsByProduct(tracksVariantsIds),
     fetchPatchesByProduct(allIds),
     fetchSuppliersByProduct(allIds),
+    fetchSupplierSizesByProduct(allIds),
   ]);
 
   return rows.map((row) =>
@@ -368,6 +380,7 @@ export async function getAllProducts(
       variantMap.get(row.id) ?? [],
       patchMap.get(row.id) ?? [],
       supplierMap.get(row.id) ?? [],
+      supplierSizeMap.get(row.id) ?? [],
     ),
   );
 }
@@ -607,7 +620,14 @@ export async function getInventoryMovements(
 
 export type ProductInput = Omit<
   Product,
-  "id" | "slug" | "variants" | "sizes" | "soldOut" | "patches" | "suppliers"
+  | "id"
+  | "slug"
+  | "variants"
+  | "sizes"
+  | "soldOut"
+  | "patches"
+  | "suppliers"
+  | "supplierSizeStock"
 > & {
   slug?: string;
   /** Cantidad por talla. Sólo se usa (y se exige) cuando stockMode === "propio". */
@@ -616,7 +636,10 @@ export type ProductInput = Omit<
   patchIds?: string[];
   /** Proveedores + precio de compra para este producto (solo se usa cuando
    * stockMode === "propio"). El nombre se resuelve al leer, acá alcanza el id. */
-  suppliers?: { supplierId: string; unitCost: number; quantity: number }[];
+  suppliers?: { supplierId: string; unitCost: number }[];
+  /** Cantidad por talla comprada a cada proveedor -- mismos supplierId de
+   * arriba, cruzados con las tallas reales del producto. */
+  supplierSizeStock?: { supplierId: string; size: string; quantity: number }[];
 };
 
 function assertValidProduct(input: ProductInput) {
@@ -669,25 +692,25 @@ function productToRow(input: ProductInput) {
   };
 }
 
-/** Reemplazo completo (no diff): sin cantidad ni ledger que preservar, a
- * diferencia de syncProductVariants — se borra todo y se inserta de nuevo. */
+/** Lista de precios por proveedor (product_suppliers): un precio por
+ * proveedor, no varía por talla. La cantidad vive aparte, ver
+ * fetchSupplierSizesByProduct — se combinan recién en rowToProduct. */
 async function fetchSuppliersByProduct(
   productIds: string[],
-): Promise<Map<string, ProductSupplier[]>> {
-  const map = new Map<string, ProductSupplier[]>();
+): Promise<Map<string, { supplierId: string; supplierName: string; unitCost: number }[]>> {
+  const map = new Map<string, { supplierId: string; supplierName: string; unitCost: number }[]>();
   if (productIds.length === 0) return map;
 
   const batches = await Promise.all(
     chunk(productIds, SUPABASE_IN_CHUNK_SIZE).map(async (ids) => {
       const { data, error } = await supabaseAdmin
         .from("product_suppliers")
-        .select("product_id, unit_cost, quantity, suppliers(id, name)")
+        .select("product_id, unit_cost, suppliers(id, name)")
         .in("product_id", ids);
       if (error) fail(`No se pudieron cargar los proveedores del producto: ${error.message}`);
       return data as unknown as {
         product_id: string;
         unit_cost: number | string;
-        quantity: number;
         suppliers: { id: string; name: string } | { id: string; name: string }[] | null;
       }[];
     }),
@@ -702,7 +725,50 @@ async function fetchSuppliersByProduct(
       supplierId: supplier.id,
       supplierName: supplier.name,
       unitCost: Number(row.unit_cost),
-      quantity: Number(row.quantity) || 0,
+    });
+    map.set(row.product_id, list);
+  }
+  return map;
+}
+
+/** Cantidad de stock por proveedor, desglosada por talla
+ * (product_supplier_sizes) — lo que Ventas usa para filtrar qué
+ * proveedores tienen stock de la talla elegida, y lo que se suma para
+ * sacar el total por proveedor en rowToProduct. */
+async function fetchSupplierSizesByProduct(
+  productIds: string[],
+): Promise<Map<string, ProductSupplierSizeStock[]>> {
+  const map = new Map<string, ProductSupplierSizeStock[]>();
+  if (productIds.length === 0) return map;
+
+  const batches = await Promise.all(
+    chunk(productIds, SUPABASE_IN_CHUNK_SIZE).map(async (ids) => {
+      const { data, error } = await supabaseAdmin
+        .from("product_supplier_sizes")
+        .select("product_id, size, quantity, suppliers(id, name)")
+        .in("product_id", ids);
+      if (error) {
+        fail(`No se pudo cargar el stock por talla de los proveedores: ${error.message}`);
+      }
+      return data as unknown as {
+        product_id: string;
+        size: string;
+        quantity: number;
+        suppliers: { id: string; name: string } | { id: string; name: string }[] | null;
+      }[];
+    }),
+  );
+
+  for (const row of batches.flat()) {
+    if (!row.suppliers || row.quantity <= 0) continue;
+    const supplier = Array.isArray(row.suppliers) ? row.suppliers[0] : row.suppliers;
+    if (!supplier) continue;
+    const list = map.get(row.product_id) ?? [];
+    list.push({
+      supplierId: supplier.id,
+      supplierName: supplier.name,
+      size: row.size,
+      quantity: row.quantity,
     });
     map.set(row.product_id, list);
   }
@@ -728,12 +794,13 @@ async function syncProductPatches(productId: string, patchIds: string[]): Promis
   }
 }
 
-/** Reemplazo completo (no diff): es una lista de precios/composición de
- * stock por proveedor, no un ledger de movimientos — no hay historial que
- * preservar, a diferencia de syncProductVariants. */
+/** Reemplazo completo (no diff): es una lista de precios por proveedor, no
+ * un ledger de movimientos — no hay historial que preservar, a diferencia
+ * de syncProductVariants. La cantidad por talla vive aparte, ver
+ * syncProductSupplierSizes. */
 async function syncProductSuppliers(
   productId: string,
-  suppliers: { supplierId: string; unitCost: number; quantity: number }[],
+  suppliers: { supplierId: string; unitCost: number }[],
 ): Promise<void> {
   const { error: deleteError } = await supabaseAdmin
     .from("product_suppliers")
@@ -750,11 +817,41 @@ async function syncProductSuppliers(
       product_id: productId,
       supplier_id: s.supplierId,
       unit_cost: s.unitCost,
-      quantity: s.quantity,
     })),
   );
   if (insertError) {
     fail(`No se pudieron actualizar los proveedores del producto: ${insertError.message}`);
+  }
+}
+
+/** Reemplazo completo (no diff), mismo criterio que syncProductSuppliers.
+ * Se filtran las cantidades en 0 al guardar -- no tiene sentido guardar una
+ * fila "0 unidades de esta talla" a limpiar después. */
+async function syncProductSupplierSizes(
+  productId: string,
+  entries: { supplierId: string; size: string; quantity: number }[],
+): Promise<void> {
+  const { error: deleteError } = await supabaseAdmin
+    .from("product_supplier_sizes")
+    .delete()
+    .eq("product_id", productId);
+  if (deleteError) {
+    fail(`No se pudo actualizar el stock por talla de los proveedores: ${deleteError.message}`);
+  }
+
+  const withStock = entries.filter((e) => e.quantity > 0);
+  if (withStock.length === 0) return;
+
+  const { error: insertError } = await supabaseAdmin.from("product_supplier_sizes").insert(
+    withStock.map((e) => ({
+      product_id: productId,
+      supplier_id: e.supplierId,
+      size: e.size,
+      quantity: e.quantity,
+    })),
+  );
+  if (insertError) {
+    fail(`No se pudo actualizar el stock por talla de los proveedores: ${insertError.message}`);
   }
 }
 
@@ -817,6 +914,7 @@ export async function createProduct(input: ProductInput): Promise<Product> {
   }
   await syncProductPatches(id, input.patchIds ?? []);
   await syncProductSuppliers(id, input.suppliers ?? []);
+  await syncProductSupplierSizes(id, input.supplierSizeStock ?? []);
 
   return fetchProductWithVariants(id);
 }
@@ -877,6 +975,7 @@ export async function updateProduct(
   );
   await syncProductPatches(id, input.patchIds ?? []);
   await syncProductSuppliers(id, input.suppliers ?? []);
+  await syncProductSupplierSizes(id, input.supplierSizeStock ?? []);
 
   return fetchProductWithVariants(id);
 }
@@ -1820,7 +1919,9 @@ export async function updateSale(id: string, input: SaleInput): Promise<string> 
 export async function deleteSale(id: string): Promise<void> {
   const { data: items, error: itemsError } = await supabaseAdmin
     .from("sale_items")
-    .select("variant_id, quantity, supplier_id_snapshot, product_id_snapshot")
+    .select(
+      "variant_id, quantity, supplier_id_snapshot, product_id_snapshot, product_variants(size)",
+    )
     .eq("sale_id", id);
   if (itemsError) fail(`No se pudo leer la venta: ${itemsError.message}`);
   if (!items || items.length === 0) throw new DataError("Venta no encontrada.", 404);
@@ -1830,6 +1931,7 @@ export async function deleteSale(id: string): Promise<void> {
     quantity: number;
     supplier_id_snapshot: string | null;
     product_id_snapshot: string | null;
+    product_variants: { size: string } | { size: string }[] | null;
   }[]) {
     if (!item.variant_id) continue;
     const { error } = await supabaseAdmin.from("inventory_movements").insert({
@@ -1840,10 +1942,14 @@ export async function deleteSale(id: string): Promise<void> {
     });
     if (error) fail(`No se pudo reponer el stock: ${error.message}`);
 
-    if (item.supplier_id_snapshot && item.product_id_snapshot) {
+    const variant = Array.isArray(item.product_variants)
+      ? item.product_variants[0]
+      : item.product_variants;
+    if (item.supplier_id_snapshot && item.product_id_snapshot && variant?.size) {
       const { error: supplierError } = await supabaseAdmin.rpc("restore_supplier_quantity", {
         p_product_id: item.product_id_snapshot,
         p_supplier_id: item.supplier_id_snapshot,
+        p_size: variant.size,
         p_quantity: item.quantity,
       });
       if (supplierError) {

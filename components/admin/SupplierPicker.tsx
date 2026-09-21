@@ -3,23 +3,36 @@
 import { useState } from "react";
 import type { Supplier } from "@/lib/catalog";
 
-export type SelectedSupplier = { supplierId: string; unitCost: string; quantity: string };
+export type SelectedSupplier = {
+  supplierId: string;
+  unitCost: string;
+  /** Talla -> cantidad comprada a ese proveedor (texto, como el resto de
+   * inputs controlados del formulario). Solo se listan tallas con algo
+   * cargado; el resto no necesita entrada explícita en 0. */
+  sizeQuantities: Record<string, string>;
+};
 
 /**
- * Chips de proveedores (toggle) + precio de compra por cada uno
- * seleccionado, más un campo para crear un proveedor nuevo al vuelo —
- * mismo patrón que TagPicker, con el agregado del precio por selección.
+ * Chips de proveedores (toggle) + precio de compra, más un desglose de
+ * cuántas unidades de cada talla real del producto salieron de ese
+ * proveedor — así Ventas puede filtrar, al elegir una talla, qué
+ * proveedores tienen stock de ESA talla puntual. El precio sigue siendo
+ * uno solo por proveedor (no varía por talla).
  */
 export function SupplierPicker({
   catalog,
   value,
   onChange,
   onCatalogChange,
+  sizes,
 }: {
   catalog: Supplier[];
   value: SelectedSupplier[];
   onChange: (value: SelectedSupplier[]) => void;
   onCatalogChange: (catalog: Supplier[]) => void;
+  /** Tallas actualmente cargadas para el producto (stock propio) — define
+   * qué chips de talla se ofrecen para desglosar cantidad por proveedor. */
+  sizes: string[];
 }) {
   const [newSupplier, setNewSupplier] = useState("");
   const [creating, setCreating] = useState(false);
@@ -30,7 +43,7 @@ export function SupplierPicker({
     onChange(
       included
         ? value.filter((v) => v.supplierId !== supplierId)
-        : [...value, { supplierId, unitCost: "", quantity: "" }],
+        : [...value, { supplierId, unitCost: "", sizeQuantities: {} }],
     );
   };
 
@@ -40,9 +53,13 @@ export function SupplierPicker({
     );
   };
 
-  const setQuantity = (supplierId: string, quantity: string) => {
+  const setSizeQuantity = (supplierId: string, size: string, quantity: string) => {
     onChange(
-      value.map((v) => (v.supplierId === supplierId ? { ...v, quantity } : v)),
+      value.map((v) =>
+        v.supplierId === supplierId
+          ? { ...v, sizeQuantities: { ...v.sizeQuantities, [size]: quantity } }
+          : v,
+      ),
     );
   };
 
@@ -60,7 +77,7 @@ export function SupplierPicker({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "No se pudo crear el proveedor.");
       onCatalogChange([...catalog, data]);
-      onChange([...value, { supplierId: data.id, unitCost: "", quantity: "" }]);
+      onChange([...value, { supplierId: data.id, unitCost: "", sizeQuantities: {} }]);
       setNewSupplier("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado.");
@@ -76,7 +93,11 @@ export function SupplierPicker({
         {catalog.map((supplier) => {
           const selected = value.find((v) => v.supplierId === supplier.id);
           return (
-            <div key={supplier.id} className="admin-variant-row">
+            <div
+              key={supplier.id}
+              className="admin-variant-row"
+              style={{ flexWrap: "wrap", alignItems: "flex-start" }}
+            >
               <label
                 className="admin-check"
                 data-checked={selected ? "true" : "false"}
@@ -89,7 +110,10 @@ export function SupplierPicker({
                 {supplier.name}
               </label>
               {selected ? (
-                <>
+                <div
+                  className="row gap-2"
+                  style={{ flexWrap: "wrap", alignItems: "center", flex: 1 }}
+                >
                   <input
                     type="number"
                     min="0"
@@ -100,17 +124,32 @@ export function SupplierPicker({
                     placeholder="Precio de compra"
                     aria-label={`Precio de compra a ${supplier.name}`}
                   />
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    className="admin-variant-qty"
-                    value={selected.quantity}
-                    onChange={(e) => setQuantity(supplier.id, e.target.value)}
-                    placeholder="Uds. compradas"
-                    aria-label={`Unidades compradas a ${supplier.name}`}
-                  />
-                </>
+                  {sizes.length > 0 ? (
+                    sizes.map((size) => (
+                      <label
+                        key={size}
+                        className="row gap-1"
+                        style={{ alignItems: "center", gap: 4 }}
+                      >
+                        <span className="meta">{size}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          className="admin-variant-qty"
+                          style={{ width: 56 }}
+                          value={selected.sizeQuantities[size] ?? ""}
+                          onChange={(e) => setSizeQuantity(supplier.id, size, e.target.value)}
+                          aria-label={`Unidades de talla ${size} de ${supplier.name}`}
+                        />
+                      </label>
+                    ))
+                  ) : (
+                    <p className="admin-help" style={{ margin: 0 }}>
+                      Cargá las tallas del producto para desglosar cantidad por talla.
+                    </p>
+                  )}
+                </div>
               ) : null}
             </div>
           );

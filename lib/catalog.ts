@@ -84,9 +84,12 @@ export type Product = {
   isCustomizable?: boolean;
   /** Parches que se le pueden poner a este producto puntual. */
   patches?: Patch[];
-  /** Lista de precios por proveedor (solo relevante en stock propio) — no
-   * es cantidad de stock, solo a qué costo compramos a cada uno. */
+  /** Precio de compra por proveedor (solo relevante en stock propio), con
+   * la cantidad total comprada a cada uno ya sumada entre tallas. */
   suppliers?: ProductSupplier[];
+  /** Desglose de esa misma cantidad, pero por talla — para saber, al elegir
+   * una talla en Ventas, qué proveedores tienen stock de ESA talla. */
+  supplierSizeStock?: ProductSupplierSizeStock[];
 };
 
 /** Proveedor reutilizable entre productos, con su precio de compra
@@ -98,8 +101,20 @@ export type ProductSupplier = {
   supplierId: string;
   supplierName: string;
   unitCost: number;
-  /** Unidades compradas a este proveedor a este costo (0 = solo precio de
-   * referencia, sin stock atribuido). Es por producto, no por talla. */
+  /** Unidades compradas a este proveedor a este costo, sumadas entre todas
+   * las tallas (0 = solo precio de referencia, sin stock atribuido) —
+   * derivado de sumar ProductSupplierSizeStock, no se guarda aparte. */
+  quantity: number;
+};
+
+/** Cuántas unidades de UNA talla puntual salieron de un proveedor puntual
+ * — el precio de compra sigue siendo por proveedor (ProductSupplier.unitCost),
+ * no varía por talla. Se usa para filtrar, al vender, qué proveedores
+ * realmente tienen stock de la talla elegida. */
+export type ProductSupplierSizeStock = {
+  supplierId: string;
+  supplierName: string;
+  size: string;
   quantity: number;
 };
 
