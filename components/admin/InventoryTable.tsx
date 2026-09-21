@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -79,6 +79,41 @@ export function InventoryTable({
   // fila siempre muestra todos los detalles, sin importar este estado.
   const [expandedMobile, setExpandedMobile] = useState<Set<string>>(new Set());
   const [adjusting, setAdjusting] = useState<Adjusting | null>(null);
+
+  // Restaura búsqueda/filtros desde la URL al montar (?q=&categoria=&talla=)
+  // -- así "volver atrás" desde la edición de un producto (AdminBackLink)
+  // los recupera en vez de encontrar la búsqueda vacía. Solo en el cliente:
+  // en el primer render del servidor no hay window, arranca vacío como
+  // siempre y se completa un instante después.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("q");
+    const cat = params.get("categoria");
+    const talla = params.get("talla");
+    if (q) setQuery(q);
+    if (cat) setCategoryFilter(cat);
+    if (talla) setSizeFilter(talla);
+  }, []);
+
+  // Sincroniza la URL con la búsqueda/filtros actuales, con un pequeño
+  // debounce para no reescribirla en cada tecla. Usa history.replaceState
+  // directo (no el router de Next) para que sea solo "prolijo la URL para
+  // cuando vuelvas" y no dispare una navegación/refetch en cada cambio.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      if (query) params.set("q", query);
+      else params.delete("q");
+      if (categoryFilter) params.set("categoria", categoryFilter);
+      else params.delete("categoria");
+      if (sizeFilter) params.set("talla", sizeFilter);
+      else params.delete("talla");
+      const qs = params.toString();
+      const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+      window.history.replaceState(null, "", url);
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [query, categoryFilter, sizeFilter]);
 
   const categoryName = (slug: string) =>
     categories.find((c) => c.slug === slug)?.name ?? slug;
