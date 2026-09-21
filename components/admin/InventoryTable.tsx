@@ -506,7 +506,7 @@ function ProductRowsTable({
                               {supplierBreakdown
                                 .map(
                                   (s) =>
-                                    `${s.quantity} uds. ${s.supplierName} a ${formatPrice(s.unitCost)}`,
+                                    `${s.quantity} uds. ${s.supplierName} a ${formatPrice(s.unitCost)} (${formatPrice(s.quantity * s.unitCost)})`,
                                 )
                                 .join(" · ")}
                             </p>
