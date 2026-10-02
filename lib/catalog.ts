@@ -148,6 +148,8 @@ export type Category = {
   parentSlug: string | null;
   /** Avisos propios bajo "Añadir al carrito". Null/vacío = usa los del sitio. */
   notices: ProductNotice[] | null;
+  /** Texto propio de "Envíos y devoluciones" en la ficha. Null = usa el del sitio. */
+  shippingText: string | null;
 };
 
 /** Etiqueta estandarizada del catálogo (ej. "Versión Fan"), con su color. */
@@ -385,6 +387,24 @@ export function resolveCategoryNotices(
   for (let i = chain.length - 1; i >= 0; i--) {
     const own = chain[i].notices;
     if (own && own.length > 0) return own;
+  }
+  return siteDefault;
+}
+
+/**
+ * Igual criterio que resolveCategoryNotices, pero para el texto de "Envíos
+ * y devoluciones" de la ficha de producto (ej. los importados no admiten
+ * cambio ni devolución de la seña, a diferencia del resto del catálogo).
+ */
+export function resolveCategoryShippingText(
+  categories: Category[],
+  slug: string,
+  siteDefault: string,
+): string {
+  const chain = categoryPath(categories, slug);
+  for (let i = chain.length - 1; i >= 0; i--) {
+    const own = chain[i].shippingText;
+    if (own && own.trim()) return own;
   }
   return siteDefault;
 }

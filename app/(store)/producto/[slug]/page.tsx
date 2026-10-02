@@ -9,6 +9,7 @@ import {
   isSoldOut,
   relatedTo,
   resolveCategoryNotices,
+  resolveCategoryShippingText,
 } from "@/lib/catalog";
 import { getAllCategories, getAllProducts, getAllTags, getSetting } from "@/lib/data";
 import {
@@ -86,6 +87,11 @@ export default async function ProductPage({
     product.category,
     productNotices.defaultNotices,
   );
+  const shippingText = resolveCategoryShippingText(
+    categories,
+    product.category,
+    productInfo.shippingText,
+  );
 
   const productUrl = `${SITE_URL}/producto/${product.slug}`;
   const productJsonLd = {
@@ -153,7 +159,7 @@ export default async function ProductPage({
       <ProductDetail
         product={product}
         notices={notices}
-        productInfo={productInfo}
+        productInfo={{ ...productInfo, shippingText }}
         personalizationPrice={customBanner.price}
       />
 

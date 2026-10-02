@@ -127,13 +127,14 @@ type CategoryRow = {
   is_visible: boolean;
   parent_slug: string | null;
   notices: ProductNotice[] | null;
+  shipping_text: string | null;
 };
 
 /** Columnas realmente usadas de "categories" (ver rowToCategory) —
  * created_at queda afuera a propósito: solo se usa para el .order(), que en
  * PostgREST no requiere que la columna esté en el select. */
 const CATEGORY_COLUMNS =
-  "slug, name, tagline, description, image, is_visible, parent_slug, notices" as const;
+  "slug, name, tagline, description, image, is_visible, parent_slug, notices, shipping_text" as const;
 
 /** P/M/G/XL/XXL primero, en ese orden; cualquier talla no reconocida va al final. */
 function sizeRank(size: string): number {
@@ -216,6 +217,7 @@ function rowToCategory(row: CategoryRow): Category {
     isVisible: row.is_visible,
     parentSlug: row.parent_slug ?? null,
     notices: row.notices ?? null,
+    shippingText: row.shipping_text ?? null,
   };
 }
 
@@ -1036,6 +1038,7 @@ export async function createCategory(
       is_visible: input.isVisible ?? true,
       parent_slug: parentSlug,
       notices: input.notices?.length ? input.notices : null,
+      shipping_text: input.shippingText?.trim() ? input.shippingText : null,
     })
     .select()
     .single();
@@ -1079,6 +1082,7 @@ export async function updateCategory(
       is_visible: input.isVisible ?? true,
       parent_slug: parentSlug,
       notices: input.notices?.length ? input.notices : null,
+      shipping_text: input.shippingText?.trim() ? input.shippingText : null,
     })
     .eq("slug", slug)
     .select()

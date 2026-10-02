@@ -36,6 +36,7 @@ export function CategoryForm({
     category?.parentSlug ?? defaultParentSlug ?? "",
   );
   const [notices, setNotices] = useState<ProductNotice[]>(category?.notices ?? []);
+  const [shippingText, setShippingText] = useState(category?.shippingText ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,6 +74,7 @@ export function CategoryForm({
       isVisible,
       parentSlug: parentSlug || null,
       notices: notices.filter((n) => n.text.trim()),
+      shippingText: shippingText.trim() || null,
     };
 
     setSubmitting(true);
@@ -198,6 +200,27 @@ export function CategoryForm({
           para usar los avisos por defecto del sitio.
         </p>
         <NoticesEditor notices={notices} onChange={setNotices} />
+      </div>
+
+      <div className="admin-fieldset">
+        <p className="admin-fieldset__title">
+          Envíos y devoluciones de esta categoría
+        </p>
+        <p className="admin-help">
+          Reemplaza, en la ficha de los productos de esta categoría (y de sus
+          subcategorías, si ellas no definen el suyo), el texto general que
+          se configura en Generales → Detalles de producto → Envíos. Dejalo
+          vacío para usar ese texto general.
+        </p>
+        <div className="admin-field">
+          <label htmlFor="shippingText">Texto</label>
+          <textarea
+            id="shippingText"
+            value={shippingText}
+            onChange={(e) => setShippingText(e.target.value)}
+            placeholder="Los artículos importados son pedidos especiales: no se aceptan cambios ni devolución de la seña."
+          />
+        </div>
       </div>
 
       <div className="admin-actions">

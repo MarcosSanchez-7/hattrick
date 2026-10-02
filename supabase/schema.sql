@@ -1747,3 +1747,9 @@ alter function restore_supplier_quantity(text, text, integer) set search_path = 
 -- redactar las dos, y antes el admin obligaba a completarlas igual.
 alter table categories alter column tagline drop not null;
 alter table categories alter column description drop not null;
+
+-- Igual idea que "notices" (ver más arriba): una categoría puede pisar el
+-- texto general de "Envíos y devoluciones" de la ficha de producto (ej.
+-- "Importados" no admite cambio ni devolución de la seña, a diferencia del
+-- resto del catálogo). Null = usa el texto general del sitio.
+alter table categories add column if not exists shipping_text text;
