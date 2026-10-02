@@ -131,7 +131,7 @@ export function stockCostValue(p: Product): number {
   return p.costPrice != null ? p.costPrice * stock : 0;
 }
 
-export type NoticeIcon = "truck" | "print" | "return" | "shield";
+export type NoticeIcon = "truck" | "print" | "return" | "shield" | "info";
 
 export type ProductNotice = { icon: NoticeIcon; text: string };
 

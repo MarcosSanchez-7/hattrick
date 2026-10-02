@@ -21,6 +21,7 @@ import { ProductVisual } from "@/components/product/ProductVisual";
 import {
   IconChevron,
   IconClose,
+  IconDocument,
   IconHeart,
   IconPrint,
   IconReturn,
@@ -36,6 +37,7 @@ const NOTICE_ICONS: Record<NoticeIcon, typeof IconTruck> = {
   print: IconPrint,
   return: IconReturn,
   shield: IconShield,
+  info: IconDocument,
 };
 
 export function ProductDetail({

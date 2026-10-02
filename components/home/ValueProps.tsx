@@ -1,6 +1,7 @@
 import type { NoticeIcon } from "@/lib/catalog";
 import type { ValuePropsSettings } from "@/lib/settings";
 import {
+  IconDocument,
   IconPrint,
   IconReturn,
   IconShield,
@@ -12,6 +13,7 @@ const ICONS: Record<NoticeIcon, typeof IconTruck> = {
   print: IconPrint,
   return: IconReturn,
   shield: IconShield,
+  info: IconDocument,
 };
 
 export function ValueProps({ settings }: { settings: ValuePropsSettings }) {

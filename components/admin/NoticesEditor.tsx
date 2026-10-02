@@ -8,6 +8,7 @@ export const ICON_OPTIONS: { value: NoticeIcon; label: string }[] = [
   { value: "print", label: "Personalización" },
   { value: "return", label: "Devolución" },
   { value: "shield", label: "Garantía" },
+  { value: "info", label: "General / otro" },
 ];
 
 export function NoticesEditor({
@@ -26,6 +27,12 @@ export function NoticesEditor({
 
   return (
     <div className="stack gap-2">
+      {notices.length > 0 ? (
+        <p className="admin-help" style={{ marginTop: 0 }}>
+          El ícono es solo decorativo — el texto de al lado podés escribirlo
+          como quieras, no hace falta que coincida con el ícono elegido.
+        </p>
+      ) : null}
       {notices.map((n, idx) => (
         <div key={idx} className="row" style={{ gap: 8, alignItems: "center" }}>
           <select
