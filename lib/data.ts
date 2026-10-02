@@ -1002,10 +1002,6 @@ export type CategoryInput = Omit<Category, "slug"> & { slug?: string };
 
 function assertValidCategory(input: CategoryInput) {
   if (!input.name?.trim()) throw new DataError("El nombre es obligatorio.");
-  if (!input.tagline?.trim()) throw new DataError("El eslogan es obligatorio.");
-  if (!input.description?.trim()) {
-    throw new DataError("La descripción es obligatoria.");
-  }
 }
 
 export async function createCategory(

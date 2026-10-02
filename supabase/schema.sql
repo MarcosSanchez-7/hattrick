@@ -1741,3 +1741,9 @@ $$;
 alter function create_sale_inventory_movement() set search_path = public;
 alter function update_sale(text, text, text, text, jsonb, timestamptz, text, text, text, text, text, text, text) set search_path = public;
 alter function restore_supplier_quantity(text, text, integer) set search_path = public;
+
+-- Eslogan y descripción de categoría pasan a ser opcionales: con muchas
+-- subcategorías chicas (ej. dentro de "Importados") no siempre hace falta
+-- redactar las dos, y antes el admin obligaba a completarlas igual.
+alter table categories alter column tagline drop not null;
+alter table categories alter column description drop not null;

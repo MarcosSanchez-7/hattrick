@@ -66,7 +66,7 @@ export function CategoryHeroCarousel({ slides }: { slides: HeroCategorySlide[] }
         <div className="cats__content">
           <span className="label cats__eyebrow">Colección</span>
           <h3 className="h2">{slide.name}</h3>
-          <p className="meta">{slide.tagline}</p>
+          {slide.tagline ? <p className="meta">{slide.tagline}</p> : null}
           <span className="cats__go">
             Explorar
             <IconArrow className="icon--sm" />

@@ -146,7 +146,7 @@ export function CategoryGrid({
                 <div className="cats__content">
                   <span className="label cats__eyebrow">Colección</span>
                   <h3 className="h2">{cat.name}</h3>
-                  <p className="meta">{cat.tagline}</p>
+                  {cat.tagline ? <p className="meta">{cat.tagline}</p> : null}
                   <span className="cats__go">
                     Explorar
                     <IconArrow className="icon--sm" />

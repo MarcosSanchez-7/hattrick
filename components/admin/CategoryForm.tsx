@@ -60,8 +60,8 @@ export function CategoryForm({
     e.preventDefault();
     setError(null);
 
-    if (!name.trim() || !tagline.trim() || !description.trim()) {
-      setError("Completa nombre, eslogan y descripción.");
+    if (!name.trim()) {
+      setError("Completa el nombre.");
       return;
     }
 
@@ -119,11 +119,10 @@ export function CategoryForm({
             />
           </div>
           <div className="admin-field">
-            <label htmlFor="tagline">Eslogan corto</label>
+            <label htmlFor="tagline">Eslogan corto (opcional)</label>
             <input
               id="tagline"
               type="text"
-              required
               value={tagline}
               onChange={(e) => setTagline(e.target.value)}
               placeholder="Las equipaciones de las cinco grandes ligas"
@@ -159,10 +158,9 @@ export function CategoryForm({
           </p>
         </div>
         <div className="admin-field">
-          <label htmlFor="description">Descripción</label>
+          <label htmlFor="description">Descripción (opcional)</label>
           <textarea
             id="description"
-            required
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Qué encontrará el cliente en esta sección…"

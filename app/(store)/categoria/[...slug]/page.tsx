@@ -40,11 +40,11 @@ export async function generateMetadata({
   const title = `${category.name} — Camisetas de fútbol`;
   return {
     title,
-    description: category.description,
+    description: category.description || undefined,
     alternates: { canonical: canonicalPath },
     openGraph: {
       title,
-      description: category.description,
+      description: category.description || undefined,
       url: canonicalPath,
       images: category.image ? [{ url: category.image }] : undefined,
     },
@@ -117,9 +117,11 @@ export default async function CategoryPage({
             <span>{category.name}</span>
           </nav>
           <h1 className="h1">{category.name}</h1>
-          <p className="lead" style={{ marginTop: 12 }}>
-            {category.description}
-          </p>
+          {category.description ? (
+            <p className="lead" style={{ marginTop: 12 }}>
+              {category.description}
+            </p>
+          ) : null}
 
           {children.length > 0 ? (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 20 }}>
