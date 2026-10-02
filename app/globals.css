@@ -618,7 +618,7 @@ textarea {
 
 .megamenu__inner {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 320px);
   gap: var(--sp-7);
   padding-block: var(--sp-7);
 }
@@ -644,15 +644,6 @@ textarea {
   padding-left: 6px;
   text-decoration: underline;
   text-underline-offset: 4px;
-}
-
-.megamenu__promo {
-  background: var(--surface-soft);
-  padding: var(--sp-5);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: var(--sp-4);
 }
 
 @keyframes fade-down {
@@ -2792,6 +2783,18 @@ textarea {
   background: var(--surface-muted);
 }
 
+/* Carpeta de subcategoría (InventoryTable.tsx) -- fondo plano (vs. el
+   tenue por defecto) para que lea como "contenida" en la carpeta padre
+   que la precede, igual criterio que .admin-table__row--child. */
+.admin-cat-group--child .admin-cat-group__head {
+  background: var(--surface);
+  font-weight: 600;
+}
+
+.admin-cat-group--child .admin-cat-group__head:hover {
+  background: var(--surface-soft);
+}
+
 .admin-cat-group__head .meta {
   margin-left: auto;
 }
@@ -2961,6 +2964,21 @@ textarea {
   align-items: center;
   gap: var(--sp-3);
   min-width: 220px;
+}
+
+/* Fila de subcategoría (CategoriesTable.tsx) -- fondo tenue para que se lea
+   como "contenida" en la categoría padre que la precede en la tabla. */
+.admin-table__row--child td {
+  background: var(--surface-soft);
+}
+
+.admin-table__tree-connector {
+  flex: none;
+  width: 16px;
+  text-align: center;
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+  line-height: 1;
 }
 
 /* Select de estado de venta (SalesTable.tsx) -- se ve como una pastilla de

@@ -147,6 +147,11 @@ export function InventoryTable({
 
   const isFiltering = query.trim() !== "" || categoryFilter !== "" || sizeFilter !== "";
 
+  // Recorre el árbol (no la lista plana de categorías) para que una
+  // categoría padre con subcategorías, pero sin productos propios (ej.
+  // "Basket" con todo el stock en "Shorts"/"Camisillas"), siga apareciendo
+  // como carpeta -- con el total de toda su rama -- en vez de desaparecer
+  // de la lista, dejando a sus hijas sueltas y sin contexto.
   const groups = useMemo(() => {
     const bySlug = new Map<string, Product[]>();
     for (const p of filtered) {
@@ -157,17 +162,26 @@ export function InventoryTable({
     const ordered: {
       slug: string;
       name: string;
-      items: Product[];
+      depth: number;
+      ownItems: Product[];
+      productTotal: number;
       stockTotal: number;
       costTotal: number;
     }[] = [];
-    for (const c of categories) {
-      const items = bySlug.get(c.slug);
-      if (items?.length) {
-        const stockTotal = items.reduce((acc, p) => acc + totalStock(p), 0);
-        const costTotal = items.reduce((acc, p) => acc + stockCostValue(p), 0);
-        ordered.push({ slug: c.slug, name: c.name, items, stockTotal, costTotal });
-      }
+    for (const { category: c, depth } of orderCategoriesTree(categories)) {
+      const treeItems = byCategoryTree(filtered, categories, c.slug);
+      if (treeItems.length === 0) continue;
+      const stockTotal = treeItems.reduce((acc, p) => acc + totalStock(p), 0);
+      const costTotal = treeItems.reduce((acc, p) => acc + stockCostValue(p), 0);
+      ordered.push({
+        slug: c.slug,
+        name: c.name,
+        depth,
+        ownItems: bySlug.get(c.slug) ?? [],
+        productTotal: treeItems.length,
+        stockTotal,
+        costTotal,
+      });
     }
     return ordered;
   }, [filtered, categories]);
@@ -328,17 +342,28 @@ export function InventoryTable({
         groups.map((group) => {
           const isExpanded = expanded.has(group.slug);
           return (
-            <div key={group.slug} className="admin-cat-group">
+            <div
+              key={group.slug}
+              className={
+                group.depth > 0 ? "admin-cat-group admin-cat-group--child" : "admin-cat-group"
+              }
+            >
               <button
                 type="button"
                 className="admin-cat-group__head"
+                style={{ paddingLeft: `calc(var(--sp-5) + ${group.depth * 24}px)` }}
                 aria-expanded={isExpanded}
                 onClick={() => toggleExpanded(group.slug)}
               >
+                {group.depth > 0 && (
+                  <span className="admin-table__tree-connector" aria-hidden="true">
+                    ↳
+                  </span>
+                )}
                 <IconFolder className="icon--sm" />
                 <span>{group.name}</span>
                 <span className="meta">
-                  {group.items.length} producto{group.items.length !== 1 ? "s" : ""}
+                  {group.productTotal} producto{group.productTotal !== 1 ? "s" : ""}
                   {" · "}
                   {group.stockTotal} uds.
                   {!readOnly ? <> · {formatPrice(group.costTotal)}</> : null}
@@ -346,18 +371,25 @@ export function InventoryTable({
                 <IconChevron className="icon--sm" />
               </button>
               {isExpanded ? (
-                <ProductRowsTable
-                  products={group.items}
-                  categoryName={categoryName}
-                  actions={actions}
-                  hideCategoryColumn
-                  expandedStock={expandedStock}
-                  onToggleStock={toggleStock}
-                  expandedMobile={expandedMobile}
-                  onToggleMobile={toggleMobile}
-                  onAdjust={setAdjusting}
-                  readOnly={readOnly}
-                />
+                group.ownItems.length > 0 ? (
+                  <ProductRowsTable
+                    products={group.ownItems}
+                    categoryName={categoryName}
+                    actions={actions}
+                    hideCategoryColumn
+                    expandedStock={expandedStock}
+                    onToggleStock={toggleStock}
+                    expandedMobile={expandedMobile}
+                    onToggleMobile={toggleMobile}
+                    onAdjust={setAdjusting}
+                    readOnly={readOnly}
+                  />
+                ) : (
+                  <p className="meta" style={{ padding: "0 var(--sp-5) var(--sp-5)" }}>
+                    Sin productos propios — el total está repartido en sus subcategorías,
+                    abajo.
+                  </p>
+                )
               ) : null}
             </div>
           );

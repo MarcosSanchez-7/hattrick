@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getAllCategories, getAllProducts } from "@/lib/data";
+import { byCategoryTree } from "@/lib/catalog";
 import { CategoriesTable } from "@/components/admin/CategoriesTable";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
@@ -12,10 +13,12 @@ export default async function AdminCategoriesPage() {
     getAllProducts({ includeHidden: true }),
   ]);
 
-  const productCounts = products.reduce<Record<string, number>>((acc, p) => {
-    acc[p.category] = (acc[p.category] ?? 0) + 1;
-    return acc;
-  }, {});
+  // Cuenta propia + de todas las subcategorías: una categoría padre debe
+  // mostrar el total de la rama, no solo los productos asignados a ella
+  // directamente (que normalmente es 0, porque todo vive en sus hijas).
+  const productCounts = Object.fromEntries(
+    categories.map((c) => [c.slug, byCategoryTree(products, categories, c.slug).length]),
+  );
 
   return (
     <>

@@ -194,23 +194,6 @@ export function Navbar({
                   ))}
                 </ul>
               </div>
-
-              <div className="megamenu__promo">
-                <div>
-                  <p className="label" style={{ color: "var(--ink-muted)" }}>
-                    Destacado
-                  </p>
-                  <p className="h3" style={{ marginTop: 8 }}>
-                    Equipaciones 25/26 ya disponibles
-                  </p>
-                  <p className="meta" style={{ marginTop: 8 }}>
-                    Personalización oficial incluida durante el lanzamiento.
-                  </p>
-                </div>
-                <Link href="/novedades" className="btn btn--sm">
-                  Ver la colección
-                </Link>
-              </div>
             </div>
           </div>
         ) : null}

@@ -14,6 +14,7 @@ import {
   IconExternal,
   IconEye,
   IconEyeOff,
+  IconFolder,
   IconPlus,
   IconTrash,
 } from "@/components/ui/Icons";
@@ -101,12 +102,20 @@ export function CategoriesTable({
                       ? "No se puede eliminar: tiene productos"
                       : "Eliminar";
                 return (
-                  <tr key={c.slug}>
+                  <tr
+                    key={c.slug}
+                    className={depth > 0 ? "admin-table__row--child" : undefined}
+                  >
                     <td>
                       <div
                         className="admin-table__product"
-                        style={{ paddingLeft: depth * 20 }}
+                        style={{ paddingLeft: depth * 24 }}
                       >
+                        {depth > 0 && (
+                          <span className="admin-table__tree-connector" aria-hidden="true">
+                            ↳
+                          </span>
+                        )}
                         <div className="admin-table__thumb">
                           {c.image ? (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -115,15 +124,23 @@ export function CategoriesTable({
                               alt={c.name}
                               loading="lazy"
                             />
+                          ) : depth > 0 ? (
+                            <span style={{ color: "var(--ink-muted)" }}>
+                              <IconFolder className="icon--sm" />
+                            </span>
                           ) : (
                             <span className="meta" style={{ fontSize: "0.625rem" }}>
                               Sin foto
                             </span>
                           )}
                         </div>
-                        <div style={{ fontWeight: 600 }}>
-                          {depth > 0 ? "— " : ""}
-                          {c.name}
+                        <div>
+                          <div style={{ fontWeight: depth > 0 ? 500 : 600 }}>{c.name}</div>
+                          {childCount > 0 && (
+                            <div className="meta" style={{ fontSize: "0.75rem" }}>
+                              {childCount} subcategoría{childCount !== 1 ? "s" : ""}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
