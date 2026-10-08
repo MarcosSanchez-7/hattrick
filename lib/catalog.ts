@@ -477,6 +477,10 @@ export const newArrivals = (products: Product[]) =>
 export const bestSellers = (products: Product[]) =>
   [...products].sort((a, b) => b.reviews - a.reviews).slice(0, 8);
 
+/** Resalta en dorado el título de los productos de la categoría "Combos",
+ * donde sea que se muestren (tarjeta, ficha). */
+export const isComboProduct = (product: Product) => product.category === "combos";
+
 /**
  * Primero por misma categoría (más relevante: mismo equipo/torneo); si no
  * alcanza el `limit`, completa con productos que compartan al menos una

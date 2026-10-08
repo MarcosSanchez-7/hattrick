@@ -1390,6 +1390,13 @@ textarea {
   text-underline-offset: 3px;
 }
 
+/* Título dorado de los productos de la categoría "Combos" (ver
+   isComboProduct en lib/catalog.ts) -- en la tarjeta y en la ficha. */
+.card__name[data-combo='true'],
+.h1[data-combo='true'] {
+  color: #c9962c;
+}
+
 .card__prices {
   display: flex;
   flex-wrap: wrap;

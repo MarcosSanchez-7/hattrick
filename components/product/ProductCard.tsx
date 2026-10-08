@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { discountPercent, isOnSale, isSoldOut, type Product, type Tag } from "@/lib/catalog";
+import {
+  discountPercent,
+  isComboProduct,
+  isOnSale,
+  isSoldOut,
+  type Product,
+  type Tag,
+} from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { readableTextColor } from "@/lib/color";
 import { ProductVisual } from "@/components/product/ProductVisual";
@@ -65,7 +72,11 @@ export function ProductCard({ product, tags = [] }: { product: Product; tags?: T
       </ProductCardMedia>
 
       <div className="card__body">
-        <Link href={`/producto/${product.slug}`} className="card__name">
+        <Link
+          href={`/producto/${product.slug}`}
+          className="card__name"
+          data-combo={isComboProduct(product) ? "true" : "false"}
+        >
           {product.name}
         </Link>
         <div className="card__prices">

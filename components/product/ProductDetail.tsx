@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   CONSULT_SIZE_LABEL,
   discountPercent,
+  isComboProduct,
   isOnSale,
   isPatchAvailable,
   needsSizeSelection,
@@ -191,7 +192,9 @@ export function ProductDetail({
 
       <div className="pdp__info">
         <div>
-          <h1 className="h1">{product.name}</h1>
+          <h1 className="h1" data-combo={isComboProduct(product) ? "true" : "false"}>
+            {product.name}
+          </h1>
         </div>
 
         <div className="pdp__price-row">
