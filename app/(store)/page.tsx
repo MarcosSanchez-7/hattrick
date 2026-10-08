@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { bestSellers, newArrivals } from "@/lib/catalog";
+import { bestSellers, byCategoryTree, categorySlugPath, getCategory, newArrivals } from "@/lib/catalog";
 import { getAllCategories, getAllProducts, getAllTags, getSetting } from "@/lib/data";
 import {
   DEFAULT_CUSTOM_BANNER,
@@ -47,6 +47,13 @@ export default async function HomePage() {
   const populares = bestSellers(products).slice(0, 4);
   const firstSlideImage = heroSettings.slides[0]?.image;
 
+  const combosCategory = homeSettings.combos.categorySlug
+    ? getCategory(categories, homeSettings.combos.categorySlug)
+    : undefined;
+  const combos = combosCategory
+    ? byCategoryTree(products, categories, combosCategory.slug).slice(0, 4)
+    : [];
+
   return (
     <>
       {/* El Hero pinta la primera imagen como background-image en CSS (no
@@ -83,7 +90,7 @@ export default async function HomePage() {
       <CategoryGrid categories={categories} products={products} />
 
       {/* Más vendidos */}
-      {populares.length > 0 ? (
+      {homeSettings.showBestSellers && populares.length > 0 ? (
         <section className="section section--soft">
           <div className="container">
             <div className="section-head">
@@ -98,6 +105,29 @@ export default async function HomePage() {
               </Link>
             </div>
             <ProductGrid products={populares} tags={tags} />
+          </div>
+        </section>
+      ) : null}
+
+      {/* Combos: franja configurable desde Generales -> Secciones de la home, misma ubicación que "Más vendidos". */}
+      {homeSettings.combos.enabled && combosCategory && combos.length > 0 ? (
+        <section className="section section--soft">
+          <div className="container">
+            <div className="section-head">
+              <div>
+                <span className="label section-head__eyebrow">
+                  Más equipación por menos
+                </span>
+                <h2 className="h1">{combosCategory.name}</h2>
+              </div>
+              <Link
+                href={`/categoria/${categorySlugPath(categories, combosCategory.slug).join("/")}`}
+                className="section-head__link"
+              >
+                Ver todos los combos
+              </Link>
+            </div>
+            <ProductGrid products={combos} tags={tags} />
           </div>
         </section>
       ) : null}

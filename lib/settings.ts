@@ -154,10 +154,20 @@ export const DEFAULT_REVIEWS: ReviewsSettings = {
 export type HomeSettings = {
   /** Se activa solo cuando hay mucho stock nuevo cargado; si no, no vale la pena la sección. */
   showNewArrivals: boolean;
+  /** Apagala si por un tiempo preferís mostrar otra cosa en su lugar (ej. Combos). */
+  showBestSellers: boolean;
+  /** Franja de productos de una categoría puntual (ej. "Combos"), en el mismo lugar que "Más vendidos". */
+  combos: {
+    enabled: boolean;
+    /** Slug de la categoría a mostrar. "" = todavía no se eligió ninguna. */
+    categorySlug: string;
+  };
 };
 
 export const DEFAULT_HOME: HomeSettings = {
   showNewArrivals: false,
+  showBestSellers: true,
+  combos: { enabled: false, categorySlug: "" },
 };
 
 export type ProductNoticesSettings = {

@@ -1,4 +1,4 @@
-import { getSetting } from "@/lib/data";
+import { getAllCategories, getSetting } from "@/lib/data";
 import { DEFAULT_HOME } from "@/lib/settings";
 import { HomeSettingsForm } from "@/components/admin/HomeSettingsForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
@@ -7,7 +7,10 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Secciones de la home" };
 
 export default async function HomeSettingsPage() {
-  const settings = await getSetting("home", DEFAULT_HOME);
+  const [settings, categories] = await Promise.all([
+    getSetting("home", DEFAULT_HOME),
+    getAllCategories({ includeHidden: true }),
+  ]);
 
   return (
     <>
@@ -19,7 +22,7 @@ export default async function HomeSettingsPage() {
       <h1 className="h1" style={{ marginBottom: 24 }}>
         Secciones de la home
       </h1>
-      <HomeSettingsForm initial={settings} />
+      <HomeSettingsForm initial={settings} categories={categories} />
     </>
   );
 }
