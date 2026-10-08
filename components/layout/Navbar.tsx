@@ -93,7 +93,19 @@ export function Navbar({
             <IconMenu />
           </button>
 
-          <Link href="/" className="nav__logo">
+          <Link
+            href="/"
+            className="nav__logo"
+            onClick={(e) => {
+              // Si ya estás en la home, Link no dispara navegación (misma
+              // ruta) y por lo tanto tampoco el scroll-to-top que sí pasa
+              // al cambiar de página -- lo forzamos a mano en ese caso.
+              if (pathname === "/") {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }
+            }}
+          >
             Hattrick<span aria-hidden="true" />
           </Link>
 
