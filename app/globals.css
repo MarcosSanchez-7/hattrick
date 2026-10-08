@@ -1642,6 +1642,27 @@ textarea {
   }
 }
 
+/* Versión chica del banner en la home (CustomBanner.tsx, compact): ocupa
+   todo el ancho del container, así que el min-height fijo de .cats__card
+   (pensado para una tarjeta angosta del bento) la dejaba carísima de alto
+   en pantallas anchas -- aspect-ratio la mantiene proporcionada sea cual
+   sea el ancho, y centrado (no "top": estas fotos son de la personalización
+   en sí, no de un flat-lay como las de categoría). */
+.custom__teaser {
+  aspect-ratio: 21 / 7;
+  min-height: 0;
+}
+
+.custom__teaser .cats__art img {
+  object-position: center;
+}
+
+@media (max-width: 560px) {
+  .custom__teaser {
+    aspect-ratio: 4 / 5;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    Newsletter
    ═══════════════════════════════════════════════════════════════════════════ */

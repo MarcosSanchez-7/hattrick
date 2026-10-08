@@ -134,25 +134,6 @@ export default async function HomePage() {
 
       <CustomBanner settings={customBannerSettings} compact />
 
-      <section className="section">
-        <div className="container" style={{ maxWidth: 760 }}>
-          <h2 className="h2">Camisetas de fútbol en Paraguay</h2>
-          <p className="lead" style={{ marginTop: 12 }}>
-            En HATTRICK encontrás camisetas de clubes paraguayos como Cerro
-            Porteño y Olimpia, equipos europeos, selecciones camino al
-            Mundial 2026 y ediciones retro para coleccionar. Todo el
-            catálogo con talles disponibles, personalización oficial y
-            stock real.
-          </p>
-          <p className="lead" style={{ marginTop: 12 }}>
-            Hacemos envíos a todo Paraguay, con entrega gratuita desde Gs.
-            650.000. Si tenés dudas sobre talles, stock o cómo hacer tu
-            pedido, escribinos por WhatsApp y coordinamos todo directo con
-            vos.
-          </p>
-        </div>
-      </section>
-
       <ReviewsSection settings={reviewsSettings} />
     </>
   );

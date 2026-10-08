@@ -38,7 +38,7 @@ export function CustomBanner({
     return (
       <section className="section">
         <div className="container">
-          <div className="cats__card" style={{ minHeight: 320 }}>
+          <div className="cats__card custom__teaser">
             <Link href={settings.ctaHref} className="cats__hero-link">
               <div className="cats__art">
                 {count > 0 ? (
