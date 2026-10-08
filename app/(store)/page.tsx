@@ -132,7 +132,7 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      <CustomBanner settings={customBannerSettings} />
+      <CustomBanner settings={customBannerSettings} compact />
 
       <section className="section">
         <div className="container" style={{ maxWidth: 760 }}>
