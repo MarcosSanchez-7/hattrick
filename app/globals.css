@@ -1038,13 +1038,50 @@ textarea {
   }
 }
 
+/* Slider de un solo ítem por vez (ValueProps.tsx) -- en desktop/tablet los
+   4 avisos siguen en fila fija, esto no les aplica. Cada fila le pasa su
+   índice en --i (estilo inline) y el contenedor el índice activo en
+   --active; a partir de ahí es puro CSS: el ítem activo queda en
+   translateX(0) y el resto corrido a los costados, listo para la
+   transición cuando cambia --active. */
+.values__dots {
+  display: none;
+}
+
 @media (max-width: 560px) {
   .values {
     grid-template-columns: 1fr;
+    position: relative;
+    overflow: hidden;
+    min-height: 150px;
+  }
+  .values__item {
+    position: absolute;
+    inset: 0;
+    transform: translateX(calc((var(--i, 0) - var(--active, 0)) * 100%));
+    transition: transform 0.4s var(--ease);
   }
   .values__item + .values__item {
     border-left: 0;
-    border-top: 1px solid var(--line);
+    border-top: 0;
+  }
+  .values__dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    padding: var(--sp-3) 0;
+  }
+  .values__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    border: none;
+    padding: 0;
+    background: var(--line);
+    cursor: pointer;
+  }
+  .values__dot[data-active="true"] {
+    background: var(--ink);
   }
 }
 
