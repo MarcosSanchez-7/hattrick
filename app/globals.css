@@ -1649,7 +1649,7 @@ textarea {
    sea el ancho, y centrado (no "top": estas fotos son de la personalización
    en sí, no de un flat-lay como las de categoría). */
 .custom__teaser {
-  aspect-ratio: 21 / 7;
+  aspect-ratio: 16 / 9;
   min-height: 0;
 }
 

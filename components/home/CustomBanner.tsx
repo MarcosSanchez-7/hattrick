@@ -67,18 +67,36 @@ export function CustomBanner({
               </div>
             </Link>
             {count > 1 ? (
-              <div className="hero__dots" style={{ bottom: "var(--sp-3)", right: "var(--sp-3)" }}>
-                {images.map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    className="hero__dot hero__dot--dark"
-                    data-active={i === index ? "true" : "false"}
-                    onClick={() => setIndex(i)}
-                    aria-label={`Ver foto ${i + 1}`}
-                  />
-                ))}
-              </div>
+              <>
+                <button
+                  type="button"
+                  className="pdp__nav pdp__nav--prev"
+                  onClick={() => goTo(index - 1)}
+                  aria-label="Foto anterior"
+                >
+                  <IconChevron className="icon--sm" />
+                </button>
+                <button
+                  type="button"
+                  className="pdp__nav pdp__nav--next"
+                  onClick={() => goTo(index + 1)}
+                  aria-label="Foto siguiente"
+                >
+                  <IconChevron className="icon--sm" />
+                </button>
+                <div className="hero__dots" style={{ bottom: "var(--sp-3)", right: "var(--sp-3)" }}>
+                  {images.map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      className="hero__dot hero__dot--dark"
+                      data-active={i === index ? "true" : "false"}
+                      onClick={() => setIndex(i)}
+                      aria-label={`Ver foto ${i + 1}`}
+                    />
+                  ))}
+                </div>
+              </>
             ) : null}
           </div>
         </div>
