@@ -458,8 +458,14 @@ async function insertMovement(
  * Deja el stock de cada talla en la cantidad indicada (valor absoluto, no un
  * delta): crea las tallas que falten, ajusta las que cambiaron de cantidad
  * (vía un movimiento 'correction', nunca escribiendo stock_on_hand a mano) y
- * lleva a 0 las tallas que ya no están seleccionadas — sin borrar el
- * histórico de esa talla.
+ * borra las tallas que se desmarcaron en el panel -- no alcanza con dejarlas
+ * en 0: la ficha pública arma la lista de talles a partir de las filas de
+ * product_variants que existan, así que una fila en 0 seguía apareciendo
+ * como "agotado" en vez de desaparecer. sale_items guarda su propio snapshot
+ * de talla/producto, así que borrar la variante no rompe el historial de
+ * ventas; inventory_movements no tiene ese snapshot, así que sus
+ * movimientos viejos de esa talla quedan sin talla/producto asociado (el
+ * join da null), pero el movimiento en sí no se borra.
  */
 async function syncProductVariants(
   productId: string,
@@ -501,13 +507,14 @@ async function syncProductVariants(
   }
 
   for (const [size, variant] of existingBySize) {
-    if (!(size in quantities) && variant.stock_on_hand !== 0) {
-      await insertMovement(
-        variant.id,
-        "correction",
-        -variant.stock_on_hand,
-        "Talla retirada desde el panel de administración",
-      );
+    if (!(size in quantities)) {
+      const { error: deleteError } = await supabaseAdmin
+        .from("product_variants")
+        .delete()
+        .eq("id", variant.id);
+      if (deleteError) {
+        fail(`No se pudo quitar la talla "${size}": ${deleteError.message}`);
+      }
     }
   }
 }
@@ -2088,6 +2095,22 @@ export async function createSupplier(name: string, notes?: string | null): Promi
     fail(`No se pudo crear el proveedor: ${error.message}`);
   }
   return rowToSupplier(data as SupplierRow);
+}
+
+export async function deleteSupplier(id: string): Promise<void> {
+  const { count, error: countError } = await supabaseAdmin
+    .from("product_suppliers")
+    .select("product_id", { count: "exact", head: true })
+    .eq("supplier_id", id);
+  if (countError) fail(`No se pudo comprobar el uso del proveedor: ${countError.message}`);
+  if (count && count > 0) {
+    throw new DataError(
+      `No puedes eliminar un proveedor asignado a ${count} producto${count !== 1 ? "s" : ""}. Quitalo de esos productos primero.`,
+    );
+  }
+
+  const { error } = await supabaseAdmin.from("suppliers").delete().eq("id", id);
+  if (error) fail(`No se pudo eliminar el proveedor: ${error.message}`);
 }
 
 // ── Clientes (CRM ligero) ───────────────────────────────────────────────
