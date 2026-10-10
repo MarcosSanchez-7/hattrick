@@ -4,13 +4,15 @@ import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  DELIVERY_STATUSES,
+  PAYMENT_STATUSES,
   SALE_CHANNELS,
-  SALE_STATUSES,
   SHIPPING_METHODS,
   lineProfit,
   lineTotal,
+  type DeliveryStatus,
+  type PaymentStatus,
   type Sale,
-  type SaleStatus,
 } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { imageVariant } from "@/lib/image";
@@ -23,30 +25,118 @@ const channelLabel = (value: string) =>
 const shippingMethodLabel = (value: string) =>
   SHIPPING_METHODS.find((m) => m.value === value)?.label ?? value;
 
-/** Pastilla de color por estado (ver .admin-status-select--* en globals.css). */
-function SaleStatusSelect({
+async function patchSale(saleId: string, body: Record<string, unknown>) {
+  const res = await fetch(`/api/admin/sales/${saleId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error ?? "No se pudo actualizar la venta.");
+  }
+}
+
+/** Pastilla de estado de pago (ver .admin-status-select--pago-* en
+ * globals.css) + monto señado editable, que solo tiene sentido cuando el
+ * pago está "señado" -- ese número varía por venta, no hay un default. */
+function SalePaymentStatusSelect({
   saleId,
-  status,
+  paymentStatus,
+  depositAmount,
   onChanged,
 }: {
   saleId: string;
-  status: SaleStatus;
+  paymentStatus: PaymentStatus;
+  depositAmount: number | null;
+  onChanged: () => void;
+}) {
+  const [pending, setPending] = useState(false);
+  const [amountDraft, setAmountDraft] = useState(depositAmount != null ? String(depositAmount) : "");
+
+  const handleStatusChange = async (next: PaymentStatus) => {
+    setPending(true);
+    try {
+      await patchSale(saleId, { paymentStatus: next });
+      onChanged();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Error inesperado.");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const commitAmount = async () => {
+    const trimmed = amountDraft.trim();
+    const next = trimmed === "" ? null : Number(trimmed);
+    if (next != null && (!Number.isFinite(next) || next < 0)) {
+      window.alert("El monto señado tiene que ser un número válido.");
+      setAmountDraft(depositAmount != null ? String(depositAmount) : "");
+      return;
+    }
+    if (next === (depositAmount ?? null)) return;
+    setPending(true);
+    try {
+      await patchSale(saleId, { depositAmount: next });
+      onChanged();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Error inesperado.");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <div className="stack gap-2">
+      <select
+        className={`admin-status-select admin-status-select--pago-${paymentStatus}`}
+        value={paymentStatus}
+        disabled={pending}
+        onChange={(e) => handleStatusChange(e.target.value as PaymentStatus)}
+        aria-label="Estado de pago"
+      >
+        {PAYMENT_STATUSES.map((s) => (
+          <option key={s.value} value={s.value}>
+            {s.label}
+          </option>
+        ))}
+      </select>
+      {paymentStatus === "senado" ? (
+        <input
+          type="number"
+          min="0"
+          step="1000"
+          className="admin-variant-qty"
+          style={{ width: 120 }}
+          value={amountDraft}
+          disabled={pending}
+          onChange={(e) => setAmountDraft(e.target.value)}
+          onBlur={commitAmount}
+          onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+          placeholder="Monto señado"
+          aria-label="Monto señado"
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/** Pastilla de estado de entrega (ver .admin-status-select--entrega-* en globals.css). */
+function SaleDeliveryStatusSelect({
+  saleId,
+  deliveryStatus,
+  onChanged,
+}: {
+  saleId: string;
+  deliveryStatus: DeliveryStatus;
   onChanged: () => void;
 }) {
   const [pending, setPending] = useState(false);
 
-  const handleChange = async (next: SaleStatus) => {
+  const handleChange = async (next: DeliveryStatus) => {
     setPending(true);
     try {
-      const res = await fetch(`/api/admin/sales/${saleId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: next }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "No se pudo actualizar el estado.");
-      }
+      await patchSale(saleId, { deliveryStatus: next });
       onChanged();
     } catch (err) {
       window.alert(err instanceof Error ? err.message : "Error inesperado.");
@@ -57,13 +147,13 @@ function SaleStatusSelect({
 
   return (
     <select
-      className={`admin-status-select admin-status-select--${status}`}
-      value={status}
+      className={`admin-status-select admin-status-select--entrega-${deliveryStatus}`}
+      value={deliveryStatus}
       disabled={pending}
-      onChange={(e) => handleChange(e.target.value as SaleStatus)}
-      aria-label="Estado de la venta"
+      onChange={(e) => handleChange(e.target.value as DeliveryStatus)}
+      aria-label="Estado de entrega"
     >
-      {SALE_STATUSES.map((s) => (
+      {DELIVERY_STATUSES.map((s) => (
         <option key={s.value} value={s.value}>
           {s.label}
         </option>
@@ -84,7 +174,8 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [channelFilter, setChannelFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("");
+  const [deliveryFilter, setDeliveryFilter] = useState("");
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 
   const toggleExpanded = (itemId: number) => {
@@ -101,9 +192,10 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
       sales.filter(
         (s) =>
           (!channelFilter || s.channel === channelFilter) &&
-          (!statusFilter || s.status === statusFilter),
+          (!paymentFilter || s.paymentStatus === paymentFilter) &&
+          (!deliveryFilter || s.deliveryStatus === deliveryFilter),
       ),
-    [sales, channelFilter, statusFilter],
+    [sales, channelFilter, paymentFilter, deliveryFilter],
   );
 
   const rows = filteredSales.flatMap((sale) =>
@@ -157,12 +249,25 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
         </select>
         <select
           className="select"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          aria-label="Filtrar por estado"
+          value={paymentFilter}
+          onChange={(e) => setPaymentFilter(e.target.value)}
+          aria-label="Filtrar por estado de pago"
         >
-          <option value="">Todos los estados</option>
-          {SALE_STATUSES.map((s) => (
+          <option value="">Todos los pagos</option>
+          {PAYMENT_STATUSES.map((s) => (
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+        <select
+          className="select"
+          value={deliveryFilter}
+          onChange={(e) => setDeliveryFilter(e.target.value)}
+          aria-label="Filtrar por estado de entrega"
+        >
+          <option value="">Todas las entregas</option>
+          {DELIVERY_STATUSES.map((s) => (
             <option key={s.value} value={s.value}>
               {s.label}
             </option>
@@ -191,7 +296,8 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                 <th>Precio venta</th>
                 <th>Ganancia</th>
                 <th>Canal</th>
-                <th>Estado</th>
+                <th>Pago</th>
+                <th>Entrega</th>
                 <th>Cliente</th>
                 <th aria-label="Acciones" />
               </tr>
@@ -265,10 +371,18 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                   <td data-label="Canal">
                     <span className="meta">{channelLabel(sale.channel)}</span>
                   </td>
-                  <td data-label="Estado">
-                    <SaleStatusSelect
+                  <td data-label="Pago">
+                    <SalePaymentStatusSelect
                       saleId={sale.id}
-                      status={sale.status}
+                      paymentStatus={sale.paymentStatus}
+                      depositAmount={sale.depositAmount}
+                      onChanged={() => router.refresh()}
+                    />
+                  </td>
+                  <td data-label="Entrega">
+                    <SaleDeliveryStatusSelect
+                      saleId={sale.id}
+                      deliveryStatus={sale.deliveryStatus}
                       onChanged={() => router.refresh()}
                     />
                   </td>
@@ -319,7 +433,7 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                 </tr>
                 {isExpanded ? (
                   <tr>
-                    <td colSpan={10} className="admin-table__expand-panel">
+                    <td colSpan={11} className="admin-table__expand-panel">
                       <div className="row gap-4" style={{ flexWrap: "wrap" }}>
                         <div>
                           <span className="label">Vendedor</span>

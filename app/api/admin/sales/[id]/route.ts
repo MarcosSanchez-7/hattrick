@@ -45,7 +45,11 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   const { id } = await params;
   try {
     const body = await request.json();
-    await updateSaleStatus(id, body?.status);
+    await updateSaleStatus(id, {
+      paymentStatus: body?.paymentStatus,
+      deliveryStatus: body?.deliveryStatus,
+      depositAmount: body?.depositAmount,
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof DataError) {

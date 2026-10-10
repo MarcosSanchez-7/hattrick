@@ -12,9 +12,10 @@ import type {
   ProductSupplierSizeStock,
   ProductVariant,
   Sale,
+  DeliveryStatus,
+  PaymentStatus,
   SaleChannel,
   SaleLine,
-  SaleStatus,
   ShippingMethod,
   StockMode,
   Supplier,
@@ -1547,7 +1548,9 @@ type SaleItemRow = {
 type SaleRow = {
   id: string;
   channel: SaleChannel;
-  status: SaleStatus;
+  payment_status: PaymentStatus;
+  delivery_status: DeliveryStatus;
+  deposit_amount: number | null;
   staff_name: string | null;
   customer_note: string | null;
   customer_name: string | null;
@@ -1562,7 +1565,7 @@ type SaleRow = {
 };
 
 const SALE_SELECT =
-  "id, channel, status, staff_name, customer_note, customer_name, customer_phone, destination_city, destination_neighborhood, shipping_method, shipping_method_detail, customer_id, sold_at, sale_items(id, variant_id, quantity, unit_price, cost_price, product_name_snapshot, size_snapshot, product_id_snapshot, item_note, supplier_id_snapshot, supplier_name_snapshot, product_variants(size, product_id, products(name, images)))";
+  "id, channel, payment_status, delivery_status, deposit_amount, staff_name, customer_note, customer_name, customer_phone, destination_city, destination_neighborhood, shipping_method, shipping_method_detail, customer_id, sold_at, sale_items(id, variant_id, quantity, unit_price, cost_price, product_name_snapshot, size_snapshot, product_id_snapshot, item_note, supplier_id_snapshot, supplier_name_snapshot, product_variants(size, product_id, products(name, images)))";
 
 function rowToSale(row: SaleRow): Sale {
   // product_name_snapshot/size_snapshot solo existen en ventas importadas
@@ -1590,7 +1593,9 @@ function rowToSale(row: SaleRow): Sale {
   return {
     id: row.id,
     channel: row.channel,
-    status: row.status,
+    paymentStatus: row.payment_status,
+    deliveryStatus: row.delivery_status,
+    depositAmount: row.deposit_amount != null ? Number(row.deposit_amount) : null,
     staffName: row.staff_name,
     customerNote: row.customer_note,
     customerName: row.customer_name,
@@ -1962,19 +1967,52 @@ export async function deleteSale(id: string): Promise<void> {
   if (error) fail(`No se pudo eliminar la venta: ${error.message}`);
 }
 
-const VALID_SALE_STATUSES: SaleStatus[] = ["pendiente", "senado", "entregado"];
+const VALID_PAYMENT_STATUSES: PaymentStatus[] = ["pagado", "pendiente", "senado"];
+const VALID_DELIVERY_STATUSES: DeliveryStatus[] = [
+  "entregado",
+  "pendiente",
+  "preparando",
+  "agendado",
+];
 
-/** Cambio rápido de estado de entrega/cobro, separado de updateSale a
- * propósito: no requiere reenviar los artículos ni pasar por el RPC que
- * mueve stock -- mismo patrón que setProductVisibility (PATCH liviano vs.
- * PUT completo). */
-export async function updateSaleStatus(id: string, status: SaleStatus): Promise<void> {
-  if (!VALID_SALE_STATUSES.includes(status)) {
-    throw new DataError("Estado de venta inválido.", 400);
+export type SaleStatusPatch = {
+  paymentStatus?: PaymentStatus;
+  deliveryStatus?: DeliveryStatus;
+  /** undefined = no tocar; null = borrar el monto señado. */
+  depositAmount?: number | null;
+};
+
+/** Cambio rápido de estado de pago/entrega (y del monto señado), separado
+ * de updateSale a propósito: no requiere reenviar los artículos ni pasar
+ * por el RPC que mueve stock -- mismo patrón que setProductVisibility
+ * (PATCH liviano vs. PUT completo). Cada campo es opcional: la tabla de
+ * ventas los edita por separado (un select dispara un PATCH por campo). */
+export async function updateSaleStatus(id: string, patch: SaleStatusPatch): Promise<void> {
+  const update: Record<string, unknown> = {};
+
+  if (patch.paymentStatus !== undefined) {
+    if (!VALID_PAYMENT_STATUSES.includes(patch.paymentStatus)) {
+      throw new DataError("Estado de pago inválido.", 400);
+    }
+    update.payment_status = patch.paymentStatus;
   }
+  if (patch.deliveryStatus !== undefined) {
+    if (!VALID_DELIVERY_STATUSES.includes(patch.deliveryStatus)) {
+      throw new DataError("Estado de entrega inválido.", 400);
+    }
+    update.delivery_status = patch.deliveryStatus;
+  }
+  if (patch.depositAmount !== undefined) {
+    if (patch.depositAmount != null && !(Number(patch.depositAmount) >= 0)) {
+      throw new DataError("El monto señado no puede ser negativo.", 400);
+    }
+    update.deposit_amount = patch.depositAmount;
+  }
+  if (Object.keys(update).length === 0) return;
+
   const { data, error } = await supabaseAdmin
     .from("sales")
-    .update({ status })
+    .update(update)
     .eq("id", id)
     .select("id");
   if (error) fail(`No se pudo actualizar el estado de la venta: ${error.message}`);

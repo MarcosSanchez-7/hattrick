@@ -218,22 +218,35 @@ export const SHIPPING_METHODS: { value: ShippingMethod; label: string }[] = [
 ];
 
 /**
- * Estado de entrega/cobro de la venta -- independiente del canal o de los
- * artículos, se actualiza a mano a medida que avanza (se señó, se cobró el
- * resto, se entregó). "pendiente" es el default de toda venta nueva.
+ * Estado de pago y estado de entrega -- independientes entre sí (una venta
+ * puede estar pagada pero sin entregar, o señada y ya entregada bajo
+ * confianza, etc.), se actualizan a mano a medida que avanza la venta.
+ * "pendiente" es el default de ambos en toda venta nueva.
  */
-export type SaleStatus = "pendiente" | "senado" | "entregado";
+export type PaymentStatus = "pagado" | "pendiente" | "senado";
 
-export const SALE_STATUSES: { value: SaleStatus; label: string }[] = [
+export const PAYMENT_STATUSES: { value: PaymentStatus; label: string }[] = [
+  { value: "pagado", label: "Pagado" },
   { value: "pendiente", label: "Pendiente" },
   { value: "senado", label: "Señado" },
+];
+
+export type DeliveryStatus = "entregado" | "pendiente" | "preparando" | "agendado";
+
+export const DELIVERY_STATUSES: { value: DeliveryStatus; label: string }[] = [
+  { value: "pendiente", label: "Pendiente" },
+  { value: "preparando", label: "Preparando" },
+  { value: "agendado", label: "Agendado" },
   { value: "entregado", label: "Entregado" },
 ];
 
 export type Sale = {
   id: string;
   channel: SaleChannel;
-  status: SaleStatus;
+  paymentStatus: PaymentStatus;
+  deliveryStatus: DeliveryStatus;
+  /** Monto ya señado (Gs.) -- solo tiene sentido cuando paymentStatus es "senado", varía por venta. */
+  depositAmount: number | null;
   staffName?: string | null;
   customerNote?: string | null;
   customerName?: string | null;

@@ -1753,3 +1753,37 @@ alter table categories alter column description drop not null;
 -- "Importados" no admite cambio ni devolución de la seña, a diferencia del
 -- resto del catálogo). Null = usa el texto general del sitio.
 alter table categories add column if not exists shipping_text text;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Separa sales.status (pendiente/señado/entregado, una sola columna) en dos
+-- dimensiones independientes: pago y entrega -- una venta puede estar
+-- pagada pero sin entregar, o señada y entregada bajo confianza, etc. Suma
+-- además el monto ya señado, que antes no existía (varía por venta, no hay
+-- un default posible). Ningún código de la app tocaba "status" desde
+-- record_sale/update_sale (los RPC de ventas), así que no hace falta
+-- redefinirlos -- la columna se escribía aparte, vía updateSaleStatus.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+alter table sales add column if not exists payment_status text not null default 'pendiente'
+  check (payment_status in ('pagado', 'pendiente', 'senado'));
+alter table sales add column if not exists delivery_status text not null default 'pendiente'
+  check (delivery_status in ('entregado', 'pendiente', 'preparando', 'agendado'));
+alter table sales add column if not exists deposit_amount numeric(10, 2) check (deposit_amount >= 0);
+
+-- Migra las ventas ya cargadas con el status viejo: "entregado" pasa a pago
+-- pagado + entrega entregada (si se entregó, se asume que ya se cobró);
+-- "señado" pasa a pago señado con el monto vacío (no había ese dato antes,
+-- se completa a mano); "pendiente" pasa a ambos pendientes.
+update sales set
+  payment_status = case status
+    when 'entregado' then 'pagado'
+    when 'senado' then 'senado'
+    else 'pendiente'
+  end,
+  delivery_status = case status
+    when 'entregado' then 'entregado'
+    else 'pendiente'
+  end
+where status is not null;
+
+alter table sales drop column if exists status;
