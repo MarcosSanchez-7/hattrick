@@ -1787,3 +1787,11 @@ update sales set
 where status is not null;
 
 alter table sales drop column if exists status;
+
+-- product_supplier_sizes (desglose de stock por proveedor/talla, usado por
+-- lib/data.ts) quedó sin RLS activado -- nunca se documentó su creación
+-- acá, señal de que se creó directo en la base. Sin esto queda expuesta
+-- sin restricciones a la clave pública (anon) de Supabase; el resto de las
+-- tablas usan este mismo patrón (RLS on, sin políticas -- ver comentario
+-- al principio del archivo).
+alter table product_supplier_sizes enable row level security;
