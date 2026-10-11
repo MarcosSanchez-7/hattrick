@@ -80,6 +80,11 @@ const SECTIONS = [
     title: "Reseñas",
     description: "Capturas de conversaciones de entrega o paquetes listos, mostradas en la home.",
   },
+  {
+    href: "/gestion-ssjblue/generales/estados-venta",
+    title: "Colores de estados de venta",
+    description: "El color de cada pastilla de pago y de entrega en Ventas.",
+  },
 ];
 
 export default function GeneralesPage() {

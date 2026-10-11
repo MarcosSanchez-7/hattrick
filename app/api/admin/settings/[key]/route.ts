@@ -12,6 +12,7 @@ import {
   DEFAULT_PRODUCT_INFO,
   DEFAULT_PRODUCT_NOTICES,
   DEFAULT_REVIEWS,
+  DEFAULT_SALE_STATUS_COLORS,
   DEFAULT_VALUE_PROPS,
   type SiteSettingsKey,
 } from "@/lib/settings";
@@ -28,6 +29,7 @@ const DEFAULTS: Record<SiteSettingsKey, unknown> = {
   branding: DEFAULT_BRANDING,
   personalizationGallery: DEFAULT_PERSONALIZATION_GALLERY,
   reviews: DEFAULT_REVIEWS,
+  saleStatusColors: DEFAULT_SALE_STATUS_COLORS,
 };
 
 function isValidKey(key: string): key is SiteSettingsKey {

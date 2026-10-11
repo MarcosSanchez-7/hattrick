@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { getSales } from "@/lib/data";
+import { getSales, getSetting } from "@/lib/data";
+import { DEFAULT_SALE_STATUS_COLORS } from "@/lib/settings";
 import { SalesTable } from "@/components/admin/SalesTable";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter";
@@ -17,7 +18,10 @@ export default async function VentasPage({
   const fromDate = from || todayInParaguay();
   const toDate = to || fromDate;
 
-  const sales = await getSales(paraguayDayRangeToUtc(fromDate, toDate));
+  const [sales, statusColors] = await Promise.all([
+    getSales(paraguayDayRangeToUtc(fromDate, toDate)),
+    getSetting("saleStatusColors", DEFAULT_SALE_STATUS_COLORS),
+  ]);
 
   return (
     <>
@@ -54,7 +58,7 @@ export default async function VentasPage({
         resetLabel="Hoy"
       />
 
-      <SalesTable sales={sales} />
+      <SalesTable sales={sales} statusColors={statusColors} />
     </>
   );
 }

@@ -14,8 +14,10 @@ import {
   type PaymentStatus,
   type Sale,
 } from "@/lib/catalog";
+import { readableTextColor } from "@/lib/color";
 import { formatPrice } from "@/lib/format";
 import { imageVariant } from "@/lib/image";
+import type { SaleStatusColors } from "@/lib/settings";
 import { IconChevron, IconDocument, IconTrash } from "@/components/ui/Icons";
 import { PARAGUAY_TZ } from "@/lib/timezone";
 
@@ -37,18 +39,20 @@ async function patchSale(saleId: string, body: Record<string, unknown>) {
   }
 }
 
-/** Pastilla de estado de pago (ver .admin-status-select--pago-* en
- * globals.css) + monto señado editable, que solo tiene sentido cuando el
- * pago está "señado" -- ese número varía por venta, no hay un default. */
+/** Pastilla de estado de pago (color elegible en Generales -> Colores de
+ * estados de venta) + monto señado editable, que solo tiene sentido cuando
+ * el pago está "señado" -- ese número varía por venta, no hay un default. */
 function SalePaymentStatusSelect({
   saleId,
   paymentStatus,
   depositAmount,
+  colors,
   onChanged,
 }: {
   saleId: string;
   paymentStatus: PaymentStatus;
   depositAmount: number | null;
+  colors: SaleStatusColors["payment"];
   onChanged: () => void;
 }) {
   const [pending, setPending] = useState(false);
@@ -89,7 +93,11 @@ function SalePaymentStatusSelect({
   return (
     <div className="stack gap-2">
       <select
-        className={`admin-status-select admin-status-select--pago-${paymentStatus}`}
+        className="admin-status-select"
+        style={{
+          background: colors[paymentStatus],
+          color: readableTextColor(colors[paymentStatus]),
+        }}
         value={paymentStatus}
         disabled={pending}
         onChange={(e) => handleStatusChange(e.target.value as PaymentStatus)}
@@ -121,14 +129,17 @@ function SalePaymentStatusSelect({
   );
 }
 
-/** Pastilla de estado de entrega (ver .admin-status-select--entrega-* en globals.css). */
+/** Pastilla de estado de entrega (color elegible en Generales -> Colores
+ * de estados de venta). */
 function SaleDeliveryStatusSelect({
   saleId,
   deliveryStatus,
+  colors,
   onChanged,
 }: {
   saleId: string;
   deliveryStatus: DeliveryStatus;
+  colors: SaleStatusColors["delivery"];
   onChanged: () => void;
 }) {
   const [pending, setPending] = useState(false);
@@ -147,7 +158,11 @@ function SaleDeliveryStatusSelect({
 
   return (
     <select
-      className={`admin-status-select admin-status-select--entrega-${deliveryStatus}`}
+      className="admin-status-select"
+      style={{
+        background: colors[deliveryStatus],
+        color: readableTextColor(colors[deliveryStatus]),
+      }}
       value={deliveryStatus}
       disabled={pending}
       onChange={(e) => handleChange(e.target.value as DeliveryStatus)}
@@ -170,7 +185,13 @@ const dateTimeFormatter = new Intl.DateTimeFormat("es-PY", {
   minute: "2-digit",
 });
 
-export function SalesTable({ sales }: { sales: Sale[] }) {
+export function SalesTable({
+  sales,
+  statusColors,
+}: {
+  sales: Sale[];
+  statusColors: SaleStatusColors;
+}) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [channelFilter, setChannelFilter] = useState("");
@@ -376,6 +397,7 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                       saleId={sale.id}
                       paymentStatus={sale.paymentStatus}
                       depositAmount={sale.depositAmount}
+                      colors={statusColors.payment}
                       onChanged={() => router.refresh()}
                     />
                   </td>
@@ -383,6 +405,7 @@ export function SalesTable({ sales }: { sales: Sale[] }) {
                     <SaleDeliveryStatusSelect
                       saleId={sale.id}
                       deliveryStatus={sale.deliveryStatus}
+                      colors={statusColors.delivery}
                       onChanged={() => router.refresh()}
                     />
                   </td>

@@ -1,5 +1,5 @@
 import { formatPrice } from "@/lib/format";
-import type { NoticeIcon, ProductNotice } from "@/lib/catalog";
+import type { DeliveryStatus, NoticeIcon, PaymentStatus, ProductNotice } from "@/lib/catalog";
 
 /**
  * Contenido general del sitio editable desde /gestion-ssjblue/generales: hero, footer
@@ -247,6 +247,28 @@ export const DEFAULT_BRANDING: BrandingSettings = {
   faviconUrl: "",
 };
 
+/** Color de fondo de cada pastilla de estado en Ventas (SalesTable.tsx) --
+ * el texto (blanco o negro) se calcula solo según el contraste, igual que
+ * las etiquetas de producto (ver lib/color.ts readableTextColor). */
+export type SaleStatusColors = {
+  payment: Record<PaymentStatus, string>;
+  delivery: Record<DeliveryStatus, string>;
+};
+
+export const DEFAULT_SALE_STATUS_COLORS: SaleStatusColors = {
+  payment: {
+    pagado: "#2f9e52",
+    pendiente: "#c9962c",
+    senado: "#2f6fb0",
+  },
+  delivery: {
+    entregado: "#2f9e52",
+    pendiente: "#c9962c",
+    preparando: "#7c4dbd",
+    agendado: "#2095a3",
+  },
+};
+
 export type SiteSettingsKey =
   | "hero"
   | "footer"
@@ -258,4 +280,5 @@ export type SiteSettingsKey =
   | "valueProps"
   | "branding"
   | "personalizationGallery"
-  | "reviews";
+  | "reviews"
+  | "saleStatusColors";

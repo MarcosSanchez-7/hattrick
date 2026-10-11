@@ -3069,43 +3069,6 @@ textarea {
   outline-offset: 1px;
 }
 
-/* Estado de pago (SalesTable.tsx -- SalePaymentStatusSelect). */
-.admin-status-select--pago-pendiente {
-  background-color: #fdf1d6;
-  color: #8a5a00;
-}
-
-.admin-status-select--pago-senado {
-  background-color: #dbe9fb;
-  color: #1b4a8a;
-}
-
-.admin-status-select--pago-pagado {
-  background-color: #dcf1e3;
-  color: var(--success);
-}
-
-/* Estado de entrega (SalesTable.tsx -- SaleDeliveryStatusSelect). */
-.admin-status-select--entrega-pendiente {
-  background-color: #fdf1d6;
-  color: #8a5a00;
-}
-
-.admin-status-select--entrega-preparando {
-  background-color: #ece3fb;
-  color: #5b3a8a;
-}
-
-.admin-status-select--entrega-agendado {
-  background-color: #dbf3ef;
-  color: #0f6e63;
-}
-
-.admin-status-select--entrega-entregado {
-  background-color: #dcf1e3;
-  color: var(--success);
-}
-
 /* Fila desplegable de SalesTable.tsx -- flecha para ver Vendedor/Nota sin
    ir a la ficha completa de la venta. */
 .admin-table__expand-btn {
