@@ -22,16 +22,21 @@ import type { NextConfig } from "next";
  *   (@vercel/speed-insights/next) usa el mismo patrón same-origin bajo
  *   /_vercel/speed-insights/*, también cubierto por 'self'.
  *
- * script-src necesita 'unsafe-inline': Next.js App Router hidrata la página
- * con sus propios <script> inline (self.__next_f.push(...), el streaming de
- * RSC) — sin 'unsafe-inline' el navegador los bloquea, React nunca hidrata,
- * y la página queda visualmente igual pero sin reaccionar a ningún click ni
- * tocar nada (así se detectó: el admin y el timer de ofertas dejaron de
- * responder apenas se agregó la CSP). La alternativa correcta es CSP por
- * nonce generado en proxy.ts en vez de next.config.ts (Next.js lo soporta
- * de forma nativa), pero requiere que proxy.ts cubra TODAS las rutas del
- * sitio, no solo /gestion-ssjblue y /api/admin como hoy — queda pendiente
- * como mejora, no bloqueante.
+ * script-src necesita 'unsafe-inline' ACÁ (storefront público): Next.js App
+ * Router hidrata la página con sus propios <script> inline
+ * (self.__next_f.push(...), el streaming de RSC) — sin 'unsafe-inline' el
+ * navegador los bloquea, React nunca hidrata, y la página queda visualmente
+ * igual pero sin reaccionar a ningún click ni tocar nada. La alternativa
+ * correcta es CSP por nonce (Next.js lo soporta nativo), pero exige
+ * rendering dinámico en cada página que lo use — por eso el panel de admin
+ * (/gestion-ssjblue/**, /api/admin/**, ya 100% dinámico, con sesión de por
+ * medio) tiene su propia CSP por nonce en proxy.ts, mientras que el
+ * storefront se queda con 'unsafe-inline' acá: pasarlo a nonce apagaría el
+ * ISR de home/fichas de producto/categorías (todas con `revalidate`),
+ * cacheadas hoy en el borde de Vercel — un costo real de performance que no
+ * se justifica sin un XSS conocido que explotar (no hay ninguno, ver
+ * SECURITY_AUDIT.md). Ver headers() más abajo: esta CSP se aplica a todo
+ * excepto /gestion-ssjblue y /api/admin, que usan la de proxy.ts.
  *
  * connect-src necesita vercel.com Y el host de storage de Vercel Blob:
  * ImageUploader sube el archivo ORIGINAL directo desde el navegador a
@@ -79,8 +84,16 @@ const nextConfig: NextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
           },
-          { key: "Content-Security-Policy", value: CSP },
         ],
+      },
+      {
+        // Excluye /gestion-ssjblue y /api/admin a propósito: esas rutas
+        // ponen su propia CSP (por nonce) en proxy.ts. Si este bloque
+        // también las matcheara, el navegador recibiría dos headers
+        // Content-Security-Policy (se intersectan, no se reemplazan) y el
+        // nonce dejaría de alcanzar para que corran los scripts del admin.
+        source: "/((?!gestion-ssjblue|api/admin).*)",
+        headers: [{ key: "Content-Security-Policy", value: CSP }],
       },
     ];
   },
