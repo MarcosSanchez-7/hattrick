@@ -1,89 +1,148 @@
 import Link from "next/link";
-import { IconArrow } from "@/components/ui/Icons";
+import {
+  IconChevron,
+  IconDocument,
+  IconExpand,
+  IconExternal,
+  IconFolder,
+  IconGrid,
+  IconLayout,
+  IconMenu,
+  IconPalette,
+  IconPrint,
+  IconShield,
+  IconStar,
+  IconTag,
+  IconTruck,
+  type IconProps,
+} from "@/components/ui/Icons";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
 export const metadata = { title: "Generales" };
 
-const SECTIONS = [
+type Section = {
+  href: string;
+  title: string;
+  description: string;
+  icon: (props: IconProps) => React.ReactElement;
+};
+
+const GROUPS: { title: string; sections: Section[] }[] = [
   {
-    href: "/gestion-ssjblue/generales/branding",
-    title: "Branding",
-    description: "Favicon / ícono del sitio (pestaña del navegador).",
+    title: "Home",
+    sections: [
+      {
+        href: "/gestion-ssjblue/generales/hero",
+        title: "Portada (Hero)",
+        description: "Titular, texto, botones y estadísticas de la home.",
+        icon: IconExpand,
+      },
+      {
+        href: "/gestion-ssjblue/generales/home",
+        title: "Secciones de la home",
+        description: "Mostrar u ocultar bloques como \"Nuevos ingresos\".",
+        icon: IconLayout,
+      },
+      {
+        href: "/gestion-ssjblue/generales/informacion",
+        title: "Franja de información",
+        description: "Los 4 ítems (envío, personalización, etc.) debajo del Hero.",
+        icon: IconTruck,
+      },
+      {
+        href: "/gestion-ssjblue/generales/personalizacion",
+        title: "Banner de personalización",
+        description: "El bloque \"Ponle tu nombre\" de la home.",
+        icon: IconPrint,
+      },
+      {
+        href: "/gestion-ssjblue/generales/resenas",
+        title: "Reseñas",
+        description: "Capturas de conversaciones de entrega o paquetes listos.",
+        icon: IconStar,
+      },
+    ],
   },
   {
-    href: "/gestion-ssjblue/generales/home",
-    title: "Secciones de la home",
-    description: "Mostrar u ocultar bloques como \"Nuevos ingresos\".",
+    title: "Catálogo",
+    sections: [
+      {
+        href: "/gestion-ssjblue/categorias",
+        title: "Categorías",
+        description: "Crear, editar y eliminar categorías del catálogo.",
+        icon: IconFolder,
+      },
+      {
+        href: "/gestion-ssjblue/generales/etiquetas",
+        title: "Etiquetas",
+        description: "Etiquetas estandarizadas con color para los productos.",
+        icon: IconTag,
+      },
+      {
+        href: "/gestion-ssjblue/generales/parches",
+        title: "Parches",
+        description: "Catálogo de parches de ligas/competiciones, con precio.",
+        icon: IconShield,
+      },
+      {
+        href: "/gestion-ssjblue/generales/avisos",
+        title: "Avisos del producto",
+        description: "Avisos bajo \"Añadir al carrito\" (editables por categoría).",
+        icon: IconDocument,
+      },
+      {
+        href: "/gestion-ssjblue/generales/detalles-producto",
+        title: "Envíos del producto",
+        description: "El texto de \"Envíos y devoluciones\" de la ficha.",
+        icon: IconTruck,
+      },
+    ],
   },
   {
-    href: "/gestion-ssjblue/generales/hero",
-    title: "Portada (Hero)",
-    description: "Titular, texto, botones y estadísticas de la home.",
+    title: "Ventas",
+    sections: [
+      {
+        href: "/gestion-ssjblue/generales/estados-venta",
+        title: "Colores de estados de venta",
+        description: "El color de cada pastilla de pago y de entrega.",
+        icon: IconPalette,
+      },
+    ],
   },
   {
-    href: "/gestion-ssjblue/generales/informacion",
-    title: "Franja de información",
-    description: "Los 4 ítems (envío, personalización, etc.) debajo del Hero.",
-  },
-  {
-    href: "/gestion-ssjblue/generales/navbar",
-    title: "Menú y avisos",
-    description: "Mensajes de la barra superior y enlaces extra del menú.",
-  },
-  {
-    href: "/gestion-ssjblue/generales/footer",
-    title: "Footer",
-    description: "Descripción de la marca, redes sociales y datos legales.",
-  },
-  {
-    href: "/gestion-ssjblue/generales/personalizacion",
-    title: "Banner de personalización",
-    description: "El bloque \"Ponle tu nombre\" de la home.",
-  },
-  {
-    href: "/gestion-ssjblue/categorias",
-    title: "Categorías",
-    description: "Crear, editar y eliminar categorías del catálogo.",
-  },
-  {
-    href: "/gestion-ssjblue/paginas",
-    title: "Páginas",
-    description: "Términos, privacidad, envíos, contacto y demás textos del footer.",
-  },
-  {
-    href: "/gestion-ssjblue/generales/etiquetas",
-    title: "Etiquetas",
-    description: "Etiquetas estandarizadas con color para los productos.",
-  },
-  {
-    href: "/gestion-ssjblue/generales/avisos",
-    title: "Avisos del producto",
-    description: "Avisos por defecto bajo \"Añadir al carrito\" (editables por categoría).",
-  },
-  {
-    href: "/gestion-ssjblue/generales/detalles-producto",
-    title: "Envíos del producto",
-    description: "El texto de \"Envíos y devoluciones\" en la ficha de cada producto.",
-  },
-  {
-    href: "/gestion-ssjblue/generales/qr",
-    title: "Códigos QR",
-    description: "Links rastreables para imprimir en bolsas, flyers, etc. — cuánta gente entra por cada uno.",
-  },
-  {
-    href: "/gestion-ssjblue/generales/parches",
-    title: "Parches",
-    description: "Catálogo de parches de ligas/competiciones con su precio — elegibles al cargar cada producto.",
-  },
-  {
-    href: "/gestion-ssjblue/generales/resenas",
-    title: "Reseñas",
-    description: "Capturas de conversaciones de entrega o paquetes listos, mostradas en la home.",
-  },
-  {
-    href: "/gestion-ssjblue/generales/estados-venta",
-    title: "Colores de estados de venta",
-    description: "El color de cada pastilla de pago y de entrega en Ventas.",
+    title: "Sitio",
+    sections: [
+      {
+        href: "/gestion-ssjblue/generales/branding",
+        title: "Branding",
+        description: "Favicon / ícono del sitio (pestaña del navegador).",
+        icon: IconGrid,
+      },
+      {
+        href: "/gestion-ssjblue/generales/navbar",
+        title: "Menú y avisos",
+        description: "Mensajes de la barra superior y enlaces extra del menú.",
+        icon: IconMenu,
+      },
+      {
+        href: "/gestion-ssjblue/generales/footer",
+        title: "Footer",
+        description: "Descripción de la marca, redes sociales y datos legales.",
+        icon: IconLayout,
+      },
+      {
+        href: "/gestion-ssjblue/paginas",
+        title: "Páginas",
+        description: "Términos, privacidad, envíos, contacto y demás textos.",
+        icon: IconDocument,
+      },
+      {
+        href: "/gestion-ssjblue/generales/qr",
+        title: "Códigos QR",
+        description: "Links rastreables — cuánta gente entra por cada uno.",
+        icon: IconExternal,
+      },
+    ],
   },
 ];
 
@@ -96,23 +155,27 @@ export default function GeneralesPage() {
           <h1 className="h1">Generales</h1>
           <p className="lead" style={{ marginTop: 8, fontSize: "0.9375rem" }}>
             Configuración del sitio que no depende de un producto en concreto.
-            Iremos sumando más secciones aquí.
           </p>
         </div>
       </div>
 
-      <div className="admin-form__grid" style={{ maxWidth: 900 }}>
-        {SECTIONS.map((s) => (
-          <Link key={s.href} href={s.href} className="admin-fieldset admin-generales-card">
-            <p className="h3">{s.title}</p>
-            <p className="meta" style={{ marginTop: 6 }}>
-              {s.description}
-            </p>
-            <span className="cats__go" style={{ marginTop: 12 }}>
-              Editar
-              <IconArrow className="icon--sm" />
-            </span>
-          </Link>
+      <div className="admin-settings-groups">
+        {GROUPS.map((group) => (
+          <div key={group.title} className="admin-settings-group">
+            <p className="admin-settings-group__title">{group.title}</p>
+            {group.sections.map((s) => (
+              <Link key={s.href} href={s.href} className="admin-settings-row">
+                <span className="admin-settings-row__icon">
+                  <s.icon className="icon--sm" />
+                </span>
+                <span className="admin-settings-row__body">
+                  <span className="admin-settings-row__title">{s.title}</span>
+                  <span className="admin-settings-row__desc">{s.description}</span>
+                </span>
+                <IconChevron className="icon--sm admin-settings-row__chevron" />
+              </Link>
+            ))}
+          </div>
         ))}
       </div>
     </>

@@ -1,4 +1,4 @@
-type IconProps = { className?: string };
+export type IconProps = { className?: string };
 
 const base = (className?: string) => `icon${className ? ` ${className}` : ""}`;
 
@@ -252,5 +252,14 @@ export const IconDocument = ({ className }: IconProps) => (
 export const IconExpand = ({ className }: IconProps) => (
   <svg className={base(className)} viewBox="0 0 24 24" aria-hidden="true">
     <path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" />
+  </svg>
+);
+
+export const IconPalette = ({ className }: IconProps) => (
+  <svg className={base(className)} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M12 3.5c-4.7 0-8.5 3.6-8.5 8 0 3 2.2 4.5 4.3 4.5h1a1.6 1.6 0 0 1 1.6 1.6c0 .5-.2.9-.2 1.4 0 .9.8 1.5 1.8 1.5 4.7 0 8.5-3.8 8.5-8.5 0-4.7-3.8-8.5-8.5-8.5Z" />
+    <circle cx="8" cy="10.5" r="1.1" style={{ fill: "currentColor", stroke: "none" }} />
+    <circle cx="12" cy="8" r="1.1" style={{ fill: "currentColor", stroke: "none" }} />
+    <circle cx="16" cy="10.5" r="1.1" style={{ fill: "currentColor", stroke: "none" }} />
   </svg>
 );

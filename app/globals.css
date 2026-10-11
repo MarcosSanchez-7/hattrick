@@ -3230,14 +3230,88 @@ textarea {
   gap: var(--sp-4);
 }
 
-.admin-generales-card {
-  text-decoration: none;
-  transition: border-color 0.18s var(--ease), background-color 0.18s var(--ease);
+/* Generales (app/gestion-ssjblue/(protected)/generales/page.tsx) -- lista
+   de ajustes agrupada por tema en vez de una grilla de tarjetas sueltas,
+   para que quepan muchas más filas por pantalla sin perder legibilidad. */
+.admin-settings-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-8) var(--sp-7);
+  max-width: 980px;
 }
 
-.admin-generales-card:hover {
-  border-color: var(--ink);
+.admin-settings-group__title {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  padding-bottom: var(--sp-2);
+  margin-bottom: var(--sp-1);
+  border-bottom: 1px solid var(--line);
+}
+
+.admin-settings-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-1);
+  border-bottom: 1px solid var(--line);
+  text-decoration: none;
+  transition: background-color 0.15s var(--ease);
+}
+
+.admin-settings-group .admin-settings-row:last-child {
+  border-bottom: 0;
+}
+
+.admin-settings-row:hover {
   background: var(--surface-soft);
+}
+
+.admin-settings-row__icon {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+}
+
+.admin-settings-row__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-settings-row__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.admin-settings-row__desc {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-settings-row__chevron {
+  flex: none;
+  color: var(--ink-muted);
+  transform: rotate(-90deg);
+}
+
+@media (max-width: 760px) {
+  .admin-settings-groups {
+    grid-template-columns: 1fr;
+  }
 }
 
 .admin-fieldset__title {

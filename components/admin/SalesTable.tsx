@@ -56,6 +56,7 @@ function SalePaymentStatusSelect({
   onChanged: () => void;
 }) {
   const [pending, setPending] = useState(false);
+  const [amountOpen, setAmountOpen] = useState(false);
   const [amountDraft, setAmountDraft] = useState(depositAmount != null ? String(depositAmount) : "");
 
   const handleStatusChange = async (next: PaymentStatus) => {
@@ -78,6 +79,7 @@ function SalePaymentStatusSelect({
       setAmountDraft(depositAmount != null ? String(depositAmount) : "");
       return;
     }
+    setAmountOpen(false);
     if (next === (depositAmount ?? null)) return;
     setPending(true);
     try {
@@ -91,7 +93,7 @@ function SalePaymentStatusSelect({
   };
 
   return (
-    <div className="stack gap-2">
+    <div>
       <select
         className="admin-status-select"
         style={{
@@ -110,20 +112,33 @@ function SalePaymentStatusSelect({
         ))}
       </select>
       {paymentStatus === "senado" ? (
-        <input
-          type="number"
-          min="0"
-          step="1000"
-          className="admin-variant-qty"
-          style={{ width: 120 }}
-          value={amountDraft}
-          disabled={pending}
-          onChange={(e) => setAmountDraft(e.target.value)}
-          onBlur={commitAmount}
-          onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-          placeholder="Monto señado"
-          aria-label="Monto señado"
-        />
+        amountOpen ? (
+          <input
+            type="number"
+            min="0"
+            step="1000"
+            className="admin-variant-qty"
+            style={{ width: 120, marginTop: 4 }}
+            value={amountDraft}
+            disabled={pending}
+            autoFocus
+            onChange={(e) => setAmountDraft(e.target.value)}
+            onBlur={commitAmount}
+            onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+            placeholder="Monto señado"
+            aria-label="Monto señado"
+          />
+        ) : (
+          <button
+            type="button"
+            className="inventory-stock-toggle"
+            style={{ marginTop: 4, fontWeight: 400 }}
+            onClick={() => setAmountOpen(true)}
+          >
+            {depositAmount != null ? formatPrice(depositAmount) : "Cargar monto"}
+            <IconChevron className="icon--sm" />
+          </button>
+        )
       ) : null}
     </div>
   );
