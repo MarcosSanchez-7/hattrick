@@ -922,6 +922,48 @@ export async function createProduct(input: ProductInput): Promise<Product> {
   return fetchProductWithVariants(id);
 }
 
+/**
+ * Filtra, de una lista de URLs que se iba a borrar del blob, las que
+ * todavía están en uso por OTRO producto/categoría/parche -- sin esto, si
+ * dos recursos llegan a compartir la misma URL de imagen (ej. una copiada
+ * a mano entre fichas, o reusada como referencia temporal), borrar el
+ * primero rompe la foto del segundo sin ningún aviso. Se llama siempre
+ * antes de deleteImagesWithVariants en los 6 lugares que limpian imágenes
+ * (alta/baja de producto, categoría y parche).
+ */
+async function filterImagesStillInUse(urls: string[]): Promise<string[]> {
+  const candidates = urls.filter(Boolean);
+  if (candidates.length === 0) return [];
+
+  const [productsRes, categoriesRes, patchesRes] = await Promise.all([
+    supabaseAdmin.from("products").select("images").overlaps("images", candidates),
+    supabaseAdmin.from("categories").select("image").in("image", candidates),
+    supabaseAdmin.from("patches").select("images").overlaps("images", candidates),
+  ]);
+  if (productsRes.error) {
+    fail(`No se pudo comprobar el uso de las imágenes: ${productsRes.error.message}`);
+  }
+  if (categoriesRes.error) {
+    fail(`No se pudo comprobar el uso de las imágenes: ${categoriesRes.error.message}`);
+  }
+  if (patchesRes.error) {
+    fail(`No se pudo comprobar el uso de las imágenes: ${patchesRes.error.message}`);
+  }
+
+  const inUse = new Set<string>();
+  for (const row of (productsRes.data ?? []) as { images: string[] | null }[]) {
+    for (const img of row.images ?? []) inUse.add(img);
+  }
+  for (const row of (categoriesRes.data ?? []) as { image: string | null }[]) {
+    if (row.image) inUse.add(row.image);
+  }
+  for (const row of (patchesRes.data ?? []) as { images: string[] | null }[]) {
+    for (const img of row.images ?? []) inUse.add(img);
+  }
+
+  return candidates.filter((u) => !inUse.has(u));
+}
+
 export async function updateProduct(
   id: string,
   input: ProductInput,
@@ -965,7 +1007,7 @@ export async function updateProduct(
   const oldImages = (oldRow as { images: string[] | null }).images ?? [];
   const newImages = input.images ?? [];
   const removedImages = oldImages.filter((u) => !newImages.includes(u));
-  await deleteImagesWithVariants(removedImages);
+  await deleteImagesWithVariants(await filterImagesStillInUse(removedImages));
 
   // Siempre se llama (incluso sin tracking) para dejar en 0 cualquier talla
   // que hubiera quedado de un cambio de tipo de stock o de control interno
@@ -996,7 +1038,7 @@ export async function deleteProduct(id: string): Promise<void> {
     throw new DataError("Producto no encontrado.", 404);
   }
   const images = (data[0] as { images: string[] | null }).images ?? [];
-  await deleteImagesWithVariants(images);
+  await deleteImagesWithVariants(await filterImagesStillInUse(images));
 }
 
 // ── Categorías ───────────────────────────────────────────────────────────
@@ -1092,7 +1134,9 @@ export async function updateCategory(
   if (error) fail(`No se pudo actualizar la categoría: ${error.message}`);
   if (!data) throw new DataError("Categoría no encontrada.", 404);
 
-  if (oldImage && oldImage !== newImage) await deleteImagesWithVariants([oldImage]);
+  if (oldImage && oldImage !== newImage) {
+    await deleteImagesWithVariants(await filterImagesStillInUse([oldImage]));
+  }
 
   return rowToCategory(data as CategoryRow);
 }
@@ -1132,7 +1176,7 @@ export async function deleteCategory(slug: string): Promise<void> {
     throw new DataError("Categoría no encontrada.", 404);
   }
   const image = (data[0] as { image: string | null }).image;
-  if (image) await deleteImagesWithVariants([image]);
+  if (image) await deleteImagesWithVariants(await filterImagesStillInUse([image]));
 }
 
 // ── Etiquetas ────────────────────────────────────────────────────────────
@@ -3527,7 +3571,7 @@ export async function updatePatch(id: string, input: PatchInput): Promise<Patch>
   const oldImages = (oldRow as { images: string[] | null }).images ?? [];
   const newImages = input.images ?? [];
   const removedImages = oldImages.filter((u) => !newImages.includes(u));
-  await deleteImagesWithVariants(removedImages);
+  await deleteImagesWithVariants(await filterImagesStillInUse(removedImages));
 
   return rowToPatch(data as PatchRow);
 }
@@ -3541,7 +3585,7 @@ export async function deletePatch(id: string): Promise<void> {
   if (error) fail(`No se pudo eliminar el parche: ${error.message}`);
   if (!data || data.length === 0) throw new DataError("Parche no encontrado.", 404);
   const images = (data[0] as { images: string[] | null }).images ?? [];
-  await deleteImagesWithVariants(images);
+  await deleteImagesWithVariants(await filterImagesStillInUse(images));
 }
 
 export { slugify };
