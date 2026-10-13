@@ -1,6 +1,7 @@
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 import { SalesImportForm } from "@/components/admin/SalesImportForm";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Importar ventas" };
 
 export default function ImportSalesPage() {

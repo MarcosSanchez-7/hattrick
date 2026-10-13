@@ -1420,6 +1420,15 @@ export async function getAdminUserById(id: string): Promise<AdminUser | null> {
   return data ? rowToAdminUser(data as AdminUserRow) : null;
 }
 
+// Hash fijo (calculado una sola vez al cargar el módulo) para cuando el
+// email no existe -- sin esto, verifyAdminCredentials respondía más rápido
+// ante un email inexistente que ante uno real con contraseña incorrecta
+// (porque solo en el segundo caso corre scrypt, deliberadamente lento),
+// una fuga de timing que permitiría adivinar qué emails de admin son
+// válidos. Corriendo el mismo scrypt en ambos casos, el tiempo de
+// respuesta deja de depender de si el email existe.
+const DUMMY_PASSWORD_HASH = hashPassword("timing-attack-mitigation-dummy");
+
 /** Única función que toca password_hash — solo la usa el login. */
 export async function verifyAdminCredentials(
   email: string,
@@ -1431,7 +1440,10 @@ export async function verifyAdminCredentials(
     .eq("email", email.trim().toLowerCase())
     .maybeSingle();
   if (error) fail(`No se pudo verificar las credenciales: ${error.message}`);
-  if (!data) return null;
+  if (!data) {
+    verifyPassword(password, DUMMY_PASSWORD_HASH);
+    return null;
+  }
   const row = data as AdminUserRow;
   if (!verifyPassword(password, row.password_hash)) return null;
   return rowToAdminUser(row);

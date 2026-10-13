@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/Icons";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Generales" };
 
 type Section = {

@@ -21,17 +21,56 @@ const STRICT_RATE_LIMIT_PATHS = [
   "/api/admin/setup",
 ];
 
+const isDev = process.env.NODE_ENV === "development";
+
+/**
+ * CSP del panel de admin, por nonce en vez de 'unsafe-inline' en
+ * script-src (ver next.config.ts para la CSP del storefront público, que
+ * se queda con 'unsafe-inline' a propósito). Viable acá sin costo real
+ * porque TODO /gestion-ssjblue/** y /api/admin/** ya es contenido dinámico
+ * (sesión de por medio, nunca tuvo ISR que perder) -- hacerlo sitewide sí
+ * tiene costo real: Next.js exige rendering dinámico en cualquier página
+ * que use el nonce, lo que apagaría el ISR del storefront (home, fichas de
+ * producto, categorías), documentado como la razón de no hacerlo ahí.
+ */
+function buildAdminCsp(nonce: string): string {
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'",
+    "img-src 'self' data: https:",
+    "connect-src 'self' https://nominatim.openstreetmap.org https://*.public.blob.vercel-storage.com https://vercel.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ].join("; ");
+}
+
 /**
  * proxy.ts (antes middleware.ts — renombrado en Next.js 16). Responsable de
- * dos cosas para /gestion-ssjblue/** y /api/admin/**: (1) rate limiting por
- * IP (ver lib/rate-limit.ts) y (2) chequeo OPTIMISTA de la sesión del panel
- * de admin (solo firma/expiración del JWT, sin tocar la base). El chequeo
- * autoritativo (¿el admin sigue existiendo?) vive en
- * app/gestion-ssjblue/(protected)/layout.tsx, vía getCurrentAdmin().
+ * tres cosas para /gestion-ssjblue/** y /api/admin/**: (1) rate limiting por
+ * IP (ver lib/rate-limit.ts), (2) chequeo OPTIMISTA de la sesión del panel
+ * de admin (solo firma/expiración del JWT, sin tocar la base — el chequeo
+ * autoritativo vive en app/gestion-ssjblue/(protected)/layout.tsx, vía
+ * getCurrentAdmin()) y (3) la CSP por nonce del admin (ver buildAdminCsp).
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isApi = pathname.startsWith("/api/admin");
+
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const csp = buildAdminCsp(nonce);
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", csp);
+
+  const next = () => {
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
+    response.headers.set("Content-Security-Policy", csp);
+    return response;
+  };
 
   const ip = ipAddress(request);
   if (ip) {
@@ -58,7 +97,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (PUBLIC_ADMIN_PATHS.includes(pathname) || PUBLIC_API_PATHS.includes(pathname)) {
-    return NextResponse.next();
+    return next();
   }
 
   const token = request.cookies.get(COOKIE_NAME)?.value;
@@ -73,7 +112,7 @@ export async function proxy(request: NextRequest) {
 
   // Vendedor: acceso de solo lectura, únicamente a Inventario. Se resuelve
   // acá (no página por página) para que ninguna sección nueva se olvide de
-  // excluirlo, y para cerrar de un saque cualquier endpoint de escritura.
+  // excluirla, y para cerrar de un saque cualquier endpoint de escritura.
   if (session.role === "vendedor") {
     if (isApi) {
       if (request.method !== "GET" && pathname !== "/api/admin/heartbeat") {
@@ -87,7 +126,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  return next();
 }
 
 export const config = {
