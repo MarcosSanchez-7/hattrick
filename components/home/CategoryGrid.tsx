@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef } from "react";
 import Link from "next/link";
 import {
   byCategoryTree,
@@ -11,6 +10,7 @@ import {
 import { imageVariant } from "@/lib/image";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import { IconArrow, IconChevron } from "@/components/ui/Icons";
+import { useLoopCarousel } from "@/components/home/useLoopCarousel";
 
 export function CategoryGrid({
   categories,
@@ -19,18 +19,16 @@ export function CategoryGrid({
   categories: Category[];
   products: Product[];
 }) {
-  const trackRef = useRef<HTMLDivElement>(null);
   const topCategories = topLevelCategories(categories);
+  const loop = topCategories.length > 1;
+  // x3 para el loop infinito (ver useLoopCarousel) -- con 1 sola categoría
+  // no tiene sentido triplicar, no hay nada que recorrer.
+  const items = loop ? [...topCategories, ...topCategories, ...topCategories] : topCategories;
+  const { trackRef, handleScroll, scrollBy } = useLoopCarousel(items);
 
   const coverOf = (cat: Category) => {
     const inCategory = byCategoryTree(products, categories, cat.slug);
     return inCategory[0];
-  };
-
-  const scrollBy = (dir: 1 | -1) => {
-    const track = trackRef.current;
-    if (!track) return;
-    track.scrollBy({ left: dir * track.clientWidth * 0.8, behavior: "smooth" });
   };
 
   return (
@@ -48,12 +46,12 @@ export function CategoryGrid({
         </div>
 
         <div className="hscroll">
-          <div className="hscroll__track" ref={trackRef}>
-            {topCategories.map((cat) => {
+          <div className="hscroll__track" ref={trackRef} onScroll={loop ? handleScroll : undefined}>
+            {items.map((cat, i) => {
               const cover = coverOf(cat);
               return (
                 <Link
-                  key={cat.slug}
+                  key={`${cat.slug}-${i}`}
                   href={`/categoria/${cat.slug}`}
                   className="cats__card cats__card--carousel"
                 >
@@ -70,7 +68,7 @@ export function CategoryGrid({
                         images={cover.images}
                         colors={cover.colors}
                         pattern={cover.pattern}
-                        uid={`cat-${cat.slug}`}
+                        uid={`cat-${cat.slug}-${i}`}
                         alt={cat.name}
                       />
                     ) : null}
@@ -89,7 +87,7 @@ export function CategoryGrid({
             })}
           </div>
 
-          {topCategories.length > 1 ? (
+          {loop ? (
             <>
               <button
                 type="button"
