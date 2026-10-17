@@ -9,7 +9,6 @@ export function WholesaleSettingsForm({ initial }: { initial: WholesaleSettings 
   const router = useRouter();
   const [form, setForm] = useState<WholesaleSettings>(initial);
   const [points, setPoints] = useState(initial.points.join("\n"));
-  const [teaserMessages, setTeaserMessages] = useState(initial.teaserMessages.join("\n"));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -29,10 +28,6 @@ export function WholesaleSettingsForm({ initial }: { initial: WholesaleSettings 
         points: points
           .split("\n")
           .map((p) => p.trim())
-          .filter(Boolean),
-        teaserMessages: teaserMessages
-          .split("\n")
-          .map((m) => m.trim())
           .filter(Boolean),
       };
       const res = await fetch("/api/admin/settings/wholesale", {
@@ -76,33 +71,32 @@ export function WholesaleSettingsForm({ initial }: { initial: WholesaleSettings 
           </label>
         </div>
         <p className="admin-help">
-          Va rotando una frase a la vez cada 30 segundos mientras el
-          visitante sigue en la tienda (no es un aviso único). Se puede
-          cerrar, pero vuelve a salir en el próximo ciclo. Activalo cuando
+          Aparece a los pocos segundos y se queda fija hasta que el
+          visitante la cierra con la X (no se oculta sola). Una vez
+          cerrada, no vuelve a salir en esa misma visita. Activalo cuando
           ya hayas revisado el contenido de la página de abajo.
         </p>
-        <div className="admin-field" style={{ marginTop: 12 }}>
-          <label htmlFor="teaserMessages">Frases que rotan (una por línea)</label>
-          <textarea
-            id="teaserMessages"
-            value={teaserMessages}
-            onChange={(e) => {
-              setSaved(false);
-              setTeaserMessages(e.target.value);
-            }}
-            rows={4}
-            placeholder={"Precios mayoristas\nSuper precio por docena"}
-          />
-        </div>
-        <div className="admin-field" style={{ marginTop: 12, maxWidth: 280 }}>
-          <label htmlFor="teaserHref">A dónde manda</label>
-          <input
-            id="teaserHref"
-            type="text"
-            value={form.teaserHref}
-            onChange={(e) => update("teaserHref", e.target.value)}
-            placeholder="/mayorista"
-          />
+        <div className="admin-form__grid admin-form__grid--3" style={{ marginTop: 12 }}>
+          <div className="admin-field">
+            <label htmlFor="teaserText">Texto del mensaje</label>
+            <input
+              id="teaserText"
+              type="text"
+              value={form.teaserText}
+              onChange={(e) => update("teaserText", e.target.value)}
+              placeholder="Precios mayoristas"
+            />
+          </div>
+          <div className="admin-field">
+            <label htmlFor="teaserHref">A dónde manda</label>
+            <input
+              id="teaserHref"
+              type="text"
+              value={form.teaserHref}
+              onChange={(e) => update("teaserHref", e.target.value)}
+              placeholder="/mayorista"
+            />
+          </div>
         </div>
       </div>
 
