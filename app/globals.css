@@ -4593,6 +4593,41 @@ button[aria-pressed='true'] .wishlist-heart-icon {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   Franja de mayorista (cierre de la home, después de Reseñas)
+   ═══════════════════════════════════════════════════════════════════════════
+   Mismo fondo oscuro que Ofertas/DTF (reusa --surface-inverse) para que lea
+   como un cierre con peso, pero sin fotos ni carrusel -- solo texto y un
+   botón, la última palabra de la página. */
+
+.wholesale-cta {
+  background: var(--surface-inverse);
+  color: var(--on-inverse);
+}
+
+.wholesale-cta__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-5);
+}
+
+.wholesale-cta__eyebrow {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+@media (max-width: 640px) {
+  .wholesale-cta__inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .wholesale-cta .btn {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    Vista previa de parche (lightbox del storefront) — mismo lenguaje visual
    que .admin-modal/.admin-modal-backdrop, con clases propias porque este
    overlay vive en la tienda, no en el admin.

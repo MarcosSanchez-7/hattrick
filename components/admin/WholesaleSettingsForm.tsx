@@ -101,6 +101,58 @@ export function WholesaleSettingsForm({ initial }: { initial: WholesaleSettings 
       </div>
 
       <div className="admin-fieldset">
+        <p className="admin-fieldset__title">Franja en la home</p>
+        <div className="admin-field admin-field--checkbox">
+          <input
+            id="homeBannerEnabled"
+            type="checkbox"
+            checked={form.homeBannerEnabled}
+            onChange={(e) => update("homeBannerEnabled", e.target.checked)}
+          />
+          <label htmlFor="homeBannerEnabled" style={{ marginBottom: 0 }}>
+            Mostrar la franja al final de la home
+          </label>
+        </div>
+        <p className="admin-help">
+          Franja chica después de &quot;Reseñas&quot;, independiente del
+          mensaje flotante — podés activar una sin la otra.
+        </p>
+        <div className="admin-form__grid admin-form__grid--3" style={{ marginTop: 12 }}>
+          <div className="admin-field">
+            <label htmlFor="homeBannerEyebrow">Texto pequeño superior</label>
+            <input
+              id="homeBannerEyebrow"
+              type="text"
+              value={form.homeBannerEyebrow}
+              onChange={(e) => update("homeBannerEyebrow", e.target.value)}
+              placeholder="Ventas al por mayor"
+            />
+          </div>
+          <div className="admin-field">
+            <label htmlFor="homeBannerTitle">Título</label>
+            <input
+              id="homeBannerTitle"
+              type="text"
+              value={form.homeBannerTitle}
+              onChange={(e) => update("homeBannerTitle", e.target.value)}
+              placeholder="Precios especiales por cantidad"
+            />
+          </div>
+          <div className="admin-field">
+            <label htmlFor="homeBannerCtaLabel">Texto del botón</label>
+            <input
+              id="homeBannerCtaLabel"
+              type="text"
+              value={form.homeBannerCtaLabel}
+              onChange={(e) => update("homeBannerCtaLabel", e.target.value)}
+              placeholder="Ver precios mayoristas"
+            />
+          </div>
+        </div>
+        <p className="admin-help">El botón manda a lo mismo que &quot;A dónde manda&quot; de arriba.</p>
+      </div>
+
+      <div className="admin-fieldset">
         <p className="admin-fieldset__title">Texto de la página</p>
         <div className="admin-field">
           <label htmlFor="eyebrow">Texto pequeño superior</label>

@@ -164,8 +164,17 @@ export type WholesaleSettings = {
    * página ya esté revisado y listo para mostrarse. */
   teaserEnabled: boolean;
   teaserText: string;
-  /** A qué página manda el mensaje flotante al tocarlo (normalmente /mayorista). */
+  /** A qué página manda el mensaje flotante al tocarlo (normalmente /mayorista),
+   * y también el botón de homeBanner de acá abajo. */
   teaserHref: string;
+
+  /** Franja chica al final de la home (después de Reseñas) que invita a
+   * /mayorista -- independiente del mensaje flotante, se puede activar
+   * una sin la otra. */
+  homeBannerEnabled: boolean;
+  homeBannerEyebrow: string;
+  homeBannerTitle: string;
+  homeBannerCtaLabel: string;
 
   eyebrow: string;
   title: string;
@@ -184,6 +193,10 @@ export const DEFAULT_WHOLESALE: WholesaleSettings = {
   teaserEnabled: false,
   teaserText: "Precios mayoristas",
   teaserHref: "/mayorista",
+  homeBannerEnabled: false,
+  homeBannerEyebrow: "Ventas al por mayor",
+  homeBannerTitle: "Precios especiales por cantidad",
+  homeBannerCtaLabel: "Ver precios mayoristas",
   eyebrow: "Para revendedores",
   title: "Precios mayoristas por docena",
   lead: "¿Tenés un local o revendés indumentaria? Llevate camisetas por docena cerrada a un precio especial, como opción extra al catálogo normal.",

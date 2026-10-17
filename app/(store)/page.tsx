@@ -9,6 +9,7 @@ import {
   DEFAULT_HOME,
   DEFAULT_REVIEWS,
   DEFAULT_VALUE_PROPS,
+  DEFAULT_WHOLESALE,
 } from "@/lib/settings";
 import { Hero } from "@/components/home/Hero";
 import { ValueProps } from "@/components/home/ValueProps";
@@ -36,6 +37,7 @@ export default async function HomePage() {
     valuePropsSettings,
     reviewsSettings,
     dtfSettings,
+    wholesaleSettings,
   ] = await Promise.all([
     getAllProducts(),
     getAllCategories(),
@@ -46,6 +48,7 @@ export default async function HomePage() {
     getSetting("valueProps", DEFAULT_VALUE_PROPS),
     getSetting("reviews", DEFAULT_REVIEWS),
     getSetting("dtf", DEFAULT_DTF),
+    getSetting("wholesale", DEFAULT_WHOLESALE),
   ]);
   const nuevos = newArrivals(products).slice(0, 8);
   const populares = bestSellers(products).slice(0, 4);
@@ -152,6 +155,27 @@ export default async function HomePage() {
         <CustomBanner settings={customBannerSettings} compact />
 
         <ReviewsSection settings={reviewsSettings} />
+
+        {/* Cierre de la home: invita a /mayorista, independiente del
+            mensaje flotante (ver WhatsAppTeaser.tsx) -- se activa aparte
+            desde Generales -> Mayorista. */}
+        {wholesaleSettings.homeBannerEnabled ? (
+          <section className="section wholesale-cta">
+            <div className="container">
+              <div className="wholesale-cta__inner">
+                <div>
+                  <span className="label wholesale-cta__eyebrow">
+                    {wholesaleSettings.homeBannerEyebrow}
+                  </span>
+                  <h2 className="h1">{wholesaleSettings.homeBannerTitle}</h2>
+                </div>
+                <Link href={wholesaleSettings.teaserHref || "/mayorista"} className="btn btn--light">
+                  {wholesaleSettings.homeBannerCtaLabel}
+                </Link>
+              </div>
+            </div>
+          </section>
+        ) : null}
       </div>
     </>
   );
