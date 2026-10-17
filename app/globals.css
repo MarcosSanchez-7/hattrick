@@ -1313,6 +1313,16 @@ textarea {
   display: none;
 }
 
+/* Centrado -- el teaser de CustomBanner (más ancho, con bajada) se lee
+   mejor alineado a la izquierda, pero en esta tarjeta angosta el título
+   centrado queda más prolijo que pegado al borde. */
+.cats__card--carousel .cats__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
 @media (max-width: 640px) {
   .cats__card--carousel {
     width: 172px;
