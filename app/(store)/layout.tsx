@@ -90,7 +90,7 @@ export default async function StoreLayout({
         <CartStockToast />
         <WishlistToast />
         {footerSettings.whatsappNumber && wholesaleSettings.teaserEnabled ? (
-          <WhatsAppTeaser text={wholesaleSettings.teaserText} href={wholesaleSettings.teaserHref} />
+          <WhatsAppTeaser messages={wholesaleSettings.teaserMessages} href={wholesaleSettings.teaserHref} />
         ) : null}
         <WhatsAppButton
           phoneNumber={footerSettings.whatsappNumber}

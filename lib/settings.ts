@@ -163,7 +163,11 @@ export type WholesaleSettings = {
    * tienda. Apagado por default: se prende cuando el contenido de la
    * página ya esté revisado y listo para mostrarse. */
   teaserEnabled: boolean;
-  teaserText: string;
+  /** Frases cortas que van rotando (una por vez) cada cierto tiempo,
+   * mientras el visitante sigue en la tienda -- no es un aviso único, es
+   * un empujoncito recurrente. Vacío = no se muestra nada aunque
+   * teaserEnabled esté prendido. */
+  teaserMessages: string[];
   /** A qué página manda el mensaje flotante al tocarlo (normalmente /mayorista). */
   teaserHref: string;
 
@@ -182,7 +186,7 @@ export type WholesaleSettings = {
 
 export const DEFAULT_WHOLESALE: WholesaleSettings = {
   teaserEnabled: false,
-  teaserText: "Precios mayoristas",
+  teaserMessages: ["Precios mayoristas", "Super precio por docena"],
   teaserHref: "/mayorista",
   eyebrow: "Para revendedores",
   title: "Precios mayoristas por docena",
