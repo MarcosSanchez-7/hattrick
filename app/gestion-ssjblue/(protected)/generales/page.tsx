@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  IconBox,
   IconChevron,
   IconDocument,
   IconExpand,
@@ -67,6 +68,12 @@ const GROUPS: { title: string; sections: Section[] }[] = [
         title: "Taller DTF",
         description: "Vidriera destacada de estampados DTF, después de Ofertas.",
         icon: IconPrint,
+      },
+      {
+        href: "/gestion-ssjblue/generales/mayorista",
+        title: "Mayorista",
+        description: "Página de venta por docena + el mensaje flotante que la promociona.",
+        icon: IconBox,
       },
     ],
   },

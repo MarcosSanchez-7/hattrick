@@ -55,6 +55,9 @@ export type FooterSettings = {
   legalName: string;
   /** Sólo números, con código de país (ej. 595981234567). Vacío = sin botón flotante. */
   whatsappNumber: string;
+  /** Mensaje prellenado del botón flotante -- identifica que el contacto
+   * viene de la web, no de otro canal (Instagram, boca a boca, etc.). */
+  whatsappMessage: string;
 };
 
 export const DEFAULT_FOOTER: FooterSettings = {
@@ -66,6 +69,7 @@ export const DEFAULT_FOOTER: FooterSettings = {
   youtubeUrl: "",
   legalName: "HATTRICK",
   whatsappNumber: "",
+  whatsappMessage: "Hola! Vengo desde la página web.",
 };
 
 export type NavLink = { label: string; href: string };
@@ -148,6 +152,50 @@ export const DEFAULT_DTF: DtfSettings = {
   ctaHref: "",
   categorySlug: "",
   backgroundImage: "",
+};
+
+/** Página /mayorista + el mensaje flotante que la promociona arriba del
+ * botón de WhatsApp (ver WhatsAppTeaser.tsx). Venta por docena cerrada a
+ * un precio especial, pensada como canal extra (revendedores/locales),
+ * separada del catálogo normal. */
+export type WholesaleSettings = {
+  /** Activa el mensaje flotante arriba del botón de WhatsApp en toda la
+   * tienda. Apagado por default: se prende cuando el contenido de la
+   * página ya esté revisado y listo para mostrarse. */
+  teaserEnabled: boolean;
+  teaserText: string;
+  /** A qué página manda el mensaje flotante al tocarlo (normalmente /mayorista). */
+  teaserHref: string;
+
+  eyebrow: string;
+  title: string;
+  lead: string;
+  points: string[];
+  priceLabel: string;
+  ctaLabel: string;
+  /** Mensaje de WhatsApp prellenado específico de esta consulta (distinto
+   * del mensaje general del botón flotante). */
+  whatsappMessage: string;
+  /** Vacío = se usa una ilustración genérica en vez de foto. */
+  image: string;
+};
+
+export const DEFAULT_WHOLESALE: WholesaleSettings = {
+  teaserEnabled: false,
+  teaserText: "Precios mayoristas",
+  teaserHref: "/mayorista",
+  eyebrow: "Para revendedores",
+  title: "Precios mayoristas por docena",
+  lead: "¿Tenés un local o revendés indumentaria? Llevate camisetas por docena cerrada a un precio especial, como opción extra al catálogo normal.",
+  points: [
+    "Docena cerrada: 12 unidades, podés combinar modelos y talles",
+    "Precio por unidad más bajo que al por menor",
+    "Mismo stock y calidad que el resto del catálogo",
+  ],
+  priceLabel: "Consultá el precio por docena",
+  ctaLabel: "Consultar por WhatsApp",
+  whatsappMessage: "Hola! Vengo desde la página web y quiero info de precios mayoristas (por docena).",
+  image: "",
 };
 
 /** Galería/mini-blog de personalizaciones ya hechas, mostrada en
@@ -313,4 +361,5 @@ export type SiteSettingsKey =
   | "personalizationGallery"
   | "reviews"
   | "saleStatusColors"
-  | "dtf";
+  | "dtf"
+  | "wholesale";

@@ -15,6 +15,7 @@ import {
   DEFAULT_REVIEWS,
   DEFAULT_SALE_STATUS_COLORS,
   DEFAULT_VALUE_PROPS,
+  DEFAULT_WHOLESALE,
   type SiteSettingsKey,
 } from "@/lib/settings";
 
@@ -32,6 +33,7 @@ const DEFAULTS: Record<SiteSettingsKey, unknown> = {
   reviews: DEFAULT_REVIEWS,
   saleStatusColors: DEFAULT_SALE_STATUS_COLORS,
   dtf: DEFAULT_DTF,
+  wholesale: DEFAULT_WHOLESALE,
 };
 
 function isValidKey(key: string): key is SiteSettingsKey {

@@ -1,5 +1,5 @@
 import { getAllCategories, getAllPages, getAllProducts, getSetting } from "@/lib/data";
-import { DEFAULT_BRANDING, DEFAULT_FOOTER, DEFAULT_NAVBAR } from "@/lib/settings";
+import { DEFAULT_BRANDING, DEFAULT_FOOTER, DEFAULT_NAVBAR, DEFAULT_WHOLESALE } from "@/lib/settings";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { CartDrawer } from "@/components/cart/CartDrawer";
@@ -10,6 +10,7 @@ import { AnnouncementBar } from "@/components/layout/AnnouncementBar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { WhatsAppButton } from "@/components/layout/WhatsAppButton";
+import { WhatsAppTeaser } from "@/components/layout/WhatsAppTeaser";
 
 // Mismo revalidate que las paginas hijas (ver app/(store)/page.tsx y
 // hermanas) -- un layout con force-dynamic anula el revalidate de sus
@@ -20,7 +21,7 @@ export const revalidate = 60;
 export default async function StoreLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [categories, products, pages, navbarSettings, footerSettings, branding] =
+  const [categories, products, pages, navbarSettings, footerSettings, branding, wholesaleSettings] =
     await Promise.all([
       getAllCategories(),
       getAllProducts(),
@@ -28,6 +29,7 @@ export default async function StoreLayout({
       getSetting("navbar", DEFAULT_NAVBAR),
       getSetting("footer", DEFAULT_FOOTER),
       getSetting("branding", DEFAULT_BRANDING),
+      getSetting("wholesale", DEFAULT_WHOLESALE),
     ]);
 
   const sameAs = [
@@ -87,7 +89,13 @@ export default async function StoreLayout({
         <CartDrawer />
         <CartStockToast />
         <WishlistToast />
-        <WhatsAppButton phoneNumber={footerSettings.whatsappNumber} />
+        {footerSettings.whatsappNumber && wholesaleSettings.teaserEnabled ? (
+          <WhatsAppTeaser text={wholesaleSettings.teaserText} href={wholesaleSettings.teaserHref} />
+        ) : null}
+        <WhatsAppButton
+          phoneNumber={footerSettings.whatsappNumber}
+          message={footerSettings.whatsappMessage}
+        />
       </WishlistProvider>
     </CartProvider>
   );

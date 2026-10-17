@@ -136,6 +136,19 @@ export function FooterSettingsForm({ initial }: { initial: FooterSettings }) {
             Vacío = no se muestra el botón flotante de WhatsApp en la tienda.
           </p>
         </div>
+        <div className="admin-field" style={{ marginTop: 16 }}>
+          <label htmlFor="whatsappMessage">Mensaje prellenado del botón flotante</label>
+          <input
+            id="whatsappMessage"
+            type="text"
+            value={form.whatsappMessage}
+            onChange={(e) => update("whatsappMessage", e.target.value)}
+            placeholder="Hola! Vengo desde la página web."
+          />
+          <p className="admin-help">
+            Así identificás que el contacto vino de la web y no de otro canal.
+          </p>
+        </div>
       </div>
 
       <div className="admin-actions">
