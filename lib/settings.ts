@@ -119,6 +119,37 @@ export const DEFAULT_CUSTOM_BANNER: CustomBannerSettings = {
   price: 50000,
 };
 
+/** Sección destacada de la home, después de "Ofertas de la semana" -- a
+ * diferencia de las otras secciones de contenido (Reseñas, etc.), esto NO
+ * guarda sus propias fotos/productos acá: muestra productos reales del
+ * catálogo (mismo sistema que cualquier producto -- fotos, precio, talles)
+ * que vivan en categorySlug, igual que hace home.combos. Así el estampado
+ * DTF se carga, edita y gestiona desde Productos como cualquier otro
+ * artículo, en vez de un formulario aparte. */
+export type DtfSettings = {
+  eyebrow: string;
+  title: string;
+  lead: string;
+  ctaLabel: string;
+  ctaHref: string;
+  /** Categoría del catálogo cuyos productos se muestran acá. "" = todavía
+   * no se eligió ninguna (la sección no se muestra). */
+  categorySlug: string;
+  /** Imagen de fondo de alta calidad para la sección (PNG recomendado).
+   * Vacío = fondo sólido oscuro, igual que "Ofertas de la semana". */
+  backgroundImage: string;
+};
+
+export const DEFAULT_DTF: DtfSettings = {
+  eyebrow: "Taller DTF",
+  title: "Estampado DTF de alta definición",
+  lead: "Diseños propios, logos o arte libre, impresos y termofijados sobre cualquier remera del catálogo. Trabajos bajo pedido.",
+  ctaLabel: "Pedí tu estampado",
+  ctaHref: "",
+  categorySlug: "",
+  backgroundImage: "",
+};
+
 /** Galería/mini-blog de personalizaciones ya hechas, mostrada en
  * /personalizacion debajo del banner. */
 export type PersonalizationGalleryPost = {
@@ -281,4 +312,5 @@ export type SiteSettingsKey =
   | "branding"
   | "personalizationGallery"
   | "reviews"
-  | "saleStatusColors";
+  | "saleStatusColors"
+  | "dtf";

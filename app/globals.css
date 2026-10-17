@@ -840,8 +840,37 @@ textarea {
    Hero
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* Wrapper que le da al Hero "aire" de sobra para quedar fijo (sticky) mientras
+   el contenido siguiente (.page-reveal, ver más abajo) sube por encima y lo
+   va tapando -- el padding-bottom es la distancia de scroll que dura ese
+   efecto antes de que el Hero se despegue y siga el flujo normal. */
+.hero-pin {
+  position: relative;
+  /* Antes clamp(80px, 18vh, 220px): en viewports comunes de escritorio eso
+     dejaba un hueco blanco bien visible entre el Hero y lo que sigue
+     (ese padding todavía no lo tapa nada hasta que se scrollea sobre él).
+     Más chico = el pin se nota igual al deslizar pero sin hueco en reposo. */
+  padding-bottom: clamp(24px, 4vh, 56px);
+}
+
 .hero {
+  position: sticky;
+  /* No top:0 -- ahí ya vive el .nav sticky (z-index 60); el Hero se pega
+     justo debajo de él, no debajo de la announcement bar (esa no es sticky,
+     se va con el scroll normal). */
+  top: var(--nav-h);
+  z-index: 0;
   border-bottom: 1px solid var(--line);
+}
+
+/* Todo el contenido después del Hero en el home: fondo opaco + encima en
+   el stacking order para tapar al Hero (sticky, z-index:0) a medida que
+   se sube con el scroll -- sin esto, por ser .hero un elemento posicionado,
+   pintaría por encima de este bloque aunque venga después en el DOM. */
+.page-reveal {
+  position: relative;
+  z-index: 1;
+  background: var(--surface);
 }
 
 .hero__slide {
@@ -983,6 +1012,9 @@ textarea {
 }
 
 @media (max-width: 640px) {
+  .hero-pin {
+    padding-bottom: clamp(16px, 3vh, 36px);
+  }
   .hero__slide {
     height: min(75vh, 620px);
     min-height: 380px;
@@ -1087,31 +1119,19 @@ textarea {
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Categorías
-   ═══════════════════════════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════════════════════
 
-.cats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  background: var(--line);
-  border: 1px solid var(--line);
-}
+   .cats-index es la grilla de "Compra por categoría" del home (ver
+   CategoryGrid.tsx). El resto de las reglas .cats__* de acá abajo (card,
+   hero-link, art, overlay, content, go) las sigue usando el teaser chico de
+   CustomBanner.tsx -- quedan compartidas aposta, no las toques sin revisar
+   ese componente también. */
 
 .cats__card {
   position: relative;
   display: block;
   min-height: 240px;
   overflow: hidden;
-  grid-column: span var(--col-span, 1);
-  grid-row: span var(--row-span, 1);
-}
-
-/* Espacio grande del bento estandarizado (6+ categorías) — la propia
-   tarjeta ya no es el link (puede rotar entre varias categorías), así
-   que .cats__hero-link ocupa todo el espacio en su lugar. */
-.cats__card--hero {
-  grid-column: span 2;
-  grid-row: span 2;
 }
 
 .cats__hero-link {
@@ -1183,10 +1203,6 @@ textarea {
   max-width: 34ch;
 }
 
-.cats__eyebrow {
-  color: rgba(255, 255, 255, 0.75);
-}
-
 .cats__go {
   display: inline-flex;
   align-items: center;
@@ -1207,25 +1223,104 @@ textarea {
   transition: transform 0.25s var(--ease);
 }
 
-@media (max-width: 900px) {
-  .cats {
-    grid-template-columns: repeat(2, 1fr);
+/* Carrusel horizontal genérico -- lo usan CategoryGrid.tsx (categorías) y
+   DtfSection.tsx (trabajos DTF). Una sola fila de tarjetas de ancho fijo
+   que se desliza con scroll-snap + flechas, en vez de apilar todo hacia
+   abajo: mismo alto sin importar cuántas tarjetas haya, así que no se come
+   pantalla ni en mobile ni en desktop. */
+.hscroll {
+  position: relative;
+}
+
+.hscroll__track {
+  display: flex;
+  gap: var(--sp-4);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding-block: 2px; /* espacio para que el outline de foco no se recorte */
+}
+
+.hscroll__track::-webkit-scrollbar {
+  display: none;
+}
+
+.hscroll__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  transition: background-color 0.2s var(--ease);
+}
+
+.hscroll__nav:hover {
+  background: var(--surface-soft);
+}
+
+.hscroll__nav--prev {
+  left: -14px;
+}
+
+.hscroll__nav--prev .icon {
+  transform: rotate(90deg);
+}
+
+.hscroll__nav--next {
+  right: -14px;
+}
+
+.hscroll__nav--next .icon {
+  transform: rotate(-90deg);
+}
+
+@media (max-width: 640px) {
+  .hscroll__nav {
+    width: 36px;
+    height: 36px;
   }
-  /* Por debajo de 3 columnas, los tramos calculados para el grid de
-     escritorio (span 2, span 3) ya no cierran parejo — se simplifica a
-     tarjetas uniformes en vez de arrastrar la cuenta a menos columnas. */
-  .cats__card {
-    grid-column: span 1 !important;
-    grid-row: span 1 !important;
+  .hscroll__nav--prev {
+    left: -10px;
+  }
+  .hscroll__nav--next {
+    right: -10px;
   }
 }
 
-@media (max-width: 560px) {
-  .cats {
-    grid-template-columns: 1fr;
+/* Tarjeta de categoría dentro del carrusel -- reusa .cats__card/__art/
+   __overlay/__content/__go (ver sección Categorías más arriba, compartida
+   con el teaser de CustomBanner) con ancho fijo en vez de ocupar todo el
+   ancho de una grilla. */
+.cats__card--carousel {
+  flex: 0 0 auto;
+  width: 240px;
+  aspect-ratio: 3 / 4;
+  min-height: 0;
+  scroll-snap-align: start;
+}
+
+/* La tarjeta queda solo con el título sobre la foto, en todos los tamaños
+   -- la bajada repetía lo que ya dice el nombre de la categoría. */
+.cats__card--carousel .cats__content .meta {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .cats__card--carousel {
+    width: 172px;
   }
-  .cats__card {
-    min-height: 340px;
+  /* En mobile además se saca el "Explorar": a este tamaño de tarjeta
+     recargaba más de lo que ayudaba. */
+  .cats__card--carousel .cats__go {
+    display: none;
   }
 }
 
@@ -1362,6 +1457,11 @@ textarea {
 
 .badge--tag {
   background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+}
+
+.badge--dtf {
+  background: var(--on-inverse);
   color: var(--ink);
 }
 
@@ -1519,6 +1619,87 @@ textarea {
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: #9a9a9a;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Taller DTF
+   ═══════════════════════════════════════════════════════════════════════════
+   Sección destacada de la home, después de "Ofertas de la semana" -- mismo
+   fondo oscuro que .offers (reusa --surface-inverse, no un color nuevo) por
+   default, con la opción de poner una imagen de fondo propia (ver .dtf__bg)
+   para "jugar con la temática" sin tocar código. Los productos son
+   ProductCard reales (mismas fotos/precio/talles/hover de cualquier
+   producto), solo que envueltos en .dtf-card para el ancho fijo del
+   carrusel -- ver DtfSection.tsx. */
+
+.dtf {
+  position: relative;
+  background: var(--surface-inverse);
+  color: var(--on-inverse);
+  overflow: hidden;
+}
+
+.dtf__bg {
+  position: absolute;
+  inset: 0;
+  background-image: var(--dtf-bg);
+  background-size: cover;
+  background-position: center;
+}
+
+/* Encima de la foto de fondo (si hay) para que el texto siga siendo
+   legible sea cual sea la imagen que suba el admin. */
+.dtf[data-has-bg='true'] .dtf__bg {
+  background-color: rgba(0, 0, 0, 0.55);
+  background-blend-mode: darken;
+}
+
+.dtf .container {
+  position: relative;
+  z-index: 1;
+}
+
+.dtf .section-head {
+  border-color: rgba(250, 250, 250, 0.16);
+}
+
+.dtf .lead {
+  color: rgba(255, 255, 255, 0.72);
+  margin-top: var(--sp-2);
+}
+
+/* Mismas correcciones de tema oscuro que .offers (ver más arriba) -- acá
+   envuelven un ProductCard completo en vez de la grilla de ofertas. */
+.dtf .card__media {
+  background: #1a1a1a;
+}
+
+.dtf .card__team,
+.dtf .meta,
+.dtf .rating {
+  color: #9a9a9a;
+}
+
+.dtf .price--old {
+  color: #8a8a8a;
+}
+
+.dtf .badge--out {
+  background: #1a1a1a;
+  border-color: #333;
+  color: #aaa;
+}
+
+.dtf-card {
+  flex: 0 0 auto;
+  width: 240px;
+  scroll-snap-align: start;
+}
+
+@media (max-width: 640px) {
+  .dtf-card {
+    width: 172px;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

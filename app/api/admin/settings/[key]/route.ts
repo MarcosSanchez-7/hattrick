@@ -4,6 +4,7 @@ import { DataError, getSetting, updateSetting } from "@/lib/data";
 import {
   DEFAULT_BRANDING,
   DEFAULT_CUSTOM_BANNER,
+  DEFAULT_DTF,
   DEFAULT_FOOTER,
   DEFAULT_HERO,
   DEFAULT_HOME,
@@ -30,6 +31,7 @@ const DEFAULTS: Record<SiteSettingsKey, unknown> = {
   personalizationGallery: DEFAULT_PERSONALIZATION_GALLERY,
   reviews: DEFAULT_REVIEWS,
   saleStatusColors: DEFAULT_SALE_STATUS_COLORS,
+  dtf: DEFAULT_DTF,
 };
 
 function isValidKey(key: string): key is SiteSettingsKey {

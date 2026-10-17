@@ -14,7 +14,18 @@ import { ProductCardMedia } from "@/components/product/ProductCardMedia";
 import { WishlistHeartButton } from "@/components/wishlist/WishlistHeartButton";
 import { QuickAddButton } from "@/components/cart/QuickAddButton";
 
-export function ProductCard({ product, tags = [] }: { product: Product; tags?: Tag[] }) {
+export function ProductCard({
+  product,
+  tags = [],
+  badge,
+}: {
+  product: Product;
+  tags?: Tag[];
+  /** Badge fijo que no depende de product.tags (ej. "Bajo pedido" en la
+   * vidriera de DTF, ver DtfSection.tsx) -- siempre se muestra, sin que el
+   * admin tenga que taggear cada producto a mano. */
+  badge?: string;
+}) {
   const sale = isOnSale(product);
   const allSoldOut = isSoldOut(product);
   const hasSecondImage = (product.images?.length ?? 0) > 1;
@@ -31,6 +42,7 @@ export function ProductCard({ product, tags = [] }: { product: Product; tags?: T
         alt={alt}
       >
         <div className="card__badges">
+          {badge ? <span className="badge badge--dtf">{badge}</span> : null}
           {product.isNew ? <span className="badge">Nuevo</span> : null}
           {sale ? (
             <span className="badge badge--sale">

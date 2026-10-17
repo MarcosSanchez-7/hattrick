@@ -62,6 +62,12 @@ const GROUPS: { title: string; sections: Section[] }[] = [
         description: "Capturas de conversaciones de entrega o paquetes listos.",
         icon: IconStar,
       },
+      {
+        href: "/gestion-ssjblue/generales/dtf",
+        title: "Taller DTF",
+        description: "Vidriera destacada de estampados DTF, después de Ofertas.",
+        icon: IconPrint,
+      },
     ],
   },
   {

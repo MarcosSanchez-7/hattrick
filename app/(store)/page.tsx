@@ -4,6 +4,7 @@ import { bestSellers, byCategoryTree, categorySlugPath, getCategory, newArrivals
 import { getAllCategories, getAllProducts, getAllTags, getSetting } from "@/lib/data";
 import {
   DEFAULT_CUSTOM_BANNER,
+  DEFAULT_DTF,
   DEFAULT_HERO,
   DEFAULT_HOME,
   DEFAULT_REVIEWS,
@@ -13,6 +14,7 @@ import { Hero } from "@/components/home/Hero";
 import { ValueProps } from "@/components/home/ValueProps";
 import { CategoryGrid } from "@/components/home/CategoryGrid";
 import { OffersSection } from "@/components/home/OffersSection";
+import { DtfSection } from "@/components/home/DtfSection";
 import { CustomBanner } from "@/components/home/CustomBanner";
 import { ReviewsSection } from "@/components/home/ReviewsSection";
 import { ProductGrid } from "@/components/product/ProductCard";
@@ -33,6 +35,7 @@ export default async function HomePage() {
     homeSettings,
     valuePropsSettings,
     reviewsSettings,
+    dtfSettings,
   ] = await Promise.all([
     getAllProducts(),
     getAllCategories(),
@@ -42,6 +45,7 @@ export default async function HomePage() {
     getSetting("home", DEFAULT_HOME),
     getSetting("valueProps", DEFAULT_VALUE_PROPS),
     getSetting("reviews", DEFAULT_REVIEWS),
+    getSetting("dtf", DEFAULT_DTF),
   ]);
   const nuevos = newArrivals(products).slice(0, 8);
   const populares = bestSellers(products).slice(0, 4);
@@ -54,6 +58,13 @@ export default async function HomePage() {
     ? byCategoryTree(products, categories, combosCategory.slug).slice(0, 4)
     : [];
 
+  const dtfCategory = dtfSettings.categorySlug
+    ? getCategory(categories, dtfSettings.categorySlug)
+    : undefined;
+  const dtfProducts = dtfCategory
+    ? byCategoryTree(products, categories, dtfCategory.slug).slice(0, 12)
+    : [];
+
   return (
     <>
       {/* El Hero pinta la primera imagen como background-image en CSS (no
@@ -64,77 +75,84 @@ export default async function HomePage() {
         <link rel="preload" as="image" href={firstSlideImage} fetchPriority="high" />
       ) : null}
       <Hero settings={heroSettings} />
-      <ValueProps settings={valuePropsSettings} />
 
-      {/* Nuevos ingresos: solo cuando el admin la activa (mucho stock nuevo cargado) */}
-      {homeSettings.showNewArrivals && nuevos.length > 0 ? (
-        <section className="section" id="novedades">
-          <div className="container">
-            <div className="section-head">
-              <div>
-                <span className="label section-head__eyebrow">
-                  Recién llegado al almacén
-                </span>
-                <h2 className="h1">Nuevos ingresos</h2>
+      {/* Todo lo que sigue va en .page-reveal: fondo opaco + encima del Hero
+          en el stacking order, así al scrollear sube y lo tapa en vez de
+          dejarlo asomar por los costados (ver .hero-pin/.hero en globals.css). */}
+      <div className="page-reveal">
+        <ValueProps settings={valuePropsSettings} />
+
+        {/* Nuevos ingresos: solo cuando el admin la activa (mucho stock nuevo cargado) */}
+        {homeSettings.showNewArrivals && nuevos.length > 0 ? (
+          <section className="section" id="novedades">
+            <div className="container">
+              <div className="section-head">
+                <div>
+                  <span className="label section-head__eyebrow">
+                    Recién llegado al almacén
+                  </span>
+                  <h2 className="h1">Nuevos ingresos</h2>
+                </div>
+                <Link href="/novedades" className="section-head__link">
+                  Ver los {newArrivals(products).length} artículos nuevos
+                </Link>
               </div>
-              <Link href="/novedades" className="section-head__link">
-                Ver los {newArrivals(products).length} artículos nuevos
-              </Link>
+              <ProductGrid products={nuevos} tags={tags} />
             </div>
-            <ProductGrid products={nuevos} tags={tags} />
-          </div>
-        </section>
-      ) : null}
+          </section>
+        ) : null}
 
-      <OffersSection products={products} tags={tags} />
-      <CategoryGrid categories={categories} products={products} />
+        <CategoryGrid categories={categories} products={products} />
+        <OffersSection products={products} tags={tags} />
+        <DtfSection settings={dtfSettings} products={dtfProducts} tags={tags} />
 
-      {/* Más vendidos */}
-      {homeSettings.showBestSellers && populares.length > 0 ? (
-        <section className="section section--soft">
-          <div className="container">
-            <div className="section-head">
-              <div>
-                <span className="label section-head__eyebrow">
-                  Lo que más se lleva
-                </span>
-                <h2 className="h1">Más vendidos</h2>
+        {/* Más vendidos */}
+        {homeSettings.showBestSellers && populares.length > 0 ? (
+          <section className="section section--soft">
+            <div className="container">
+              <div className="section-head">
+                <div>
+                  <span className="label section-head__eyebrow">
+                    Lo que más se lleva
+                  </span>
+                  <h2 className="h1">Más vendidos</h2>
+                </div>
+                <Link href="/buscar" className="section-head__link">
+                  Ver todo el catálogo
+                </Link>
               </div>
-              <Link href="/buscar" className="section-head__link">
-                Ver todo el catálogo
-              </Link>
+              <ProductGrid products={populares} tags={tags} />
             </div>
-            <ProductGrid products={populares} tags={tags} />
-          </div>
-        </section>
-      ) : null}
+          </section>
+        ) : null}
 
-      {/* Combos: franja configurable desde Generales -> Secciones de la home, misma ubicación que "Más vendidos". */}
-      {homeSettings.combos.enabled && combosCategory && combos.length > 0 ? (
-        <section className="section section--soft">
-          <div className="container">
-            <div className="section-head">
-              <div>
-                <span className="label section-head__eyebrow">
-                  Más equipación por menos
-                </span>
-                <h2 className="h1">{combosCategory.name}</h2>
+        {/* Combos: franja configurable desde Generales -> Secciones de la home, misma ubicación que "Más vendidos". */}
+        {homeSettings.combos.enabled && combosCategory && combos.length > 0 ? (
+          <section className="section section--soft">
+            <div className="container">
+              <div className="section-head">
+                <div>
+                  <span className="label section-head__eyebrow">
+                    Más equipación por menos
+                  </span>
+                  <h2 className="h1">{combosCategory.name}</h2>
+                </div>
+                <Link
+                  href={`/categoria/${categorySlugPath(categories, combosCategory.slug).join("/")}`}
+                  className="section-head__link"
+                >
+                  Ver todos los combos
+                </Link>
               </div>
-              <Link
-                href={`/categoria/${categorySlugPath(categories, combosCategory.slug).join("/")}`}
-                className="section-head__link"
-              >
-                Ver todos los combos
-              </Link>
+              <ProductGrid products={combos} tags={tags} />
             </div>
-            <ProductGrid products={combos} tags={tags} />
-          </div>
-        </section>
-      ) : null}
+          </section>
+        ) : null}
 
-      <CustomBanner settings={customBannerSettings} compact />
+        <CustomBanner settings={customBannerSettings} compact />
 
-      <ReviewsSection settings={reviewsSettings} />
+        <ReviewsSection settings={reviewsSettings} />
+      </div>
     </>
   );
 }
