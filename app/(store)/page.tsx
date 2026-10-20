@@ -53,6 +53,7 @@ export default async function HomePage() {
   const nuevos = newArrivals(products).slice(0, 8);
   const populares = bestSellers(products).slice(0, 4);
   const firstSlideImage = heroSettings.slides[0]?.image;
+  const firstSlideMobileImage = heroSettings.slides[0]?.mobileImage;
 
   const combosCategory = homeSettings.combos.categorySlug
     ? getCategory(categories, homeSettings.combos.categorySlug)
@@ -73,9 +74,27 @@ export default async function HomePage() {
       {/* El Hero pinta la primera imagen como background-image en CSS (no
           <img>), así que no hay atributo loading/fetchPriority que setear
           ahí — este preload es la forma de darle prioridad de carga al
-          candidato más probable a LCP del home. */}
+          candidato más probable a LCP del home. Dos <link> con `media` en
+          vez de uno: el navegador descarga solo la que de verdad va a usar
+          según el viewport (mismo breakpoint que .hero__slide en
+          globals.css), no ambas. */}
       {firstSlideImage ? (
-        <link rel="preload" as="image" href={firstSlideImage} fetchPriority="high" />
+        <link
+          rel="preload"
+          as="image"
+          href={firstSlideImage}
+          fetchPriority="high"
+          media={firstSlideMobileImage ? "(min-width: 641px)" : undefined}
+        />
+      ) : null}
+      {firstSlideMobileImage ? (
+        <link
+          rel="preload"
+          as="image"
+          href={firstSlideMobileImage}
+          fetchPriority="high"
+          media="(max-width: 640px)"
+        />
       ) : null}
       <Hero settings={heroSettings} />
 

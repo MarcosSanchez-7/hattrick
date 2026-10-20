@@ -10,8 +10,10 @@ function emptySlide(): HeroSlide {
   return {
     id: crypto.randomUUID(),
     image: "",
+    mobileImage: "",
     eyebrow: "",
     headline: "",
+    description: "",
     ctaLabel: "",
     ctaHref: "",
   };
@@ -111,8 +113,20 @@ export function HeroSettingsForm({ initial }: { initial: HeroSettings }) {
             images={slide.image ? [slide.image] : []}
             onChange={(images) => updateSlide(slide.id, "image", images[0] ?? "")}
             max={1}
-            label="Imagen del flyer (a pantalla completa)"
+            label="Imagen del flyer (a pantalla completa, desktop)"
           />
+
+          <div style={{ marginTop: 16 }}>
+            <ImageUploader
+              images={slide.mobileImage ? [slide.mobileImage] : []}
+              onChange={(images) => updateSlide(slide.id, "mobileImage", images[0] ?? "")}
+              max={1}
+              label="Imagen vertical para mobile (opcional)"
+            />
+            <p className="admin-help">
+              Si la dejás vacía, en mobile se usa la misma imagen de arriba.
+            </p>
+          </div>
 
           <div className="admin-form__grid" style={{ marginTop: 16 }}>
             <div className="admin-field">
@@ -127,12 +141,27 @@ export function HeroSettingsForm({ initial }: { initial: HeroSettings }) {
             </div>
             <div className="admin-field">
               <label htmlFor={`headline-${slide.id}`}>Titular</label>
-              <input
+              <textarea
                 id={`headline-${slide.id}`}
-                type="text"
+                rows={3}
                 value={slide.headline}
                 onChange={(e) => updateSlide(slide.id, "headline", e.target.value)}
-                placeholder="La camiseta hace al equipo"
+                placeholder={"La camiseta\nhace al {{equipo}}"}
+              />
+              <p className="admin-help">
+                Un salto de línea = nueva línea en el titular. Envolvé una
+                palabra o frase entre dobles llaves (ej. {"{{equipo}}"}) para
+                resaltarla en dorado.
+              </p>
+            </div>
+            <div className="admin-field">
+              <label htmlFor={`description-${slide.id}`}>Descripción (opcional)</label>
+              <input
+                id={`description-${slide.id}`}
+                type="text"
+                value={slide.description ?? ""}
+                onChange={(e) => updateSlide(slide.id, "description", e.target.value)}
+                placeholder="Camisetas de fútbol, personalización y envíos a todo el país."
               />
             </div>
             <div className="admin-field">

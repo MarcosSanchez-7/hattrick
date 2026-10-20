@@ -16,8 +16,14 @@ export type HeroSlide = {
   id: string;
   /** URL de la imagen (subida o pegada) que ocupa todo el ancho del hero. */
   image: string;
+  /** Opcional -- recorte vertical propio para mobile. Vacío = se usa
+   * "image" también en mobile (con otro object-position, ver Hero.tsx). */
+  mobileImage?: string;
   eyebrow: string;
+  /** Admite "\n" para forzar un salto de línea y "{{texto}}" para resaltar
+   * ese fragmento en dorado -- ver parseHeroHeadline en Hero.tsx. */
   headline: string;
+  description?: string;
   ctaLabel: string;
   ctaHref: string;
 };

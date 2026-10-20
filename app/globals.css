@@ -23,6 +23,9 @@
   /* Funcionales */
   --sale: #b3132a;
   --success: #1c7b4d;
+  /* Único lugar del sitio con color fuera del monocromo (ver DESIGN_SYSTEM.md)
+     -- reservado para el acento del titular del Hero, no para reusar suelto. */
+  --gold: #d4af37;
 
   /* Tipografía — Inter self-hosted vía next/font (ver app/layout.tsx),
      --font-inter lo inyecta el className de <html>. */
@@ -875,38 +878,91 @@ textarea {
 
 .hero__slide {
   position: relative;
-  height: min(88vh, 760px);
-  min-height: 460px;
+  height: clamp(520px, 75vh, 760px);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   background-color: var(--surface-inverse);
+  background-image: var(--hero-bg-desktop);
   background-size: cover;
-  background-position: center;
+  /* Centrado-derecha: el producto (lo que importa de la foto) queda hacia
+     la derecha, protagonista; el degradado lateral come la mitad
+     izquierda para el texto sin tapar la mercadería. */
+  background-position: right center;
   overflow: hidden;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Cross-fade simple al cambiar de flyer -- se dispara solo porque Hero.tsx
+     pone key={slide.id} en este div, así que React lo remonta (no lo
+     actualiza en el lugar) en cada cambio, reiniciando la animación. */
+  .hero__slide {
+    animation: hero-fade-in 0.5s var(--ease);
+  }
+}
+
+@keyframes hero-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .hero__overlay {
   position: absolute;
   inset: 0;
+  /* Lateral (izquierda -> derecha): da legibilidad al texto sin oscurecer
+     el lado del producto. En mobile se reemplaza por uno vertical (ver
+     media query) porque ahí el texto vive abajo, no a la izquierda. */
   background: linear-gradient(
-    0deg,
-    rgba(0, 0, 0, 0.7) 0%,
-    rgba(0, 0, 0, 0.25) 42%,
-    rgba(0, 0, 0, 0) 68%
+    90deg,
+    rgba(0, 0, 0, 0.82) 0%,
+    rgba(0, 0, 0, 0.6) 30%,
+    rgba(0, 0, 0, 0.22) 58%,
+    rgba(0, 0, 0, 0) 80%
   );
 }
 
 .hero__slide-content {
   position: relative;
   z-index: 1;
-  max-width: 640px;
-  padding-bottom: var(--sp-9);
+  max-width: 620px;
   color: var(--on-inverse);
+}
+
+/* El texto queda centrado verticalmente en desktop (ver .hero__slide), así
+   que una de sus líneas puede caer justo a la altura de .hero__nav--prev
+   (fijo al 50% de alto) -- separado solo cuando hay flechas (2+ flyers) y
+   solo en desktop: en mobile el contenido va abajo (align-items: flex-end)
+   y nunca llega a la altura de las flechas, así que ahí no hace falta. */
+.hero__slide[data-nav='true'] .hero__slide-content {
+  /* margin, no padding: un padding-left acá comería del propio max-width
+     (box-sizing: border-box), angostando las líneas del título -- un
+     margin-left corre toda la caja sin tocar el ancho disponible adentro. */
+  margin-left: 96px;
 }
 
 .hero__slide-content .h1,
 .hero__slide-content .display {
   color: var(--on-inverse);
+}
+
+.hero__slide-content .display {
+  /* Más chico que el .display de base (clamp 2.5rem/7vw/5rem, usado en
+     títulos de sección sitewide) -- acá el límite pedido es 48px/76px. */
+  font-size: clamp(3rem, 6vw, 4.75rem);
+}
+
+.hero__accent {
+  color: var(--gold);
+}
+
+.hero__description {
+  margin-top: var(--sp-4);
+  max-width: 46ch;
+  font-size: 1.05rem;
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .hero__slide-content .hero__eyebrow {
@@ -1015,13 +1071,64 @@ textarea {
   .hero-pin {
     padding-bottom: clamp(16px, 3vh, 36px);
   }
+
   .hero__slide {
-    height: min(75vh, 620px);
-    min-height: 380px;
+    height: clamp(520px, 70vh, 650px);
+    /* Composición mobile independiente de desktop: contenido abajo (no
+       centrado), con la imagen vertical dedicada si existe (--hero-bg-mobile,
+       seteada en Hero.tsx -- cae de nuevo en la de desktop si no hay una). */
+    align-items: flex-end;
+    background-image: var(--hero-bg-mobile);
+    /* Las fotos de producto llevan el escudo/insignia arriba -- anclar el
+       recorte ahí evita que un recorte centrado se lo coma (mismo criterio
+       que .pdp__main img). */
+    background-position: top center;
   }
+
+  .hero__overlay {
+    /* Vertical en vez de lateral: acá el texto vive abajo, no a la
+       izquierda, así que lo que necesita contraste es la base de la foto. */
+    background: linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.85) 0%,
+      rgba(0, 0, 0, 0.5) 38%,
+      rgba(0, 0, 0, 0.1) 65%,
+      rgba(0, 0, 0, 0) 85%
+    );
+  }
+
+  .hero__slide-content,
+  /* Mismo selector que la regla de desktop (que agrega padding-left: 96px)
+     para igualar especificidad -- si no, esa regla gana igual por ser más
+     específica, sin importar que esta venga después en el CSS. */
+  .hero__slide[data-nav='true'] .hero__slide-content {
+    max-width: 100%;
+    /* Sin indent izquierdo acá -- el contenido va abajo (align-items:
+       flex-end en .hero__slide), lejos de las flechas, que quedan fijas al
+       50% de alto. Dejar aire a la derecha en cambio, para que ninguna
+       línea del título quede debajo de los puntos del carrusel
+       (.hero__dots, anclados abajo a la derecha). */
+    margin-left: 0;
+    padding-right: 56px;
+    padding-bottom: var(--sp-7);
+  }
+
+  .hero__slide-content .display {
+    font-size: clamp(2.125rem, 9vw, 2.625rem);
+  }
+
+  .hero__description {
+    font-size: 0.95rem;
+  }
+
   .hero__nav {
     width: 38px;
     height: 38px;
+  }
+
+  .hero__dots {
+    bottom: var(--sp-4);
+    right: var(--sp-4);
   }
 }
 
