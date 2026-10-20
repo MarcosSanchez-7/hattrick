@@ -4661,6 +4661,10 @@ button[aria-pressed='true'] .wishlist-heart-icon {
   position: absolute;
   top: var(--sp-3);
   right: var(--sp-3);
+  /* Sin esto queda detrás de .patch-preview__media: ambos son position
+     relative/absolute sin z-index, así que gana el que aparece después en
+     el DOM (la imagen), aunque el botón esté dibujado "arriba" en el markup. */
+  z-index: 1;
 }
 
 .patch-preview__media {

@@ -194,7 +194,11 @@ export function ProductDetail({
                   uid={`thumb-${product.id}-${i}`}
                   number={!hasPhotos && i === 1 ? "10" : undefined}
                   alt={alt}
-                  size="thumb"
+                  /* "thumb" (160px) queda borroso acá: esta franja se
+                     renderiza bastante más grande que un thumbnail de
+                     lista (carrito/búsqueda/admin). "card" (640px) es la
+                     misma variante que ya usan las grillas de producto. */
+                  size="card"
                 />
               </button>
             ))}
