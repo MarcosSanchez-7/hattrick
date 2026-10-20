@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { searchProducts, type Product } from "@/lib/catalog";
+import { newArrivals, searchProducts, type Product } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import { IconClose, IconSearch } from "@/components/ui/Icons";
@@ -81,6 +81,30 @@ export function SearchOverlay({
     [products, query],
   );
 
+  // Mismo criterio de "novedad" que usa /novedades (flag isNew, no solo
+  // fecha) -- así lo que se sugiere acá coincide con lo que el cliente ve
+  // si sigue el link de esa sección.
+  const suggestions = useMemo(() => newArrivals(products).slice(0, 6), [products]);
+
+  const renderProductRow = (p: Product, onClick: () => void) => (
+    <Link key={p.id} href={`/producto/${p.slug}`} className="search__row" onClick={onClick}>
+      <div className="search__row-art">
+        <ProductVisual
+          images={p.images}
+          colors={p.colors}
+          pattern={p.pattern}
+          uid={`s-${p.id}`}
+          alt={p.name}
+          size="thumb"
+        />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 600 }}>{p.name}</div>
+      </div>
+      <div className="price">{formatPrice(p.price)}</div>
+    </Link>
+  );
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
@@ -115,37 +139,58 @@ export function SearchOverlay({
 
           <div className="search__body">
             {query.trim() === "" ? (
-              recentSearches.length > 0 ? (
-                <>
-                  <div
-                    className="row"
-                    style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}
-                  >
-                    <p className="label" style={{ color: "var(--ink-muted)", margin: 0 }}>
-                      Búsquedas recientes
-                    </p>
-                    <button
-                      type="button"
-                      className="link-underline meta"
-                      onClick={clearRecentSearches}
+              <>
+                {recentSearches.length > 0 ? (
+                  <div style={{ marginBottom: 28 }}>
+                    <div
+                      className="row"
+                      style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}
                     >
-                      Borrar
-                    </button>
-                  </div>
-                  <div className="search__suggests">
-                    {recentSearches.map((s) => (
+                      <p className="label" style={{ color: "var(--ink-muted)", margin: 0 }}>
+                        Búsquedas recientes
+                      </p>
                       <button
-                        key={s}
                         type="button"
-                        className="chip"
-                        onClick={() => setQuery(s)}
+                        className="link-underline meta"
+                        onClick={clearRecentSearches}
                       >
-                        {s}
+                        Borrar
                       </button>
-                    ))}
+                    </div>
+                    <div className="search__suggests">
+                      {recentSearches.map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          className="chip"
+                          onClick={() => setQuery(s)}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </>
-              ) : null
+                ) : null}
+
+                {suggestions.length > 0 ? (
+                  <div>
+                    <p className="label" style={{ color: "var(--ink-muted)", marginBottom: 12 }}>
+                      Novedades
+                    </p>
+                    <div>
+                      {suggestions.map((p) => renderProductRow(p, onClose))}
+                    </div>
+                    <Link
+                      href="/novedades"
+                      className="btn btn--ghost btn--sm"
+                      style={{ marginTop: 24, display: "inline-flex" }}
+                      onClick={onClose}
+                    >
+                      Ver todas las novedades
+                    </Link>
+                  </div>
+                ) : null}
+              </>
             ) : results.length === 0 ? (
               <p className="lead">
                 No hay resultados para <strong>«{query}»</strong>. Prueba con el
@@ -157,32 +202,12 @@ export function SearchOverlay({
                   {results.length} resultado{results.length > 1 ? "s" : ""}
                 </p>
                 <div>
-                  {results.map((p) => (
-                    <Link
-                      key={p.id}
-                      href={`/producto/${p.slug}`}
-                      className="search__row"
-                      onClick={() => {
-                        recordSearch(query);
-                        onClose();
-                      }}
-                    >
-                      <div className="search__row-art">
-                        <ProductVisual
-                          images={p.images}
-                          colors={p.colors}
-                          pattern={p.pattern}
-                          uid={`s-${p.id}`}
-                          alt={p.name}
-                          size="thumb"
-                        />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600 }}>{p.name}</div>
-                      </div>
-                      <div className="price">{formatPrice(p.price)}</div>
-                    </Link>
-                  ))}
+                  {results.map((p) =>
+                    renderProductRow(p, () => {
+                      recordSearch(query);
+                      onClose();
+                    }),
+                  )}
                 </div>
                 <button
                   type="button"
