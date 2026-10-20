@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Supplier } from "@/lib/catalog";
+import { IconTrash } from "@/components/ui/Icons";
 
 export type SelectedSupplier = {
   supplierId: string;
@@ -36,6 +37,7 @@ export function SupplierPicker({
 }) {
   const [newSupplier, setNewSupplier] = useState("");
   const [creating, setCreating] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const toggle = (supplierId: string) => {
@@ -86,6 +88,25 @@ export function SupplierPicker({
     }
   };
 
+  const handleDelete = async (supplier: Supplier) => {
+    if (!window.confirm(`¿Eliminar el proveedor «${supplier.name}»?`)) return;
+    setError(null);
+    setDeletingId(supplier.id);
+    try {
+      const res = await fetch(`/api/admin/suppliers/${supplier.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "No se pudo eliminar el proveedor.");
+      onCatalogChange(catalog.filter((s) => s.id !== supplier.id));
+      onChange(value.filter((v) => v.supplierId !== supplier.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error inesperado.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div>
       {error ? <p className="admin-error">{error}</p> : null}
@@ -101,6 +122,7 @@ export function SupplierPicker({
               <label
                 className="admin-check"
                 data-checked={selected ? "true" : "false"}
+                style={{ wordBreak: "break-all" }}
               >
                 <input
                   type="checkbox"
@@ -109,6 +131,16 @@ export function SupplierPicker({
                 />
                 {supplier.name}
               </label>
+              <button
+                type="button"
+                className="admin-icon-btn admin-icon-btn--danger"
+                aria-label={`Eliminar proveedor ${supplier.name}`}
+                title="Eliminar proveedor"
+                disabled={deletingId === supplier.id}
+                onClick={() => handleDelete(supplier)}
+              >
+                <IconTrash className="icon--sm" />
+              </button>
               {selected ? (
                 <div
                   className="row gap-2"
