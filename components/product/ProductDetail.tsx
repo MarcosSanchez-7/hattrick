@@ -17,6 +17,7 @@ import { formatPrice } from "@/lib/format";
 import { imageVariant } from "@/lib/image";
 import type { ProductInfoSettings } from "@/lib/settings";
 import { useCart } from "@/components/cart/CartProvider";
+import { trackPixelEvent } from "@/components/analytics/MetaPixel";
 import { useWishlist } from "@/components/wishlist/WishlistProvider";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import {
@@ -76,6 +77,17 @@ export function ProductDetail({
   const hasPhotos = (product.images?.length ?? 0) > 0;
   const thumbCount = hasPhotos ? product.images!.length : GENERATED_VIEWS;
   const alt = product.name;
+
+  useEffect(() => {
+    trackPixelEvent("ViewContent", {
+      content_ids: [product.id],
+      content_name: product.name,
+      content_type: "product",
+      value: product.price,
+      currency: "PYG",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al entrar a la ficha, no en cada cambio de talla/vista
+  }, [product.id]);
 
   const goTo = (i: number) => setView((i + thumbCount) % thumbCount);
 

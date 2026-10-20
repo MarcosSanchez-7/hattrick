@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import type { Product } from "@/lib/catalog";
+import { trackPixelEvent } from "@/components/analytics/MetaPixel";
 
 export const FREE_SHIPPING_FROM = 650000;
 
@@ -192,6 +193,13 @@ export function CartProvider({
         const next = [...prev];
         next[idx] = { ...next[idx], qty: capped };
         return next;
+      });
+      trackPixelEvent("AddToCart", {
+        content_ids: [product.id],
+        content_name: product.name,
+        content_type: "product",
+        value: product.price * qty,
+        currency: "PYG",
       });
       if (!opts?.silent) setIsOpen(true);
     },

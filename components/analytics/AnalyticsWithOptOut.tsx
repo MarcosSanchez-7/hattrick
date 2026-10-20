@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Analytics, type BeforeSendEvent } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { NO_TRACK_COOKIE_NAME, hasOptOutCookie } from "@/lib/opt-out";
 
 /**
  * Modo interno: visitar el sitio con ?no-track=1 (una vez, por
@@ -17,15 +18,8 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
  * visitante — por eso el filtro es por cookie, no por IP.
  */
 
-const COOKIE_NAME = "hattrick_no_track";
 const QUERY_PARAM = "no-track";
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
-
-function hasOptOutCookie(): boolean {
-  return document.cookie
-    .split("; ")
-    .some((c) => c === `${COOKIE_NAME}=1`);
-}
 
 export function AnalyticsWithOptOut() {
   useEffect(() => {
@@ -34,9 +28,9 @@ export function AnalyticsWithOptOut() {
     if (value === null) return;
 
     if (value === "0") {
-      document.cookie = `${COOKIE_NAME}=; path=/; max-age=0`;
+      document.cookie = `${NO_TRACK_COOKIE_NAME}=; path=/; max-age=0`;
     } else {
-      document.cookie = `${COOKIE_NAME}=1; path=/; max-age=${ONE_YEAR_SECONDS}; SameSite=Lax`;
+      document.cookie = `${NO_TRACK_COOKIE_NAME}=1; path=/; max-age=${ONE_YEAR_SECONDS}; SameSite=Lax`;
     }
 
     // Saca el query param de la URL para no dejarlo pegado al navegar/compartir el link.

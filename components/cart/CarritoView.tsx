@@ -11,6 +11,7 @@ import {
   type CartLine,
 } from "@/components/cart/CartProvider";
 import { ProductVisual } from "@/components/product/ProductVisual";
+import { trackPixelEvent } from "@/components/analytics/MetaPixel";
 import { LocationPicker, type LatLng } from "@/components/admin/LocationPicker";
 import {
   IconBag,
@@ -285,6 +286,14 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn--block"
+                onClick={() =>
+                  trackPixelEvent("InitiateCheckout", {
+                    content_ids: lines.map((l) => l.product.id),
+                    num_items: count,
+                    value: total,
+                    currency: "PYG",
+                  })
+                }
               >
                 <IconWhatsapp className="icon--sm" />
                 Continuar por WhatsApp

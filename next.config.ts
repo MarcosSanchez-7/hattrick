@@ -21,6 +21,11 @@ import type { NextConfig } from "next";
  *   entrada aparte, ya cubierto por 'self'. Vercel Speed Insights
  *   (@vercel/speed-insights/next) usa el mismo patrón same-origin bajo
  *   /_vercel/speed-insights/*, también cubierto por 'self'.
+ * - Meta Pixel (components/analytics/MetaPixel.tsx): fbevents.js se carga
+ *   desde connect.facebook.net (script-src) y manda sus eventos a
+ *   www.facebook.com/tr (connect-src). El <img> de respaldo en <noscript>
+ *   ya entra por el img-src "https:" de más abajo, sin necesidad de
+ *   agregar nada ahí.
  *
  * script-src necesita 'unsafe-inline' ACÁ (storefront público): Next.js App
  * Router hidrata la página con sus propios <script> inline
@@ -58,13 +63,13 @@ const isDev = process.env.NODE_ENV === "development";
 const CSP = [
   "default-src 'self'",
   // 'unsafe-eval' solo en dev: lo necesita el refresh/HMR de Next.js.
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline' https://connect.facebook.net${isDev ? " 'unsafe-eval'" : ""}`,
   // 'unsafe-inline' porque el sitio usa style={{...}} inline extensamente
   // (no hay forma simple de pasar a nonces sin tocar cientos de componentes).
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self'",
   "img-src 'self' data: https:",
-  "connect-src 'self' https://nominatim.openstreetmap.org https://*.public.blob.vercel-storage.com https://vercel.com",
+  "connect-src 'self' https://nominatim.openstreetmap.org https://*.public.blob.vercel-storage.com https://vercel.com https://www.facebook.com https://connect.facebook.net",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
