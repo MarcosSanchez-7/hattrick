@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { getAllProducts } from "@/lib/data";
-import { isOnSale, isSoldOut } from "@/lib/catalog";
+import { getAllCategories, getAllProducts } from "@/lib/data";
+import { categoryPath, isOnSale, isSoldOut, type Category } from "@/lib/catalog";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 
 /**
@@ -52,6 +52,17 @@ function formatFeedPrice(priceGs: number): string {
   return `${(priceGs / rate).toFixed(2)} ${currency}`;
 }
 
+/** "Fútbol > Europa" -- ruta raíz→hoja en nombres legibles, no slugs. Meta
+ * usa g:product_type para armar Conjuntos/Colecciones automáticos en el
+ * catálogo (ver Commerce Manager); sin esto, la única forma de ordenar el
+ * catálogo de WhatsApp por categoría es armar cada colección a mano,
+ * producto por producto. */
+function productType(categories: Category[], slug: string): string {
+  return categoryPath(categories, slug)
+    .map((c) => c.name)
+    .join(" > ");
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> },
@@ -62,7 +73,7 @@ export async function GET(
     return new NextResponse("Not found", { status: 404 });
   }
 
-  const products = await getAllProducts();
+  const [products, categories] = await Promise.all([getAllProducts(), getAllCategories()]);
 
   // Sin fotos reales no hay imagen fetcheable por Meta — la ilustración
   // (JerseyArt) es un SVG generado en el navegador, no un archivo con URL.
@@ -76,6 +87,7 @@ export async function GET(
       const onSale = isOnSale(p);
       const regularPrice = onSale ? p.compareAt! : p.price;
       const additional = images.slice(1, 21); // tope de Meta: 20 extra
+      const type = productType(categories, p.category);
 
       return [
         "<item>",
@@ -92,6 +104,7 @@ export async function GET(
         `<g:price>${formatFeedPrice(regularPrice)}</g:price>`,
         onSale ? `<g:sale_price>${formatFeedPrice(p.price)}</g:sale_price>` : "",
         `<g:brand>${escapeXml(SITE_NAME)}</g:brand>`,
+        type ? `<g:product_type>${escapeXml(type)}</g:product_type>` : "",
         "</item>",
       ]
         .filter(Boolean)
