@@ -51,7 +51,12 @@ export function ProductCard({
           ) : null}
           {allSoldOut ? <span className="badge badge--out">Agotado</span> : null}
           {product.tags.map((tag) => {
-            const color = tags.find((t) => t.name === tag)?.color;
+            const catalogTag = tags.find((t) => t.name === tag);
+            // Las etiquetas "de filtro" (ej. Premier League) ya se ven como
+            // chip filtrable en ProductBrowser -- repetirlas acá como badge
+            // sería mostrar la misma info dos veces en la misma tarjeta.
+            if (catalogTag?.isFilter) return null;
+            const color = catalogTag?.color;
             return (
               <span
                 key={tag}

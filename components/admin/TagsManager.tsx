@@ -11,6 +11,7 @@ export function TagsManager({ initial }: { initial: Tag[] }) {
   const [tags, setTags] = useState(initial);
   const [name, setName] = useState("");
   const [color, setColor] = useState("#2f2f2f");
+  const [isFilter, setIsFilter] = useState(false);
   const [creating, setCreating] = useState(false);
   const [pendingName, setPendingName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -24,13 +25,14 @@ export function TagsManager({ initial }: { initial: Tag[] }) {
       const res = await fetch("/api/admin/tags", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), color }),
+        body: JSON.stringify({ name: name.trim(), color, isFilter }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "No se pudo crear la etiqueta.");
       setTags((prev) => [...prev, data]);
       setName("");
       setColor("#2f2f2f");
+      setIsFilter(false);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado.");
@@ -51,6 +53,27 @@ export function TagsManager({ initial }: { initial: Tag[] }) {
       router.refresh();
     } catch {
       setError("No se pudo actualizar el color.");
+    }
+  };
+
+  const handleFilterToggle = async (tag: Tag) => {
+    const nextIsFilter = !tag.isFilter;
+    setTags((prev) =>
+      prev.map((t) => (t.name === tag.name ? { ...t, isFilter: nextIsFilter } : t)),
+    );
+    try {
+      const res = await fetch(`/api/admin/tags/${encodeURIComponent(tag.name)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isFilter: nextIsFilter }),
+      });
+      if (!res.ok) throw new Error();
+      router.refresh();
+    } catch {
+      setTags((prev) =>
+        prev.map((t) => (t.name === tag.name ? { ...t, isFilter: tag.isFilter } : t)),
+      );
+      setError("No se pudo actualizar la etiqueta.");
     }
   };
 
@@ -102,10 +125,24 @@ export function TagsManager({ initial }: { initial: Tag[] }) {
             aria-label="Color de la etiqueta"
             style={{ width: 44, height: 38, padding: 2 }}
           />
+          <label className="row" style={{ gap: 6, alignItems: "center", fontSize: "0.8125rem" }}>
+            <input
+              type="checkbox"
+              checked={isFilter}
+              onChange={(e) => setIsFilter(e.target.checked)}
+            />
+            Usar como filtro
+          </label>
           <button type="submit" className="btn btn--sm" disabled={creating || !name.trim()}>
             {creating ? "Creando…" : "Añadir etiqueta"}
           </button>
         </form>
+        <p className="admin-help" style={{ marginTop: 8 }}>
+          "Usar como filtro" (ej. Premier League, La Liga) agrega un chip para
+          filtrar en categoría/novedades/ofertas/búsqueda, y NO se muestra
+          como badge en la tarjeta de producto. Sin marcar, es una etiqueta
+          descriptiva normal (ej. Versión Fan) — solo badge, sin filtro.
+        </p>
       </div>
 
       {tags.length === 0 ? (
@@ -139,6 +176,14 @@ export function TagsManager({ initial }: { initial: Tag[] }) {
               >
                 {tag.name}
               </span>
+              <button
+                type="button"
+                className="link-underline meta"
+                onClick={() => handleFilterToggle(tag)}
+                title="Si está marcada, genera un chip de filtro en vez de (o además de) badge"
+              >
+                {tag.isFilter ? "Filtro ✓" : "Usar como filtro"}
+              </button>
               <button
                 type="button"
                 className="admin-icon-btn admin-icon-btn--danger"

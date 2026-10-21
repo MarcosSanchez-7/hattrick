@@ -26,9 +26,32 @@ export function ProductBrowser({
   defaultSort?: Sort;
 }) {
   const [sort, setSort] = useState<Sort>(defaultSort);
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+
+  // Solo etiquetas marcadas "usar como filtro" (ej. ligas) Y que de verdad
+  // tiene algún producto de esta lista -- evita, ej., mostrar el chip "Serie
+  // A" en una categoría donde no hay ningún producto italiano.
+  const filterTags = useMemo(
+    () =>
+      tags.filter(
+        (t) => t.isFilter && products.some((p) => p.tags.includes(t.name)),
+      ),
+    [tags, products],
+  );
+
+  const toggleFilter = (name: string) => {
+    setActiveFilters((prev) =>
+      prev.includes(name) ? prev.filter((f) => f !== name) : [...prev, name],
+    );
+  };
+
+  const filtered = useMemo(() => {
+    if (activeFilters.length === 0) return products;
+    return products.filter((p) => p.tags.some((t) => activeFilters.includes(t)));
+  }, [products, activeFilters]);
 
   const visible = useMemo(() => {
-    const sorted = [...products];
+    const sorted = [...filtered];
     switch (sort) {
       case "precio-asc":
         sorted.sort((a, b) => a.price - b.price);
@@ -46,10 +69,26 @@ export function ProductBrowser({
         sorted.sort((a, b) => b.reviews - a.reviews);
     }
     return sorted;
-  }, [products, sort]);
+  }, [filtered, sort]);
 
   return (
     <>
+      {filterTags.length > 0 ? (
+        <div className="filters" style={{ marginBottom: "var(--sp-4)" }}>
+          {filterTags.map((tag) => (
+            <button
+              key={tag.name}
+              type="button"
+              className="filter"
+              data-active={activeFilters.includes(tag.name) ? "true" : "false"}
+              onClick={() => toggleFilter(tag.name)}
+            >
+              {tag.name}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <div className="toolbar toolbar--simple">
         <span className="meta">{visible.length} artículos</span>
         <label className="sr-only" htmlFor="sort">
@@ -73,9 +112,19 @@ export function ProductBrowser({
         <div className="empty-state">
           <h3 className="h2">No hay artículos con estos filtros</h3>
           <p className="meta">Prueba a quitar algún filtro o vuelve al inicio.</p>
-          <Link href="/" className="btn btn--ghost btn--sm">
-            Volver al inicio
-          </Link>
+          {activeFilters.length > 0 ? (
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={() => setActiveFilters([])}
+            >
+              Quitar filtros
+            </button>
+          ) : (
+            <Link href="/" className="btn btn--ghost btn--sm">
+              Volver al inicio
+            </Link>
+          )}
         </div>
       ) : (
         <ProductGrid products={visible} tags={tags} />

@@ -153,7 +153,14 @@ export type Category = {
 };
 
 /** Etiqueta estandarizada del catálogo (ej. "Versión Fan"), con su color. */
-export type Tag = { name: string; color: string };
+export type Tag = {
+  name: string;
+  color: string;
+  /** true = además de badge en la tarjeta, genera un chip filtrable en
+   * ProductBrowser (ej. "Premier League") -- false = solo descriptiva
+   * (ej. "Versión Jugador"), como eran todas las etiquetas antes de esto. */
+  isFilter: boolean;
+};
 
 /** Dónde aparece el enlace en el footer: franja legal, columna Ayuda o Empresa. */
 export type PagePlacement = "legal" | "ayuda" | "empresa";

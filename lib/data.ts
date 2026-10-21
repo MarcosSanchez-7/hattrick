@@ -222,10 +222,10 @@ function rowToCategory(row: CategoryRow): Category {
   };
 }
 
-type TagRow = { name: string; color: string };
+type TagRow = { name: string; color: string; is_filter: boolean };
 
 function rowToTag(row: TagRow): Tag {
-  return { name: row.name, color: row.color };
+  return { name: row.name, color: row.color, isFilter: row.is_filter };
 }
 
 async function fetchVariantsByProduct(
@@ -1212,13 +1212,17 @@ export const getAllTags = cache(async (): Promise<Tag[]> => {
   return (data as TagRow[]).map(rowToTag);
 });
 
-export async function createTag(name: string, color: string): Promise<Tag> {
+export async function createTag(
+  name: string,
+  color: string,
+  isFilter = false,
+): Promise<Tag> {
   const trimmed = name.trim();
   assertValidTag(trimmed, color);
 
   const { data, error } = await supabaseAdmin
     .from("tags")
-    .insert({ name: trimmed, color })
+    .insert({ name: trimmed, color, is_filter: isFilter })
     .select()
     .single();
 
@@ -1231,12 +1235,20 @@ export async function createTag(name: string, color: string): Promise<Tag> {
   return rowToTag(data as TagRow);
 }
 
-export async function updateTagColor(name: string, color: string): Promise<Tag> {
-  assertValidTag(name, color);
+export async function updateTag(
+  name: string,
+  input: { color?: string; isFilter?: boolean },
+): Promise<Tag> {
+  const patch: { color?: string; is_filter?: boolean } = {};
+  if (input.color !== undefined) {
+    assertValidTag(name, input.color);
+    patch.color = input.color;
+  }
+  if (input.isFilter !== undefined) patch.is_filter = input.isFilter;
 
   const { data, error } = await supabaseAdmin
     .from("tags")
-    .update({ color })
+    .update(patch)
     .eq("name", name)
     .select()
     .single();

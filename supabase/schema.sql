@@ -1795,3 +1795,10 @@ alter table sales drop column if exists status;
 -- tablas usan este mismo patrón (RLS on, sin políticas -- ver comentario
 -- al principio del archivo).
 alter table product_supplier_sizes enable row level security;
+
+-- Etiquetas "de filtro" (ej. "Premier League", "La Liga"): distintas de las
+-- etiquetas descriptivas de siempre (ej. "Versión Jugador") en que generan
+-- un chip filtrable en las páginas de categoría/novedades/ofertas/búsqueda
+-- (ver ProductBrowser.tsx) y NO se muestran como badge en la tarjeta de
+-- producto (ver ProductCard.tsx) -- evita duplicar la info ahí.
+alter table tags add column if not exists is_filter boolean not null default false;

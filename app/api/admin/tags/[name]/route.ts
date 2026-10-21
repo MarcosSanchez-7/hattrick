@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { DataError, deleteTag, updateTagColor } from "@/lib/data";
+import { DataError, deleteTag, updateTag } from "@/lib/data";
 
 type Params = { params: Promise<{ name: string }> };
 
@@ -8,7 +8,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
   const { name } = await params;
   try {
     const body = await request.json();
-    const tag = await updateTagColor(name, body?.color);
+    const tag = await updateTag(name, { color: body?.color, isFilter: body?.isFilter });
     revalidatePath("/", "layout");
     return NextResponse.json(tag);
   } catch (err) {

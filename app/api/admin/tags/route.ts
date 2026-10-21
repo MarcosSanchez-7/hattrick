@@ -10,7 +10,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const tag = await createTag(body?.name, body?.color ?? "#2f2f2f");
+    const tag = await createTag(body?.name, body?.color ?? "#2f2f2f", body?.isFilter ?? false);
     revalidatePath("/", "layout");
     return NextResponse.json(tag, { status: 201 });
   } catch (err) {
