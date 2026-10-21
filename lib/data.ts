@@ -456,21 +456,54 @@ async function insertMovement(
 }
 
 /**
+ * sale_items.product_name_snapshot/size_snapshot SOLO se escriben hoy al
+ * vender por CSV/dropshipping (ver el comentario en rowToSale) -- una venta
+ * normal, hecha contra un variant_id real, nunca los tiene. Si esa variante
+ * se borra después (talla desmarcada, o el producto entero eliminado), el
+ * join a product_variants da null y esa línea de venta queda sin nombre ni
+ * talla ("—" en la tabla de Ventas) para siempre, aunque la venta en sí
+ * siga ahí. Por eso cualquier borrado de una variante tiene que completar
+ * estos campos primero (si todavía están vacíos -- no pisa un snapshot que
+ * ya tenga otro valor legítimo de CSV/dropshipping). */
+async function backfillSaleSnapshotsBeforeDelete(
+  variantId: string,
+  productId: string,
+  productName: string,
+  size: string,
+): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from("sale_items")
+    .update({
+      product_name_snapshot: productName,
+      size_snapshot: size,
+      product_id_snapshot: productId,
+    })
+    .eq("variant_id", variantId)
+    .is("product_name_snapshot", null);
+  if (error) {
+    fail(`No se pudo conservar el historial de ventas de la talla "${size}": ${error.message}`);
+  }
+}
+
+/**
  * Deja el stock de cada talla en la cantidad indicada (valor absoluto, no un
  * delta): crea las tallas que falten, ajusta las que cambiaron de cantidad
  * (vía un movimiento 'correction', nunca escribiendo stock_on_hand a mano) y
  * borra las tallas que se desmarcaron en el panel -- no alcanza con dejarlas
  * en 0: la ficha pública arma la lista de talles a partir de las filas de
  * product_variants que existan, así que una fila en 0 seguía apareciendo
- * como "agotado" en vez de desaparecer. sale_items guarda su propio snapshot
- * de talla/producto, así que borrar la variante no rompe el historial de
- * ventas; inventory_movements no tiene ese snapshot, así que sus
- * movimientos viejos de esa talla quedan sin talla/producto asociado (el
- * join da null), pero el movimiento en sí no se borra.
+ * como "agotado" en vez de desaparecer. Antes de borrar cada variante se
+ * completa el snapshot de sus ventas (ver backfillSaleSnapshotsBeforeDelete)
+ * para que esa venta no quede sin nombre/talla. inventory_movements no
+ * tiene ese snapshot, así que sus movimientos viejos de esa talla quedan
+ * sin talla/producto asociado (el join da null), pero el movimiento en sí
+ * no se borra -- aceptado, es un registro interno, no algo que vea el
+ * cliente ni lo que se ve en la tabla de Ventas.
  */
 async function syncProductVariants(
   productId: string,
   quantities: Record<string, number>,
+  productName: string,
 ): Promise<void> {
   const { data: existing, error } = await supabaseAdmin
     .from("product_variants")
@@ -509,6 +542,7 @@ async function syncProductVariants(
 
   for (const [size, variant] of existingBySize) {
     if (!(size in quantities)) {
+      await backfillSaleSnapshotsBeforeDelete(variant.id, productId, productName, size);
       const { error: deleteError } = await supabaseAdmin
         .from("product_variants")
         .delete()
@@ -920,7 +954,7 @@ export async function createProduct(input: ProductInput): Promise<Product> {
   }
 
   if (input.stockMode === "propio" || input.internalControl) {
-    await syncProductVariants(id, input.variantQuantities ?? {});
+    await syncProductVariants(id, input.variantQuantities ?? {}, input.name);
   }
   await syncProductPatches(id, input.patchIds ?? []);
   await syncProductSuppliers(id, input.suppliers ?? []);
@@ -1024,6 +1058,7 @@ export async function updateProduct(
     input.stockMode === "propio" || input.internalControl
       ? input.variantQuantities ?? {}
       : {},
+    input.name,
   );
   await syncProductPatches(id, input.patchIds ?? []);
   await syncProductSuppliers(id, input.suppliers ?? []);
@@ -1033,6 +1068,26 @@ export async function updateProduct(
 }
 
 export async function deleteProduct(id: string): Promise<void> {
+  // product_variants tiene "on delete cascade" desde products -- sin este
+  // paso, borrar el producto borraría en cascada sus variantes y cualquier
+  // venta que las referenciara quedaría sin nombre/talla (ver
+  // backfillSaleSnapshotsBeforeDelete, mismo problema que al desmarcar una
+  // talla sola desde el panel).
+  const { data: product } = await supabaseAdmin
+    .from("products")
+    .select("name")
+    .eq("id", id)
+    .maybeSingle();
+  if (product?.name) {
+    const { data: variants } = await supabaseAdmin
+      .from("product_variants")
+      .select("id, size")
+      .eq("product_id", id);
+    for (const v of (variants ?? []) as { id: string; size: string }[]) {
+      await backfillSaleSnapshotsBeforeDelete(v.id, id, product.name as string, v.size);
+    }
+  }
+
   const { data, error } = await supabaseAdmin
     .from("products")
     .delete()
