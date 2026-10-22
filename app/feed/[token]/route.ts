@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { getAllCategories, getAllProducts } from "@/lib/data";
+import { getAllCategories, getAllProducts, getAllTags } from "@/lib/data";
 import { categoryPath, isOnSale, isSoldOut, type Category } from "@/lib/catalog";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 
@@ -73,7 +73,18 @@ export async function GET(
     return new NextResponse("Not found", { status: 404 });
   }
 
-  const [products, categories] = await Promise.all([getAllProducts(), getAllCategories()]);
+  const [products, categories, tags] = await Promise.all([
+    getAllProducts(),
+    getAllCategories(),
+    getAllTags(),
+  ]);
+
+  // Mismas etiquetas "de filtro" (ej. ligas) que arman los chips de
+  // ProductBrowser.tsx en la web -- se mandan en custom_label_0 para poder
+  // armar colecciones de Meta en dos niveles (ej. Tipo de producto=Europa
+  // Y Etiqueta personalizada 0=Premier League), sin depender solo de la
+  // categoría del sitio.
+  const filterTagNames = new Set(tags.filter((t) => t.isFilter).map((t) => t.name));
 
   // Sin fotos reales no hay imagen fetcheable por Meta — la ilustración
   // (JerseyArt) es un SVG generado en el navegador, no un archivo con URL.
@@ -88,6 +99,7 @@ export async function GET(
       const regularPrice = onSale ? p.compareAt! : p.price;
       const additional = images.slice(1, 21); // tope de Meta: 20 extra
       const type = productType(categories, p.category);
+      const filterLabels = p.tags.filter((t) => filterTagNames.has(t)).join(", ");
 
       return [
         "<item>",
@@ -105,6 +117,7 @@ export async function GET(
         onSale ? `<g:sale_price>${formatFeedPrice(p.price)}</g:sale_price>` : "",
         `<g:brand>${escapeXml(SITE_NAME)}</g:brand>`,
         type ? `<g:product_type>${escapeXml(type)}</g:product_type>` : "",
+        filterLabels ? `<g:custom_label_0>${escapeXml(filterLabels)}</g:custom_label_0>` : "",
         "</item>",
       ]
         .filter(Boolean)
