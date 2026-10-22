@@ -2416,6 +2416,7 @@ textarea {
   height: 34px;
   padding-inline: var(--sp-4);
   border: 1px solid var(--line);
+  border-radius: 999px;
   font-size: 0.8125rem;
   transition: all 0.2s var(--ease);
 }
