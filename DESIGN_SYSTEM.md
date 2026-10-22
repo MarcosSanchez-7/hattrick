@@ -165,7 +165,7 @@ To maintain a "streetwear" and "architectural" aesthetic, the design system uses
 
 - **Buttons & Inputs:** Hard 90-degree angles only.
 - **Product Tiles:** Square or rectangular crops with no rounding.
-- **Exceptions:** None. The sharp aesthetic is a core brand pillar, differentiating it from softer, consumer-grade e-commerce sites.
+- **Exceptions:** Fully round (999px/50%) circles for functional, icon-only controls that need to read as a single tappable "dot" rather than a block — carousel nav arrows, dots, the floating WhatsApp button, navbar icon buttons (search/wishlist/cart), and the mobile category quick-access circles. This is deliberately narrow: it applies to round *controls*, never to rectangular surfaces like buttons-with-labels, cards, inputs, or images — those stay sharp with no rounding, same as before.
 
 ## Components
 
