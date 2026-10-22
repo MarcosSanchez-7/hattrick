@@ -28,10 +28,16 @@ type InvoiceInfo = {
   ruc: string;
 };
 
+type ContactInfo = {
+  name: string;
+  phone: string;
+};
+
 function buildWhatsAppMessage(
   lines: CartLine[],
   total: number,
   freeShipping: boolean,
+  contact: ContactInfo,
   invoice: InvoiceInfo,
   location: LatLng,
 ): string {
@@ -46,6 +52,7 @@ function buildWhatsAppMessage(
       return `${base}\n${extras.join("\n")}`;
     })
     .join("\n");
+  const contactLine = `Cliente: ${contact.name} — ${contact.phone}`;
   const locationLine = `Ubicación de entrega: https://www.google.com/maps?q=${location.lat},${location.lng}`;
   const shippingLine = freeShipping
     ? "Envío: gratis"
@@ -53,7 +60,7 @@ function buildWhatsAppMessage(
   const invoiceLine = invoice.wantsInvoice
     ? `\n\nFactura: sí\nRazón social: ${invoice.razonSocial}\nRUC: ${invoice.ruc}`
     : "";
-  return `¡Hola! Quiero comprar:\n${items}\n\n${locationLine}\n${shippingLine}\nTotal: ${formatPrice(total)}${invoiceLine}`;
+  return `¡Hola! Quiero comprar:\n${contactLine}\n${items}\n\n${locationLine}\n${shippingLine}\nTotal: ${formatPrice(total)}${invoiceLine}`;
 }
 
 export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
@@ -69,13 +76,16 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
     hydrated,
   } = useCart();
 
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [wantsInvoice, setWantsInvoice] = useState(false);
   const [razonSocial, setRazonSocial] = useState("");
   const [ruc, setRuc] = useState("");
   const [location, setLocation] = useState<LatLng | null>(null);
 
+  const contactComplete = name.trim() !== "" && phone.trim() !== "";
   const invoiceComplete = razonSocial.trim() !== "" && ruc.trim() !== "";
-  const canCheckout = location !== null && (!wantsInvoice || invoiceComplete);
+  const canCheckout = location !== null && contactComplete && (!wantsInvoice || invoiceComplete);
 
   const whatsappHref =
     whatsappNumber && canCheckout
@@ -84,6 +94,7 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
             lines,
             total,
             freeShipping,
+            { name: name.trim(), phone: phone.trim() },
             {
               wantsInvoice,
               razonSocial: razonSocial.trim(),
@@ -240,6 +251,32 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
             </div>
 
             <div className="stack gap-2">
+              <p className="label">Tus datos (obligatorio)</p>
+              <div className="field-group">
+                <div>
+                  <label htmlFor="customerName">Nombre completo</label>
+                  <input
+                    id="customerName"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Ej. Juan Pérez"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="customerPhone">Teléfono</label>
+                  <input
+                    id="customerPhone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Ej. 0981 123 456"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="stack gap-2">
               <label className="label">Ubicación de entrega (obligatorio)</label>
               <LocationPicker value={location} onChange={setLocation} height={220} />
             </div>
@@ -298,6 +335,10 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
                 <IconWhatsapp className="icon--sm" />
                 Continuar por WhatsApp
               </a>
+            ) : whatsappNumber && !contactComplete ? (
+              <p className="meta" style={{ textAlign: "center" }}>
+                Completá tu nombre y teléfono para continuar.
+              </p>
             ) : whatsappNumber && !location ? (
               <p className="meta" style={{ textAlign: "center" }}>
                 Marcá tu ubicación en el mapa para continuar.

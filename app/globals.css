@@ -2822,7 +2822,8 @@ textarea {
 
 .summary {
   border: 1px solid var(--line);
-  padding: var(--sp-5);
+  background: var(--surface-soft);
+  padding: var(--sp-6);
   display: flex;
   flex-direction: column;
   gap: var(--sp-4);
