@@ -1647,6 +1647,37 @@ textarea {
   color: var(--ink-muted);
 }
 
+/* Relleno proporcional por ancho (no clip-path por estrella individual,
+   evita la matemática de recorte fraccional): dos filas idénticas de 5
+   estrellas superpuestas -- la de atrás tenue (currentColor, el color ya
+   lo resuelve .rating / .offers .rating / .dtf .rating según la sección),
+   la de arriba a opacidad completa pero recortada por `width` (inline,
+   por instancia) al % que corresponda al puntaje. */
+.rating__stars {
+  position: relative;
+  display: inline-flex;
+  width: 88px; /* 5 estrellas de 16px (.icon--sm) + 4 gaps de 2px */
+  height: 16px;
+}
+
+.rating__stars-track,
+.rating__stars-fill {
+  display: flex;
+  gap: 2px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+}
+
+.rating__stars-track {
+  opacity: 0.3;
+}
+
+.rating__stars-fill {
+  overflow: hidden;
+}
+
 /* Carrusel horizontal en móvil */
 .rail {
   display: grid;

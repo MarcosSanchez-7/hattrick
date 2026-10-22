@@ -11,6 +11,7 @@ import { formatPrice } from "@/lib/format";
 import { readableTextColor } from "@/lib/color";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import { ProductCardMedia } from "@/components/product/ProductCardMedia";
+import { ProductRating } from "@/components/product/ProductRating";
 import { WishlistHeartButton } from "@/components/wishlist/WishlistHeartButton";
 import { QuickAddButton } from "@/components/cart/QuickAddButton";
 
@@ -96,6 +97,7 @@ export function ProductCard({
         >
           {product.name}
         </Link>
+        <ProductRating rating={product.rating} reviews={product.reviews} />
         <div className="card__prices">
           <span className={`price${sale ? " price--sale" : ""}`}>
             {formatPrice(product.price)}

@@ -20,6 +20,7 @@ import { useCart } from "@/components/cart/CartProvider";
 import { trackPixelEvent } from "@/components/analytics/MetaPixel";
 import { useWishlist } from "@/components/wishlist/WishlistProvider";
 import { ProductVisual } from "@/components/product/ProductVisual";
+import { ProductRating } from "@/components/product/ProductRating";
 import {
   IconChevron,
   IconClose,
@@ -207,10 +208,11 @@ export function ProductDetail({
       </div>
 
       <div className="pdp__info">
-        <div>
+        <div className="stack gap-2">
           <h1 className="h1" data-combo={isComboProduct(product) ? "true" : "false"}>
             {product.name}
           </h1>
+          <ProductRating rating={product.rating} reviews={product.reviews} />
         </div>
 
         <div className="pdp__price-row">
