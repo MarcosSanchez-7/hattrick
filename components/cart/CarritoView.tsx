@@ -255,7 +255,7 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
               </label>
 
               {wantsInvoice ? (
-                <div className="invoice-fields">
+                <div className="field-group">
                   <div>
                     <label htmlFor="razonSocial">Razón social</label>
                     <input

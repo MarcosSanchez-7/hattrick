@@ -123,25 +123,19 @@ export default async function CategoryPage({
             </p>
           ) : null}
 
-          {children.length > 0 ? (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 20 }}>
-              {children.map((child) => (
-                <Link
-                  key={child.slug}
-                  href={`/categoria/${categorySlugPath(categories, child.slug).join("/")}`}
-                  className="chip"
-                >
-                  {child.name}
-                </Link>
-              ))}
-            </div>
-          ) : null}
         </div>
       </header>
 
       <section className="section section--tight">
         <div className="container">
-          <ProductBrowser products={products} tags={tags} />
+          <ProductBrowser
+            products={products}
+            tags={tags}
+            categoryLinks={children.map((child) => ({
+              name: child.name,
+              href: `/categoria/${categorySlugPath(categories, child.slug).join("/")}`,
+            }))}
+          />
         </div>
       </section>
     </>

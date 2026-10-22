@@ -2456,6 +2456,112 @@ textarea {
   font-size: 0.8125rem;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Sidebar de filtros del listado (ProductBrowser) -- categoría/novedades/
+   ofertas/búsqueda. Clase propia en vez de reusar la grilla de .pdp: esa
+   lleva proporciones y un sticky-offset pensados solo para la galería de
+   producto, y acoplarla acá haría que cualquier ajuste futuro del PDP
+   golpeara también el listado sin querer.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.browse {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: var(--sp-8);
+  align-items: start;
+}
+
+.browse__sidebar {
+  position: sticky;
+  top: calc(var(--nav-h) + var(--sp-5));
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+
+/* Dentro del sidebar, los chips de equipo/liga van en columna -- el
+   .filters horizontal de siempre sigue sirviendo tal cual en cualquier
+   otro lugar que no tenga sidebar (ej. esta misma página en mobile, donde
+   el panel entero vive en el drawer con su propio ancho angosto). */
+.browse__sidebar .filters {
+  flex-direction: column;
+}
+
+.browse__sidebar .filter {
+  width: 100%;
+  text-align: left;
+}
+
+.browse__group-title {
+  margin-bottom: var(--sp-3);
+  color: var(--ink-muted);
+}
+
+.browse__links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.browse__link {
+  font-size: 0.875rem;
+  padding-block: 2px;
+}
+
+.browse__link[data-active='true'] {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Selector compuesto, no ".browse__price" solo: ".field-group" (misma
+   clase, siempre presente acá) se define más abajo en este archivo y
+   ganaría por orden de aparición pese a tener la misma especificidad que
+   una clase sola -- ".field-group.browse__price" sube la especificidad y
+   gana sin depender del orden. */
+.field-group.browse__price {
+  flex-direction: row;
+  align-items: center;
+}
+
+.field-group.browse__price input {
+  width: 0; /* flex-basis real: los dos inputs se reparten el ancho por igual */
+  flex: 1;
+  /* Sin esto, las flechitas nativas de type=number le comen al input
+     el espacio que necesita para no recortar "100.000" en el placeholder. */
+  -moz-appearance: textfield;
+}
+
+.field-group.browse__price input::-webkit-outer-spin-button,
+.field-group.browse__price input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.browse__filter-trigger {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .browse {
+    grid-template-columns: 1fr;
+  }
+  /* El panel sigue existiendo (se reusa adentro del drawer, ver
+     ProductBrowser.tsx), pero no como columna fija al lado de la grilla. */
+  .browse > .browse__sidebar {
+    display: none;
+  }
+  .browse__filter-trigger {
+    display: inline-flex;
+  }
+}
+
+/* El panel de filtros se reutiliza tal cual dentro de .drawer__body (mismo
+   componente, otro contenedor) -- sin ancho fijo de 280px ahí, ocupa todo
+   el panel del drawer. */
+.drawer__body .browse__group {
+  margin-bottom: var(--sp-6);
+}
+
 .empty-state {
   padding-block: var(--sp-9);
   text-align: center;
@@ -2771,20 +2877,24 @@ textarea {
   cursor: pointer;
 }
 
-.invoice-fields {
+/* Antes ".invoice-fields" (una sola cosa, la factura del carrito) -- se
+   generalizó el nombre porque el mismo tratamiento de input ahora se
+   reusa en el filtro de precio del listado y en los campos de
+   nombre/teléfono del carrito. */
+.field-group {
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
 }
 
-.invoice-fields label {
+.field-group label {
   display: block;
   font-size: 0.75rem;
   color: var(--ink-muted);
   margin-bottom: 4px;
 }
 
-.invoice-fields input {
+.field-group input {
   width: 100%;
   height: 42px;
   padding-inline: var(--sp-3);
@@ -2793,7 +2903,7 @@ textarea {
   font-size: 1rem;
 }
 
-.invoice-fields input:focus {
+.field-group input:focus {
   outline: none;
   border-color: var(--ink);
 }

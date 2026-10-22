@@ -6,6 +6,13 @@ const pyg = new Intl.NumberFormat("es-PY", {
 
 export const formatPrice = (value: number) => pyg.format(value);
 
+const pygNumber = new Intl.NumberFormat("es-PY", { maximumFractionDigits: 0 });
+
+/** Como formatPrice pero sin el símbolo "Gs." -- para placeholders/inputs
+ * angostos donde el contexto (ej. un campo bajo el label "Precio") ya deja
+ * claro que es plata, y el prefijo no entra sin recortarse. */
+export const formatNumber = (value: number) => pygNumber.format(value);
+
 const RELATIVE_UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["year", 60 * 60 * 24 * 365],
   ["month", 60 * 60 * 24 * 30],
