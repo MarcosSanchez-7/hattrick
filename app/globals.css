@@ -1133,6 +1133,70 @@ textarea {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   Accesos rápidos (QuickCategories) -- solo mobile, CategoryGrid ya cubre
+   lo mismo en desktop con tarjetas rectangulares.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.quick-cats {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .quick-cats {
+    display: flex;
+    gap: var(--sp-5);
+    overflow-x: auto;
+    padding-inline: var(--gutter);
+    padding-block: var(--sp-5);
+    scrollbar-width: none;
+  }
+
+  .quick-cats::-webkit-scrollbar {
+    display: none;
+  }
+
+  .quick-cats__item {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* gap, no padding/margin sueltos: ya se tropezó esta sesión con la
+       diferencia entre los dos en un elemento circular de tamaño fijo
+       (padding le come ancho a un box-sizing:border-box, margin no). */
+    gap: var(--sp-2);
+    width: 72px;
+  }
+
+  .quick-cats__circle {
+    width: 56px;
+    height: 56px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface-soft);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: var(--ink-muted);
+  }
+
+  .quick-cats__circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .quick-cats__label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.2;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    Propuestas de valor
    ═══════════════════════════════════════════════════════════════════════════ */
 

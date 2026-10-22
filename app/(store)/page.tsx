@@ -12,6 +12,7 @@ import {
   DEFAULT_WHOLESALE,
 } from "@/lib/settings";
 import { Hero } from "@/components/home/Hero";
+import { QuickCategories } from "@/components/home/QuickCategories";
 import { ValueProps } from "@/components/home/ValueProps";
 import { CategoryGrid } from "@/components/home/CategoryGrid";
 import { OffersSection } from "@/components/home/OffersSection";
@@ -102,6 +103,7 @@ export default async function HomePage() {
           en el stacking order, así al scrollear sube y lo tapa en vez de
           dejarlo asomar por los costados (ver .hero-pin/.hero en globals.css). */}
       <div className="page-reveal">
+        <QuickCategories categories={categories} />
         <ValueProps settings={valuePropsSettings} />
 
         {/* Nuevos ingresos: solo cuando el admin la activa (mucho stock nuevo cargado) */}
