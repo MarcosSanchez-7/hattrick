@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { ipAddress } from "@vercel/functions";
 import { verifyAdminSessionToken } from "@/lib/admin-auth";
 import { checkAdminRateLimit, checkStrictRateLimit } from "@/lib/rate-limit";
 
@@ -23,6 +22,19 @@ const STRICT_RATE_LIMIT_PATHS = [
 
 const isDev = process.env.NODE_ENV === "development";
 
+/** Reemplaza ipAddress() de @vercel/functions -- misma idea (primera IP de
+ * x-forwarded-for), sin depender de ningún paquete de Vercel. Netlify (y
+ * prácticamente cualquier proxy/CDN) setea el mismo header. */
+function clientIp(request: NextRequest): string | null {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const first = forwardedFor?.split(",")[0]?.trim();
+  if (first) return first;
+  return (
+    request.headers.get("x-real-ip") ||
+    request.headers.get("x-nf-client-connection-ip")
+  );
+}
+
 /**
  * CSP del panel de admin, por nonce en vez de 'unsafe-inline' en
  * script-src (ver next.config.ts para la CSP del storefront público, que
@@ -40,7 +52,7 @@ function buildAdminCsp(nonce: string): string {
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'",
     "img-src 'self' data: https:",
-    "connect-src 'self' https://nominatim.openstreetmap.org https://*.public.blob.vercel-storage.com https://vercel.com",
+    "connect-src 'self' https://nominatim.openstreetmap.org https://*.supabase.co",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -72,7 +84,7 @@ export async function proxy(request: NextRequest) {
     return response;
   };
 
-  const ip = ipAddress(request);
+  const ip = clientIp(request);
   if (ip) {
     const isStrict = STRICT_RATE_LIMIT_PATHS.includes(pathname);
     const { limited, retryAfterSeconds } = isStrict

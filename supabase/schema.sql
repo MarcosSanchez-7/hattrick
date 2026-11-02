@@ -1802,3 +1802,14 @@ alter table product_supplier_sizes enable row level security;
 -- (ver ProductBrowser.tsx) y NO se muestran como badge en la tarjeta de
 -- producto (ver ProductCard.tsx) -- evita duplicar la info ahí.
 alter table tags add column if not exists is_filter boolean not null default false;
+
+-- Migración de hosting (Vercel -> Netlify): bucket de Supabase Storage que
+-- reemplaza a Vercel Blob. Público para lectura (fotos de producto/
+-- categoría/parches/branding, servidas directo por URL) -- las escrituras
+-- siempre pasan por server-side con la service_role key (lib/supabase/
+-- server.ts) o por un token firmado de un solo uso (createSignedUploadUrl,
+-- ver app/api/admin/upload/route.ts), nunca por RLS, así que no hace falta
+-- ninguna policy extra acá.
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('product-images', 'product-images', true, 26214400)
+on conflict (id) do nothing;

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { del, put } from "@vercel/blob";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
 import convertHeic from "heic-convert";
-import { OWN_BLOB_HOST } from "@/lib/image";
+import { supabaseAdmin } from "@/lib/supabase/server";
 
+const BUCKET = "product-images";
 const MAX_BYTES = 25 * 1024 * 1024;
 const CONVERTIBLE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const HEIC_MIME_TYPES = new Set(["image/heic", "image/heif"]);
@@ -21,11 +21,11 @@ const DETAIL_MAX = 1000;
 // "full" ya no se usa como imagen principal de la ficha (eso pasó a
 // "detail") -- hoy solo la consumen el feed de Meta, el zoom de un parche y
 // un par de carruseles, ninguno necesita 2000px. Bajarla a 1400 corta a la
-// mitad su peso (era el 73% del storage del Blob) sin pérdida visible ahí.
+// mitad su peso sin pérdida visible ahí.
 const FULL_MAX = 1400;
 
-function isHeic(contentType: string, pathname: string) {
-  return HEIC_MIME_TYPES.has(contentType) || /\.hei[cf]$/i.test(pathname);
+function isHeic(contentType: string, path: string) {
+  return HEIC_MIME_TYPES.has(contentType) || /\.hei[cf]$/i.test(path);
 }
 
 /** Solo letras/números/guiones (mismo alfabeto que un slug) — nunca se
@@ -36,44 +36,63 @@ function sanitizeFolder(value: unknown): string | null {
   return clean || null;
 }
 
+async function removeRaw(path: string) {
+  await supabaseAdmin.storage.from(BUCKET).remove([path]).catch(() => {});
+}
+
+/** Sube una variante procesada y devuelve su URL pública. */
+async function uploadVariant(
+  path: string,
+  payload: Buffer,
+  contentType: string,
+): Promise<string> {
+  const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, payload, {
+    contentType,
+    upsert: false,
+  });
+  if (error) throw new Error(`No se pudo subir "${path}": ${error.message}`);
+  return supabaseAdmin.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
 export async function POST(request: NextRequest) {
-  let rawUrl: string | undefined;
+  let rawPath: string | undefined;
   let folder: string | null = null;
 
   try {
     const body = await request.json();
-    rawUrl = typeof body?.url === "string" ? body.url : undefined;
+    rawPath = typeof body?.path === "string" ? body.path : undefined;
     folder = sanitizeFolder(body?.folder);
   } catch {
     return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 });
   }
 
-  if (!rawUrl || !OWN_BLOB_HOST.test(rawUrl)) {
-    return NextResponse.json({ error: "URL de imagen inválida." }, { status: 400 });
+  if (!rawPath || !rawPath.startsWith("raw/")) {
+    return NextResponse.json({ error: "Path de imagen inválido." }, { status: 400 });
   }
 
   try {
-    const sourceRes = await fetch(rawUrl);
-    if (!sourceRes.ok) {
+    const { data: downloaded, error: downloadError } = await supabaseAdmin.storage
+      .from(BUCKET)
+      .download(rawPath);
+    if (downloadError || !downloaded) {
       return NextResponse.json(
         { error: "No se pudo leer el archivo recién subido." },
         { status: 400 },
       );
     }
 
-    const contentType = sourceRes.headers.get("content-type") ?? "";
-    const pathname = new URL(rawUrl).pathname;
-    const input = Buffer.from(await sourceRes.arrayBuffer());
+    const contentType = downloaded.type || "";
+    const input = Buffer.from(await downloaded.arrayBuffer());
 
     if (input.byteLength > MAX_BYTES) {
-      await del(rawUrl);
+      await removeRaw(rawPath);
       return NextResponse.json(
         { error: "La imagen supera el tamaño máximo de 25 MB." },
         { status: 400 },
       );
     }
 
-    const heic = isHeic(contentType, pathname);
+    const heic = isHeic(contentType, rawPath);
     let working: Buffer<ArrayBufferLike> = input;
 
     if (heic) {
@@ -82,7 +101,7 @@ export async function POST(request: NextRequest) {
           await convertHeic({ buffer: working, format: "JPEG", quality: 0.92 }),
         );
       } catch {
-        await del(rawUrl);
+        await removeRaw(rawPath);
         return NextResponse.json(
           {
             error:
@@ -138,7 +157,7 @@ export async function POST(request: NextRequest) {
       // con un tamaño enorme no sea costoso de decodificar en el navegador.
       const { width, height } = await sharp(working, { animated: true }).metadata();
       if ((width ?? 0) > 3000 || (height ?? 0) > 3000) {
-        await del(rawUrl);
+        await removeRaw(rawPath);
         return NextResponse.json(
           { error: "El GIF supera el tamaño máximo de 3000×3000 px." },
           { status: 400 },
@@ -162,7 +181,7 @@ export async function POST(request: NextRequest) {
         .webp({ quality: 82, effort: 4 })
         .toBuffer();
     } else {
-      await del(rawUrl);
+      await removeRaw(rawPath);
       return NextResponse.json(
         { error: "Formato no admitido. Usa PNG, JPG, WEBP, GIF o HEIC." },
         { status: 400 },
@@ -174,51 +193,29 @@ export async function POST(request: NextRequest) {
     // URL de "-card"/"-thumb"/"-detail" insertando el sufijo antes de la
     // extensión, así que el nombre base tiene que coincidir exacto entre todas.
     const id = randomUUID();
-    const uploads: Promise<{ url: string }>[] = [
-      put(`${folderPath}/${id}${outputExt}`, payload, {
-        access: "public",
-        contentType: outputContentType,
-        addRandomSuffix: false,
-      }),
+    const uploads: Promise<string>[] = [
+      uploadVariant(`${folderPath}/${id}${outputExt}`, payload, outputContentType),
     ];
     if (cardPayload) {
-      uploads.push(
-        put(`${folderPath}/${id}-card.webp`, cardPayload, {
-          access: "public",
-          contentType: "image/webp",
-          addRandomSuffix: false,
-        }),
-      );
+      uploads.push(uploadVariant(`${folderPath}/${id}-card.webp`, cardPayload, "image/webp"));
     }
     if (thumbPayload) {
-      uploads.push(
-        put(`${folderPath}/${id}-thumb.webp`, thumbPayload, {
-          access: "public",
-          contentType: "image/webp",
-          addRandomSuffix: false,
-        }),
-      );
+      uploads.push(uploadVariant(`${folderPath}/${id}-thumb.webp`, thumbPayload, "image/webp"));
     }
     if (detailPayload) {
-      uploads.push(
-        put(`${folderPath}/${id}-detail.webp`, detailPayload, {
-          access: "public",
-          contentType: "image/webp",
-          addRandomSuffix: false,
-        }),
-      );
+      uploads.push(uploadVariant(`${folderPath}/${id}-detail.webp`, detailPayload, "image/webp"));
     }
-    const [finalBlob] = await Promise.all(uploads);
+    const [finalUrl] = await Promise.all(uploads);
 
     // Fallo al limpiar el raw no debe tirar abajo una subida que ya
-    // terminó bien (el blob final ya está arriba) — antes esto caía al
-    // catch general, devolvía 500, y el blob final quedaba huérfano sin
+    // terminó bien (el archivo final ya está arriba) — antes esto caía al
+    // catch general, devolvía 500, y el archivo final quedaba huérfano sin
     // que el cliente nunca recibiera su URL.
-    await del(rawUrl).catch(() => {});
+    await removeRaw(rawPath);
 
     return NextResponse.json(
       {
-        url: finalBlob.url,
+        url: finalUrl,
         format: outputExt.slice(1),
         optimized: outputExt === ".webp",
         originalBytes: input.byteLength,
@@ -227,7 +224,7 @@ export async function POST(request: NextRequest) {
       { status: 201 },
     );
   } catch (err) {
-    if (rawUrl) await del(rawUrl).catch(() => {});
+    if (rawPath) await removeRaw(rawPath);
     console.error("Error procesando imagen subida:", err);
     return NextResponse.json(
       { error: "No se pudo procesar la imagen." },

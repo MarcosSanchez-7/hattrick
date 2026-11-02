@@ -7,9 +7,22 @@
  * según el contexto (grilla, miniatura, imagen grande).
  */
 
-export const OWN_BLOB_HOST = /^https:\/\/[a-z0-9]+\.public\.blob\.vercel-storage\.com\//i;
+// Antes apuntaba a *.public.blob.vercel-storage.com (migración a Supabase
+// Storage, bucket "product-images") -- el bucket queda fijo en el patrón
+// para no reconocer como "propia" cualquier otra URL de *.supabase.co.
+export const OWN_BLOB_HOST =
+  /^https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/public\/product-images\//i;
 
 export type ImageSize = "thumb" | "card" | "detail" | "full";
+
+/** URL pública completa -> path relativo al bucket "product-images" (lo
+ * que pide el SDK de Supabase Storage para .remove()/.upload() -- a
+ * diferencia de @vercel/blob, que trabajaba con la URL completa). null si
+ * la URL no es nuestra (ver OWN_BLOB_HOST). */
+export function storagePath(url: string): string | null {
+  if (!OWN_BLOB_HOST.test(url)) return null;
+  return url.replace(OWN_BLOB_HOST, "");
+}
 
 export function imageVariant(url: string, size: ImageSize): string {
   // "full" es el archivo tal cual se guardó siempre, sin cambios. URLs que

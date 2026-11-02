@@ -4,7 +4,7 @@ import type { NextConfig } from "next";
  * Dominios externos realmente usados por el sitio (relevados leyendo el
  * código, no adivinados) — cualquier CSP más angosta rompería alguno de
  * estos:
- * - Vercel Blob: fotos de producto/categoría/parches/branding.
+ * - Supabase Storage: fotos de producto/categoría/parches/branding.
  * - OpenStreetMap (tile.*): tiles del mapa de clientes/ubicación de entrega.
  * - Nominatim: búsqueda de zona/barrio dentro del selector de ubicación.
  * - unpkg.com: íconos por defecto de Leaflet (ver components/admin/leafletIcons.ts).
@@ -16,11 +16,6 @@ import type { NextConfig } from "next";
  *   el archivo (ya usado en producción, ej. una imagen del Hero servida
  *   desde i.pinimg.com) — angostarlo a un listado fijo de dominios
  *   rompería cualquier imagen cargada así.
- * - Vercel Analytics (@vercel/analytics/next) sirve su script y manda sus
- *   eventos por /_vercel/insights/* en el propio dominio — no necesita
- *   entrada aparte, ya cubierto por 'self'. Vercel Speed Insights
- *   (@vercel/speed-insights/next) usa el mismo patrón same-origin bajo
- *   /_vercel/speed-insights/*, también cubierto por 'self'.
  * - Meta Pixel (components/analytics/MetaPixel.tsx): fbevents.js se carga
  *   desde connect.facebook.net (script-src) y manda sus eventos a
  *   www.facebook.com/tr (connect-src). El <img> de respaldo en <noscript>
@@ -43,17 +38,12 @@ import type { NextConfig } from "next";
  * SECURITY_AUDIT.md). Ver headers() más abajo: esta CSP se aplica a todo
  * excepto /gestion-ssjblue y /api/admin, que usan la de proxy.ts.
  *
- * connect-src necesita vercel.com Y el host de storage de Vercel Blob:
- * ImageUploader sube el archivo ORIGINAL directo desde el navegador a
- * Vercel Blob (@vercel/blob/client, ver components/admin/ImageUploader.tsx)
- * para no chocar con el límite de tamaño de las funciones serverless. El
- * PUT real de los bytes pasa por requestApi() -> getApiUrl(), que apunta a
- * "https://vercel.com/api/blob" por defecto (confirmado leyendo
- * node_modules/@vercel/blob/dist/chunk-*.js — no directo al host de
- * storage, esa suposición inicial estaba mal y dejó la subida rota una
- * primera vez). El host {storeId}.public.blob.vercel-storage.com se deja
- * igual por las dudas (además de servir las imágenes ya subidas, vía
- * img-src). Sin vercel.com en connect-src, la subida queda bloqueada por la
+ * connect-src necesita *.supabase.co: ImageUploader sube el archivo
+ * ORIGINAL directo desde el navegador a Supabase Storage (lib/supabase/
+ * client.ts + uploadToSignedUrl, ver components/admin/ImageUploader.tsx)
+ * para no chocar con el límite de tamaño de las funciones serverless --
+ * ese PUT es un fetch cross-origin real al host de Supabase, no alcanza
+ * con 'self'. Sin esto en connect-src, la subida queda bloqueada por la
  * CSP y el uploader se queda "subiendo" para siempre sin mostrar error (el
  * fetch nunca sale, pero nada en el código distingue ese rechazo de una
  * subida lenta).
@@ -69,7 +59,7 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self'",
   "img-src 'self' data: https:",
-  "connect-src 'self' https://nominatim.openstreetmap.org https://*.public.blob.vercel-storage.com https://vercel.com https://www.facebook.com https://connect.facebook.net",
+  "connect-src 'self' https://nominatim.openstreetmap.org https://*.supabase.co https://www.facebook.com https://connect.facebook.net",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

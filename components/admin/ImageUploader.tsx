@@ -1,9 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { upload } from "@vercel/blob/client";
+import { supabaseBrowser } from "@/lib/supabase/client";
 import { imageVariant } from "@/lib/image";
 import { IconArrow, IconClose, IconPlus, IconUpload } from "@/components/ui/Icons";
+
+const BUCKET = "product-images";
 
 type Props = {
   images: string[];
@@ -16,25 +18,31 @@ type Props = {
 };
 
 /**
- * Sube el archivo original directo desde el navegador a Vercel Blob (sin
- * pasar por nuestro servidor, para no chocar con el límite de tamaño de
- * las funciones serverless) y luego pide al servidor que lo procese
- * (convertir HEIC, redimensionar, comprimir) a partir de esa URL.
+ * Sube el archivo original directo desde el navegador a Supabase Storage
+ * (sin pasar por nuestro servidor, para no chocar con el límite de tamaño
+ * de las funciones serverless): primero pide un permiso de subida firmado
+ * a /api/admin/upload, después sube con ese permiso, y por último pide al
+ * servidor que lo procese (convertir HEIC, redimensionar, comprimir) a
+ * partir del path ya subido.
  */
 async function uploadFile(file: File, folder?: string): Promise<string> {
-  // Prefijo "raw/" a propósito: si esto queda huérfano (el usuario cierra
-  // la pestaña, o falla la red, entre este PUT y la llamada a /optimize de
-  // abajo), queda identificable y barrible por prefijo desde el dashboard
-  // de Blob en vez de mezclado con el resto de los archivos.
-  const rawBlob = await upload(`raw/${file.name}`, file, {
-    access: "public",
-    handleUploadUrl: "/api/admin/upload",
+  const tokenRes = await fetch("/api/admin/upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filename: file.name, contentType: file.type }),
   });
+  const tokenData = await tokenRes.json();
+  if (!tokenRes.ok) throw new Error(tokenData.error ?? "No se pudo iniciar la subida.");
+
+  const { error: uploadError } = await supabaseBrowser.storage
+    .from(BUCKET)
+    .uploadToSignedUrl(tokenData.path, tokenData.token, file);
+  if (uploadError) throw new Error(uploadError.message || "No se pudo subir la imagen.");
 
   const res = await fetch("/api/admin/upload/optimize", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url: rawBlob.url, folder }),
+    body: JSON.stringify({ path: tokenData.path, folder }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? "No se pudo procesar la imagen.");

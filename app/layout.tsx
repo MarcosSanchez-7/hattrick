@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
-import { AnalyticsWithOptOut } from "@/components/analytics/AnalyticsWithOptOut";
+import { NoTrackOptOut } from "@/components/analytics/NoTrackOptOut";
 import { MetaPixel } from "@/components/analytics/MetaPixel";
 import "./globals.css";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
@@ -71,7 +71,7 @@ export default function RootLayout({
     <html lang="es" className={inter.variable}>
       <body>
         {children}
-        <AnalyticsWithOptOut />
+        <NoTrackOptOut />
         <MetaPixel />
       </body>
     </html>
