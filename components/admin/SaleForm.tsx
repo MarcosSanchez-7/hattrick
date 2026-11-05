@@ -411,7 +411,12 @@ export function SaleForm({
                 flex: 1,
                 border: "1px solid var(--line)",
                 padding: "10px 12px",
-                fontSize: "0.9375rem",
+                // 16px, no menos -- cualquier input con font-size < 16px
+                // dispara el zoom automático de iOS Safari al enfocarlo (no
+                // pasa en Android). Este buscador es el primer campo que se
+                // toca al agregar un artículo a la venta, así que era la
+                // causa del zoom "pegado" que no bajaba solo.
+                fontSize: "1rem",
               }}
             />
           </div>
@@ -547,7 +552,7 @@ export function SaleForm({
                               : "Stock propio"}
                         </div>
                       </td>
-                      <td>
+                      <td data-label="Detalle">
                         <input
                           type="text"
                           value={l.itemNote}
@@ -557,7 +562,7 @@ export function SaleForm({
                           onChange={(e) => updateLine(l.key, "itemNote", e.target.value)}
                         />
                       </td>
-                      <td>
+                      <td data-label="Proveedor">
                         {(() => {
                           const lineProduct = products.find((p) => p.id === l.productId);
                           // Solo se ofrecen los proveedores que tienen stock
@@ -599,7 +604,7 @@ export function SaleForm({
                           );
                         })()}
                       </td>
-                      <td>
+                      <td data-label="Cant.">
                         <input
                           type="number"
                           min={1}
@@ -617,7 +622,7 @@ export function SaleForm({
                           }}
                         />
                       </td>
-                      <td>
+                      <td data-label="Precio venta">
                         <input
                           type="number"
                           min={0}
@@ -629,7 +634,7 @@ export function SaleForm({
                           }
                         />
                       </td>
-                      <td>
+                      <td data-label="Precio costo">
                         <input
                           type="number"
                           min={0}
@@ -641,11 +646,11 @@ export function SaleForm({
                           }
                         />
                       </td>
-                      <td>{formatPrice(lineProfit)}</td>
-                      <td>
+                      <td data-label="Ganancia">{formatPrice(lineProfit)}</td>
+                      <td className="admin-table__remove-cell">
                         <button
                           type="button"
-                          className="admin-icon-btn"
+                          className="admin-icon-btn admin-table__remove-item"
                           aria-label="Quitar artículo"
                           onClick={() => removeLine(l.key)}
                         >
