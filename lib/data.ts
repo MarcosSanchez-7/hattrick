@@ -456,6 +456,40 @@ async function insertMovement(
 }
 
 /**
+ * Ajuste atómico de stock -- lee stock_on_hand y calcula el delta DENTRO
+ * de la misma transacción de Postgres (ver register_stock_adjustment en
+ * schema.sql, con "select ... for update"). Reemplaza el patrón anterior
+ * de leer acá y recién después insertar el movimiento: dos ajustes
+ * concurrentes sobre la misma talla (doble clic, dos pestañas, dos
+ * admins corrigiendo a la vez) ya no pueden partir del mismo valor leído
+ * -- confirmado el bug con una prueba controlada antes de este fix.
+ */
+async function applyStockAdjustment(
+  variantId: string,
+  mode: "restock" | "correction",
+  quantity: number,
+  note: string,
+  createdBy?: string | null,
+): Promise<void> {
+  const { error } = await supabaseAdmin.rpc("register_stock_adjustment", {
+    p_variant_id: variantId,
+    p_mode: mode,
+    p_quantity: quantity,
+    p_note: note,
+    p_created_by: createdBy ?? null,
+  });
+  if (error) {
+    if (error.message.includes("Talla no encontrada")) {
+      throw new DataError("Talla no encontrada.", 404);
+    }
+    if (error.message.includes("stock_on_hand")) {
+      fail("No hay suficiente stock para aplicar ese cambio.", 400);
+    }
+    fail(`No se pudo registrar el movimiento de stock: ${error.message}`);
+  }
+}
+
+/**
  * sale_items.product_name_snapshot/size_snapshot SOLO se escriben hoy al
  * vender por CSV/dropshipping (ver el comentario en rowToSale) -- una venta
  * normal, hecha contra un variant_id real, nunca los tiene. Si esa variante
@@ -531,10 +565,10 @@ async function syncProductVariants(
         await insertMovement(variantId, "restock", qty, "Alta inicial desde el panel");
       }
     } else if (qty !== current.stock_on_hand) {
-      await insertMovement(
+      await applyStockAdjustment(
         current.id,
         "correction",
-        qty - current.stock_on_hand,
+        qty,
         "Ajuste de cantidad desde el panel de administración",
       );
     }
@@ -568,35 +602,23 @@ export async function registerStockAdjustment(
 ): Promise<void> {
   const quantity = Math.round(input.quantity);
 
-  const { data: variant, error } = await supabaseAdmin
-    .from("product_variants")
-    .select("id, stock_on_hand")
-    .eq("id", input.variantId)
-    .maybeSingle();
-  if (error) fail(`No se pudo leer la talla: ${error.message}`);
-  if (!variant) throw new DataError("Talla no encontrada.", 404);
-
-  let delta: number;
   let defaultNote: string;
   if (input.mode === "restock") {
     if (!Number.isFinite(quantity) || quantity <= 0) {
       throw new DataError("La cantidad a reponer debe ser mayor que 0.");
     }
-    delta = quantity;
     defaultNote = "Reposición manual desde Inventario";
   } else {
     if (!Number.isFinite(quantity) || quantity < 0) {
       throw new DataError("La cantidad no puede ser negativa.");
     }
-    delta = quantity - (variant as VariantRow).stock_on_hand;
     defaultNote = "Corrección manual desde Inventario";
-    if (delta === 0) return;
   }
 
-  await insertMovement(
+  await applyStockAdjustment(
     input.variantId,
     input.mode,
-    delta,
+    quantity,
     input.note?.trim() || defaultNote,
     input.adminName ?? null,
   );
