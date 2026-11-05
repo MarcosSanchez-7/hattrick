@@ -1813,3 +1813,55 @@ alter table tags add column if not exists is_filter boolean not null default fal
 insert into storage.buckets (id, name, public, file_size_limit)
 values ('product-images', 'product-images', true, 26214400)
 on conflict (id) do nothing;
+
+-- Ajuste de stock atómico (fix de condición de carrera confirmada con una
+-- prueba controlada: dos correcciones concurrentes sobre la misma talla
+-- leían el mismo stock_on_hand y calculaban su delta por separado, sumando
+-- de más en vez de converger al valor pedido). "select ... for update"
+-- toma un lock de fila: un segundo llamado concurrente sobre la misma
+-- talla espera a que el primero termine (incluido el trigger que aplica
+-- el delta) antes de leer, así que ve el stock ya actualizado. Reemplaza
+-- la lectura+cálculo que antes vivía en el código de la app
+-- (registerStockAdjustment y la rama de corrección de syncProductVariants,
+-- lib/data.ts) -- mismo criterio que record_sale/update_sale.
+create or replace function register_stock_adjustment(
+  p_variant_id text,
+  p_mode text,
+  p_quantity integer,
+  p_note text,
+  p_created_by text
+)
+returns void
+language plpgsql
+as $$
+declare
+  v_stock integer;
+  v_delta integer;
+begin
+  select stock_on_hand into v_stock
+  from product_variants
+  where id = p_variant_id
+  for update;
+
+  if v_stock is null then
+    raise exception 'Talla no encontrada.';
+  end if;
+
+  if p_mode = 'restock' then
+    v_delta := p_quantity;
+  elsif p_mode = 'correction' then
+    v_delta := p_quantity - v_stock;
+  else
+    raise exception 'Modo de ajuste inválido: %', p_mode;
+  end if;
+
+  if v_delta = 0 then
+    return;
+  end if;
+
+  insert into inventory_movements (variant_id, movement_type, quantity_delta, note, created_by)
+  values (p_variant_id, p_mode, v_delta, p_note, p_created_by);
+end;
+$$;
+
+alter function register_stock_adjustment(text, text, integer, text, text) set search_path = public;
