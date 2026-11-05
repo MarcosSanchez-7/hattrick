@@ -6,6 +6,19 @@ const pyg = new Intl.NumberFormat("es-PY", {
 
 export const formatPrice = (value: number) => pyg.format(value);
 
+const plainNumber = new Intl.NumberFormat("es-PY", { maximumFractionDigits: 0 });
+
+/** Mismo separador de miles que formatPrice (es-PY: "."), sin el símbolo de
+ * moneda -- para inputs editables donde el usuario tipea el número pero no
+ * tiene sentido mostrarle "Gs." adentro del campo (ver SaleForm.tsx). */
+export const formatNumber = (value: number) => plainNumber.format(value);
+
+/** Inverso de formatNumber -- saca todo lo que no sea dígito (separadores
+ * de miles incluidos) para volver a tener el número crudo que se guarda en
+ * el estado/se manda al servidor. */
+export const parseFormattedNumber = (value: string): string =>
+  value.replace(/[^\d]/g, "");
+
 const RELATIVE_UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["year", 60 * 60 * 24 * 365],
   ["month", 60 * 60 * 24 * 30],

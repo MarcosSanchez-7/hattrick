@@ -12,7 +12,7 @@ import {
   type ShippingMethod,
 } from "@/lib/catalog";
 import type { Customer } from "@/lib/data";
-import { formatPrice } from "@/lib/format";
+import { formatNumber, formatPrice, parseFormattedNumber } from "@/lib/format";
 import { IconClose, IconPlus, IconSearch } from "@/components/ui/Icons";
 import { LocationPicker, type LatLng } from "@/components/admin/LocationPicker";
 import { ProductVisual } from "@/components/product/ProductVisual";
@@ -624,29 +624,29 @@ export function SaleForm({
                       </td>
                       <td data-label="Precio venta">
                         <input
-                          type="number"
-                          min={0}
-                          step={1000}
-                          value={l.unitPrice}
+                          type="text"
+                          inputMode="numeric"
+                          value={l.unitPrice ? formatNumber(Number(l.unitPrice)) : ""}
                           className="admin-variant-qty"
                           onChange={(e) =>
-                            updateLine(l.key, "unitPrice", e.target.value)
+                            updateLine(l.key, "unitPrice", parseFormattedNumber(e.target.value))
                           }
                         />
                       </td>
                       <td data-label="Precio costo">
                         <input
-                          type="number"
-                          min={0}
-                          step={1000}
-                          value={l.costPrice}
+                          type="text"
+                          inputMode="numeric"
+                          value={l.costPrice ? formatNumber(Number(l.costPrice)) : ""}
                           className="admin-variant-qty"
                           onChange={(e) =>
-                            updateLine(l.key, "costPrice", e.target.value)
+                            updateLine(l.key, "costPrice", parseFormattedNumber(e.target.value))
                           }
                         />
                       </td>
-                      <td data-label="Ganancia">{formatPrice(lineProfit)}</td>
+                      <td data-label="Ganancia" className="admin-table__profit-cell">
+                        {formatPrice(lineProfit)}
+                      </td>
                       <td className="admin-table__remove-cell">
                         <button
                           type="button"
@@ -671,7 +671,7 @@ export function SaleForm({
               <span>Total venta</span>
               <span>{formatPrice(total)}</span>
             </div>
-            <div className="totals__row totals__row--total">
+            <div className="totals__row totals__row--total totals__row--profit">
               <span>Ganancia</span>
               <span>{formatPrice(profit)}</span>
             </div>

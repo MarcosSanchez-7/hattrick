@@ -2292,6 +2292,11 @@ textarea {
 .totals__row {
   display: flex;
   justify-content: space-between;
+  /* Piso mínimo de separación entre la etiqueta y el monto -- sin esto, una
+     etiqueta/monto largos (ej. "Ganancia" en negrita + "Gs. 75.000") podían
+     ocupar casi todo el ancho disponible y quedar pegados, porque
+     space-between solo reparte el espacio que sobra. */
+  gap: var(--sp-3);
   font-size: 0.875rem;
   color: var(--ink-soft);
 }
@@ -4113,17 +4118,16 @@ textarea {
   }
 
   /* Botón "quitar artículo" (SaleForm): insignia roja flotando en la
-     esquina superior izquierda de la tarjeta -- mismo lenguaje que el
-     badge de borrar de iOS -- en vez de un ícono gris al final de la
-     tarjeta, donde se perdía. #b3132a es el mismo rojo que ya usan las
-     demás acciones destructivas del admin (.admin-icon-btn--danger). */
+     esquina superior derecha de la tarjeta -- en vez de un ícono gris al
+     final de la tarjeta, donde se perdía. #b3132a es el mismo rojo que ya
+     usan las demás acciones destructivas del admin (.admin-icon-btn--danger). */
   .admin-table td.admin-table__remove-cell {
     padding: 0;
   }
   .admin-table__remove-item {
     position: absolute;
     top: -10px;
-    left: -10px;
+    right: -10px;
     width: 28px;
     height: 28px;
     border-radius: 999px;
@@ -4142,6 +4146,34 @@ textarea {
   }
   .admin-table td:not([data-label]) {
     padding-block: var(--sp-2);
+  }
+  /* Valores editables de una fila "etiqueta: valor" (SaleForm) -- sin la
+     caja/borde completo de .admin-variant-qty, que se veía repetitivo como
+     una fila de cuadraditos; solo una línea inferior, centrados, usando
+     todo el ancho que deja libre la etiqueta. */
+  .admin-table td[data-label] input.admin-variant-qty,
+  .admin-table td[data-label] select.admin-variant-qty {
+    flex: 1;
+    min-width: 0;
+    max-width: 150px;
+    width: auto;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+    padding: 4px 2px;
+    text-align: center;
+  }
+  .admin-table td[data-label] input.admin-variant-qty:focus,
+  .admin-table td[data-label] select.admin-variant-qty:focus {
+    outline: none;
+    border-bottom-color: var(--ink);
+  }
+  /* Ganancia en verde suave (--success), para distinguirla a simple vista
+     del precio de venta/costo -- tanto en la fila de cada artículo como en
+     el total de la venta. */
+  .admin-table__profit-cell,
+  .totals__row--profit {
+    color: var(--success);
   }
   .admin-table td:not([data-label]):first-child {
     padding-top: 0;
