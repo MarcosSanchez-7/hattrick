@@ -3327,6 +3327,53 @@ textarea {
   border-bottom: 0;
 }
 
+/* Tabla de artículos de una venta (SaleForm) -- 8 columnas angostas con
+   inputs, no una lista de filas de ancho libre como el resto de las
+   tablas del admin. El padding estándar (var(--sp-5) = 24px por lado) más
+   los anchos por defecto de los inputs desbordaban cualquier pantalla que
+   no fuera ultra-wide, forzando scroll horizontal y dejando "Artículo" sin
+   espacio real (el nombre del producto partido en 3-4 líneas). Las columnas
+   angostas usan un ancho fijo (<colgroup> en el JSX) y padding reducido;
+   Artículo, sin ancho fijo, se queda con lo que sobra. table-layout:fixed
+   es necesario para que el navegador realmente respete esos anchos del
+   <colgroup> -- con el "auto" por defecto son apenas una sugerencia, y el
+   browser terminaba angostando Artículo de cualquier forma si el resto no
+   entraba, en vez de ajustarse ÉL al espacio libre real. */
+.admin-table--sale-items {
+  table-layout: fixed;
+}
+.admin-table--sale-items th,
+.admin-table--sale-items td {
+  padding-inline: var(--sp-3);
+  white-space: normal;
+}
+.admin-table--sale-items td input.admin-variant-qty,
+.admin-table--sale-items td select.admin-variant-qty {
+  width: 100%;
+  padding-inline: 6px;
+  text-align: center;
+}
+/* La columna Cant. es la más angosta (50px) -- las flechitas nativas de
+   type=number le robaban casi todo el espacio al dígito. Sin ellas entra
+   cómodo y centrado; el stepper no se pierde: el input sigue aceptando
+   flechas de teclado y los límites min/max de todas formas. */
+.admin-table--sale-items td input[type='number'] {
+  -moz-appearance: textfield;
+}
+.admin-table--sale-items td input[type='number']::-webkit-outer-spin-button,
+.admin-table--sale-items td input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+/* Última columna (botón quitar, 32px) -- con el padding estándar de la
+   tabla no entraba en su propia celda y empujaba el ancho total de
+   .admin-table-wrap, forzando scroll horizontal aunque las demás columnas
+   entraran perfecto. */
+.admin-table--sale-items td:last-child {
+  padding-inline: 4px;
+  text-align: center;
+}
+
 .admin-table__product {
   display: flex;
   align-items: center;

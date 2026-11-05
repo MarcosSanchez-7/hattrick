@@ -521,7 +521,22 @@ export function SaleForm({
           <p className="admin-help">Todavía no agregaste ningún artículo.</p>
         ) : (
           <div className="admin-table-wrap">
-            <table className="admin-table">
+            <table className="admin-table admin-table--sale-items">
+              {/* Columnas de ancho fijo para lo que tiene un contenido
+                  acotado (cantidad, precios, proveedor) -- así Artículo
+                  (sin ancho fijo) se queda con todo el resto en vez de
+                  partir "Cerro Porteño 2026" en 3-4 líneas, y la fila entra
+                  sin scroll horizontal en una pantalla normal. */}
+              <colgroup>
+                <col />
+                <col style={{ width: 100 }} />
+                <col style={{ width: 80 }} />
+                <col style={{ width: 50 }} />
+                <col style={{ width: 100 }} />
+                <col style={{ width: 100 }} />
+                <col style={{ width: 80 }} />
+                <col style={{ width: 48 }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Artículo</th>
@@ -557,7 +572,6 @@ export function SaleForm({
                           type="text"
                           value={l.itemNote}
                           className="admin-variant-qty"
-                          style={{ width: 140 }}
                           placeholder="Personalizado, parches…"
                           onChange={(e) => updateLine(l.key, "itemNote", e.target.value)}
                         />
@@ -611,7 +625,6 @@ export function SaleForm({
                           max={l.maxStock ?? undefined}
                           value={l.quantity}
                           className="admin-variant-qty"
-                          style={{ width: 70 }}
                           onChange={(e) => {
                             const raw = Number(e.target.value) || 1;
                             const quantity =
