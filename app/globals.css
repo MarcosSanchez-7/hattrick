@@ -4106,9 +4106,35 @@ textarea {
     width: 100%;
   }
   .admin-table tr {
+    position: relative;
     border: 1px solid var(--line);
     padding: var(--sp-4);
     margin-bottom: var(--sp-3);
+  }
+
+  /* Botón "quitar artículo" (SaleForm): insignia roja flotando en la
+     esquina superior izquierda de la tarjeta -- mismo lenguaje que el
+     badge de borrar de iOS -- en vez de un ícono gris al final de la
+     tarjeta, donde se perdía. #b3132a es el mismo rojo que ya usan las
+     demás acciones destructivas del admin (.admin-icon-btn--danger). */
+  .admin-table td.admin-table__remove-cell {
+    padding: 0;
+  }
+  .admin-table__remove-item {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background: #b3132a;
+    border: 2px solid var(--surface);
+    color: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  }
+  .admin-table__remove-item:hover {
+    background: #8f0f21;
+    border-color: var(--surface);
   }
   .admin-table td {
     border: none;
