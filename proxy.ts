@@ -125,9 +125,31 @@ export async function proxy(request: NextRequest) {
   // Vendedor: acceso de solo lectura, únicamente a Inventario. Se resuelve
   // acá (no página por página) para que ninguna sección nueva se olvide de
   // excluirla, y para cerrar de un saque cualquier endpoint de escritura.
+  //
+  // "Solo lectura" NO significa "cualquier GET de /api/admin/**" -- eso
+  // dejaba leer clientes, ventas y site_settings crudo con un curl directo,
+  // aunque la UI de vendedor nunca llegue a mostrar esas secciones (la
+  // restricción de la UI no protege la API). /gestion-ssjblue/inventario
+  // obtiene sus datos server-side (getAllProducts/getAllCategories en
+  // lib/data.ts, nunca vía fetch del navegador), así que hoy vendedor no
+  // necesita leer NINGÚN endpoint de la API por GET -- la allowlist queda
+  // vacía a propósito. Si una futura pantalla de solo-inventario necesita
+  // leer algo más por API, agregar su prefijo acá a mano.
+  const VENDEDOR_ALLOWED_GET_PREFIXES: string[] = [];
+
   if (session.role === "vendedor") {
     if (isApi) {
-      if (request.method !== "GET" && pathname !== "/api/admin/heartbeat") {
+      if (pathname === "/api/admin/heartbeat") {
+        if (request.method !== "POST") {
+          return NextResponse.json(
+            { error: "Tu usuario es de solo lectura." },
+            { status: 403 },
+          );
+        }
+      } else if (
+        request.method !== "GET" ||
+        !VENDEDOR_ALLOWED_GET_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+      ) {
         return NextResponse.json(
           { error: "Tu usuario es de solo lectura." },
           { status: 403 },
