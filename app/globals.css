@@ -777,14 +777,20 @@ textarea {
 .chip {
   display: inline-flex;
   align-items: center;
+  gap: var(--sp-2);
   height: 34px;
   padding-inline: var(--sp-4);
   border: 1px solid var(--line);
+  border-radius: 999px;
   font-size: 0.8125rem;
   transition:
     border-color 0.2s var(--ease),
     background-color 0.2s var(--ease),
     color 0.2s var(--ease);
+}
+
+.chip .icon {
+  flex: none;
 }
 
 .chip:hover {
@@ -1073,7 +1079,7 @@ textarea {
   }
 
   .hero__slide {
-    height: clamp(520px, 70vh, 650px);
+    height: clamp(420px, 56vh, 560px);
     /* Composición mobile independiente de desktop: contenido abajo (no
        centrado), con la imagen vertical dedicada si existe (--hero-bg-mobile,
        seteada en Hero.tsx -- cae de nuevo en la de desktop si no hay una). */
@@ -1238,6 +1244,7 @@ textarea {
   position: relative;
   display: block;
   min-height: 240px;
+  border-radius: 16px;
   overflow: hidden;
 }
 
@@ -1502,6 +1509,7 @@ textarea {
   display: block;
   background: var(--surface-soft);
   aspect-ratio: 4 / 5;
+  border-radius: 16px;
   overflow: hidden;
 }
 
@@ -1553,7 +1561,8 @@ textarea {
   display: inline-flex;
   align-items: center;
   height: 22px;
-  padding-inline: var(--sp-2);
+  padding-inline: var(--sp-3);
+  border-radius: 999px;
   font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -2387,11 +2396,19 @@ textarea {
 }
 
 .filter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
   height: 34px;
   padding-inline: var(--sp-4);
   border: 1px solid var(--line);
+  border-radius: 999px;
   font-size: 0.8125rem;
   transition: all 0.2s var(--ease);
+}
+
+.filter .icon {
+  flex: none;
 }
 
 .filter:hover {
@@ -3669,6 +3686,36 @@ textarea {
   font-weight: 700;
 }
 
+/* Título-botón de un .admin-fieldset colapsable (CollapsibleFieldset.tsx)
+   -- mismo título de siempre, ahora clickeable, con una flecha que indica
+   si el contenido está desplegado. */
+.admin-fieldset__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.admin-fieldset__toggle .meta {
+  display: block;
+  margin-top: 2px;
+  font-weight: 400;
+}
+.admin-fieldset__chevron {
+  flex: none;
+  transition: transform 0.2s var(--ease);
+}
+.admin-fieldset__toggle[aria-expanded='false'] .admin-fieldset__chevron {
+  transform: rotate(-90deg);
+}
+
 .admin-form__grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -4165,9 +4212,12 @@ textarea {
   }
 
   /* Botón "quitar artículo" (SaleForm): insignia roja flotando en la
-     esquina superior derecha de la tarjeta -- en vez de un ícono gris al
-     final de la tarjeta, donde se perdía. #b3132a es el mismo rojo que ya
-     usan las demás acciones destructivas del admin (.admin-icon-btn--danger). */
+     esquina superior derecha de la tarjeta -- visible tanto colapsada como
+     desplegada (ver excepción de abajo), en vez de un ícono gris al final
+     de la tarjeta, donde se perdía. Rojo suave (no el #b3132a de las
+     acciones destructivas del admin) porque acá se ve siempre, no solo al
+     entrar en modo edición -- uno fuerte se sentía demasiado alarmante
+     para algo que se usa de forma rutinaria. */
   .admin-table td.admin-table__remove-cell {
     padding: 0;
   }
@@ -4178,14 +4228,20 @@ textarea {
     width: 28px;
     height: 28px;
     border-radius: 999px;
-    background: #b3132a;
+    background: #f87171;
     border: 2px solid var(--surface);
     color: #fff;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
   }
   .admin-table__remove-item:hover {
-    background: #8f0f21;
+    background: #ef4444;
     border-color: var(--surface);
+  }
+  /* Excepción al "la fila colapsada solo muestra el nombre": el botón de
+     quitar se ve siempre, para no obligar a desplegar la tarjeta solo para
+     sacar un artículo cargado por error. */
+  .admin-table tr[data-expanded='false'] td.admin-table__remove-cell:not([data-label]):last-child {
+    display: block;
   }
   .admin-table td {
     border: none;
