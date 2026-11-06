@@ -104,6 +104,8 @@ export default async function HomePage() {
       <div className="page-reveal">
         <ValueProps settings={valuePropsSettings} />
 
+        <CategoryGrid categories={categories} products={products} />
+
         {/* Nuevos ingresos: solo cuando el admin la activa (mucho stock nuevo cargado) */}
         {homeSettings.showNewArrivals && nuevos.length > 0 ? (
           <section className="section" id="novedades">
@@ -124,7 +126,6 @@ export default async function HomePage() {
           </section>
         ) : null}
 
-        <CategoryGrid categories={categories} products={products} />
         <OffersSection products={products} tags={tags} />
         <DtfSection settings={dtfSettings} products={dtfProducts} tags={tags} />
 
