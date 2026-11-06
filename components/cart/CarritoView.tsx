@@ -19,7 +19,7 @@ import {
   IconPlus,
   IconTrash,
   IconTruck,
-  IconWhatsapp,
+  IconWhatsappBadge,
 } from "@/components/ui/Icons";
 
 type InvoiceInfo = {
@@ -295,7 +295,7 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
                   })
                 }
               >
-                <IconWhatsapp className="icon--sm" />
+                <IconWhatsappBadge className="icon--sm" />
                 Continuar por WhatsApp
               </a>
             ) : whatsappNumber && !location ? (

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { Product, Tag } from "@/lib/catalog";
 import { ProductGrid } from "@/components/product/ProductCard";
+import { DEFAULT_TAG_ICON, TAG_ICONS } from "@/components/ui/CatalogIcons";
 
 type Sort = "destacados" | "precio-asc" | "precio-desc" | "novedad";
 
@@ -30,14 +31,16 @@ export function ProductBrowser({
 
   // Solo etiquetas marcadas "usar como filtro" (ej. ligas) Y que de verdad
   // tiene algún producto de esta lista -- evita, ej., mostrar el chip "Serie
-  // A" en una categoría donde no hay ningún producto italiano.
-  const filterTags = useMemo(
-    () =>
-      tags.filter(
-        (t) => t.isFilter && products.some((p) => p.tags.includes(t.name)),
-      ),
-    [tags, products],
-  );
+  // A" en una categoría donde no hay ningún producto italiano. Con una sola
+  // etiqueta disponible (ej. "NBA" en Shorts, donde es la única liga
+  // cargada) el filtro no sirve -- no hay entre qué elegir -- así que la
+  // barra entera se oculta a menos que haya 2 o más (ver abajo).
+  const filterTags = useMemo(() => {
+    const candidates = tags.filter(
+      (t) => t.isFilter && products.some((p) => p.tags.includes(t.name)),
+    );
+    return candidates.length > 1 ? candidates : [];
+  }, [tags, products]);
 
   const toggleFilter = (name: string) => {
     setActiveFilters((prev) =>
@@ -75,17 +78,21 @@ export function ProductBrowser({
     <>
       {filterTags.length > 0 ? (
         <div className="filters" style={{ marginBottom: "var(--sp-4)" }}>
-          {filterTags.map((tag) => (
-            <button
-              key={tag.name}
-              type="button"
-              className="filter"
-              data-active={activeFilters.includes(tag.name) ? "true" : "false"}
-              onClick={() => toggleFilter(tag.name)}
-            >
-              {tag.name}
-            </button>
-          ))}
+          {filterTags.map((tag) => {
+            const TagIcon = TAG_ICONS[tag.name] ?? DEFAULT_TAG_ICON;
+            return (
+              <button
+                key={tag.name}
+                type="button"
+                className="filter"
+                data-active={activeFilters.includes(tag.name) ? "true" : "false"}
+                onClick={() => toggleFilter(tag.name)}
+              >
+                <TagIcon className="icon--sm" />
+                {tag.name}
+              </button>
+            );
+          })}
         </div>
       ) : null}
 

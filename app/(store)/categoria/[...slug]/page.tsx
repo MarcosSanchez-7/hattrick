@@ -13,6 +13,7 @@ import {
 import { getAllCategories, getAllProducts, getAllTags } from "@/lib/data";
 import { SITE_URL, buildBreadcrumbJsonLd } from "@/lib/site";
 import { ProductBrowser } from "@/components/product/ProductBrowser";
+import { SUBCATEGORY_ICONS } from "@/components/ui/CatalogIcons";
 
 type Params = { slug: string[] };
 
@@ -125,15 +126,19 @@ export default async function CategoryPage({
 
           {children.length > 0 ? (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 20 }}>
-              {children.map((child) => (
-                <Link
-                  key={child.slug}
-                  href={`/categoria/${categorySlugPath(categories, child.slug).join("/")}`}
-                  className="chip"
-                >
-                  {child.name}
-                </Link>
-              ))}
+              {children.map((child) => {
+                const ChildIcon = SUBCATEGORY_ICONS[child.slug];
+                return (
+                  <Link
+                    key={child.slug}
+                    href={`/categoria/${categorySlugPath(categories, child.slug).join("/")}`}
+                    className="chip"
+                  >
+                    {ChildIcon ? <ChildIcon className="icon--sm" /> : null}
+                    {child.name}
+                  </Link>
+                );
+              })}
             </div>
           ) : null}
         </div>
