@@ -17,6 +17,7 @@ import { formatPrice } from "@/lib/format";
 import { imageVariant } from "@/lib/image";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 import { CategoryPathPicker } from "@/components/admin/CategoryPathPicker";
+import { CollapsibleFieldset } from "@/components/admin/CollapsibleFieldset";
 import { TagPicker } from "@/components/admin/TagPicker";
 import { SupplierPicker, type SelectedSupplier } from "@/components/admin/SupplierPicker";
 import { IconChevron, IconFolder } from "@/components/ui/Icons";
@@ -223,6 +224,43 @@ export function ProductForm({
   // el stock sea ajeno/importado — pero solo para uso interno.
   const showVariantEditor = isPropio || form.internalControl;
 
+  // Mismo patrón "carpeta" que patchGroups -- acá con solo 2 grupos fijos
+  // en vez de uno por categoría libre: etiquetas visuales (descriptivas,
+  // ej. "Versión Jugador") separadas de las "de categoría" (is_filter,
+  // arman los chips filtrables de la tienda Y viajan al feed de Meta como
+  // custom_label_0 -- ver app/feed/[token]/route.ts).
+  const tagGroups = useMemo(
+    () => [
+      { key: "visual", name: "Visuales", items: tagsCatalog.filter((t) => !t.isFilter) },
+      { key: "meta", name: "De categoría (filtro / Meta)", items: tagsCatalog.filter((t) => t.isFilter) },
+    ],
+    [tagsCatalog],
+  );
+  const [openTagGroups, setOpenTagGroups] = useState<Set<string>>(
+    () =>
+      new Set(
+        tagGroups
+          .filter((g) => g.items.some((t) => form.tags.includes(t.name)))
+          .map((g) => g.key),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  );
+  const toggleTagGroup = (key: string) => {
+    setOpenTagGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  // Tallas/cantidades arrancan colapsadas (ver Tipo de stock) salvo que el
+  // producto ya tenga alguna cargada -- mismo criterio que los demás
+  // colapsables de este formulario: abierto si hay algo que revisar.
+  const [variantsOpen, setVariantsOpen] = useState(
+    () => Object.keys(form.variantQuantities).length > 0,
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -327,6 +365,159 @@ export function ProductForm({
   return (
     <form className="admin-form" onSubmit={handleSubmit}>
       {error ? <p className="admin-error">{error}</p> : null}
+
+      {/* Lo primero y lo más tardado: cargar fotos. Todo lo demás (datos,
+          precio, stock) es más rápido de completar después. */}
+      <div className="admin-fieldset">
+        <p className="admin-fieldset__title">Fotos del producto</p>
+        <ImageUploader
+          images={form.images}
+          onChange={(images) => update("images", images)}
+          max={6}
+          folder={form.category || undefined}
+        />
+      </div>
+
+      <div className="admin-fieldset">
+        <p className="admin-fieldset__title">Parches disponibles</p>
+        {patches.length === 0 ? (
+          <p className="admin-help">
+            Todavía no cargaste ningún parche — se crean desde Generales →
+            Parches.
+          </p>
+        ) : (
+          <>
+            <p className="admin-help" style={{ marginTop: 0 }}>
+              Desplegá una carpeta y marcá cuáles de esos parches se le pueden
+              poner a este producto.
+            </p>
+            {patchGroups.map((group) => {
+              const visibleItems = group.items.filter(
+                (p) => p.isVisible || form.patchIds.includes(p.id),
+              );
+              if (visibleItems.length === 0) return null;
+              const selectedCount = visibleItems.filter((p) =>
+                form.patchIds.includes(p.id),
+              ).length;
+              const isOpen = openPatchCategories.has(group.name);
+              return (
+                <div key={group.name} className="admin-cat-group">
+                  <button
+                    type="button"
+                    className="admin-cat-group__head"
+                    aria-expanded={isOpen}
+                    onClick={() => togglePatchCategory(group.name)}
+                  >
+                    <IconFolder className="icon--sm" />
+                    <span>{group.name}</span>
+                    <span className="meta">
+                      {selectedCount > 0
+                        ? `${selectedCount} seleccionado${selectedCount !== 1 ? "s" : ""}`
+                        : `${visibleItems.length} parche${visibleItems.length !== 1 ? "s" : ""}`}
+                    </span>
+                    <IconChevron className="icon--sm" />
+                  </button>
+                  {isOpen ? (
+                    <div className="admin-checklist" style={{ padding: "0 var(--sp-5) var(--sp-4)" }}>
+                      {visibleItems.map((p) => (
+                        <label
+                          key={p.id}
+                          className="admin-check"
+                          data-checked={form.patchIds.includes(p.id) ? "true" : "false"}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={form.patchIds.includes(p.id)}
+                            onChange={() => togglePatch(p.id)}
+                          />
+                          {p.images[0] ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={imageVariant(p.images[0], "thumb")}
+                              alt=""
+                              style={{ width: 20, height: 20, objectFit: "contain", marginRight: 4 }}
+                              loading="lazy"
+                            />
+                          ) : null}
+                          {p.name} · {formatPrice(p.price)}
+                          {p.stock === 0 ? (
+                            <span className="meta"> · sin stock</span>
+                          ) : null}
+                        </label>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </>
+        )}
+      </div>
+
+      <div className="admin-fieldset">
+        <p className="admin-fieldset__title">Descripción</p>
+        <div className="admin-field">
+          <label htmlFor="description">Descripción</label>
+          <textarea
+            id="description"
+            required
+            value={form.description}
+            onChange={(e) => update("description", e.target.value)}
+            placeholder="Tejido, corte, detalles del diseño…"
+          />
+        </div>
+      </div>
+
+      <div className="admin-fieldset">
+        <p className="admin-fieldset__title">Etiquetas</p>
+        {tagGroups.map((group) => {
+          const isOpen = openTagGroups.has(group.key);
+          const selectedCount = group.items.filter((t) =>
+            form.tags.includes(t.name),
+          ).length;
+          return (
+            <div key={group.key} className="admin-cat-group">
+              <button
+                type="button"
+                className="admin-cat-group__head"
+                aria-expanded={isOpen}
+                onClick={() => toggleTagGroup(group.key)}
+              >
+                <IconFolder className="icon--sm" />
+                <span>{group.name}</span>
+                <span className="meta">
+                  {selectedCount > 0
+                    ? `${selectedCount} seleccionada${selectedCount !== 1 ? "s" : ""}`
+                    : `${group.items.length} etiqueta${group.items.length !== 1 ? "s" : ""}`}
+                </span>
+                <IconChevron className="icon--sm" />
+              </button>
+              {isOpen ? (
+                <div style={{ padding: "0 var(--sp-5) var(--sp-4)" }}>
+                  {group.key === "meta" ? (
+                    <p className="admin-help" style={{ marginTop: 0 }}>
+                      Además de chip filtrable en la tienda, estas viajan al
+                      feed de Meta Commerce Manager (ej. &quot;La Liga&quot;).
+                    </p>
+                  ) : null}
+                  <TagPicker
+                    catalog={group.items}
+                    value={form.tags}
+                    onChange={(next) => update("tags", next)}
+                    onCatalogChange={setTagsCatalog}
+                    isFilter={group.key === "meta"}
+                    newTagPlaceholder={
+                      group.key === "meta"
+                        ? "Nueva etiqueta de categoría (ej. La Liga)"
+                        : "Nueva etiqueta visual (ej. Bajo pedido)"
+                    }
+                  />
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
 
       <div className="admin-fieldset">
         <p className="admin-fieldset__title">Datos principales</p>
@@ -487,71 +678,89 @@ export function ProductForm({
               {label}
             </label>
           ))}
-        </div>
-        <p className="admin-help">
-          {STOCK_MODES.find((m) => m.value === form.stockMode)?.help}
-        </p>
-
-        <div className="admin-field admin-field--checkbox">
-          <input
-            id="internalControl"
-            type="checkbox"
-            checked={form.internalControl}
-            onChange={(e) => update("internalControl", e.target.checked)}
-          />
-          <label htmlFor="internalControl" style={{ marginBottom: 0 }}>
+          <label
+            className="admin-check"
+            data-checked={form.internalControl ? "true" : "false"}
+          >
+            <input
+              type="checkbox"
+              checked={form.internalControl}
+              onChange={(e) => update("internalControl", e.target.checked)}
+            />
             Control interno de stock
           </label>
         </div>
         <p className="admin-help">
-          Cargá cuántas unidades tenés de cada talla para tu propio control,
-          sin importar el tipo de stock elegido arriba. La ficha pública NO
-          muestra esta cantidad — el cliente sigue viendo &quot;Consultar
-          talle&quot; igual que siempre.
+          {STOCK_MODES.find((m) => m.value === form.stockMode)?.help}
+        </p>
+        <p className="admin-help">
+          Control interno: cargá cuántas unidades tenés de cada talla para tu
+          propio control, sin importar el tipo de stock elegido arriba. La
+          ficha pública NO muestra esta cantidad — el cliente sigue viendo
+          &quot;Consultar talle&quot; igual que siempre.
         </p>
 
         {showVariantEditor ? (
-          <>
-            {!isPropio ? (
-              <p className="admin-notice-ok">
-                Esta cantidad es solo para tu control interno — la ficha
-                pública sigue mostrando &quot;Consultar talle&quot;, el cliente no
-                la ve ni queda limitado por ella.
-              </p>
-            ) : null}
-            <div className="admin-variant-list">
-            {SIZES_ADULT.map((size) => {
-              const included = size in form.variantQuantities;
-              return (
-                <div key={size} className="admin-variant-row">
-                  <label
-                    className="admin-check"
-                    data-checked={included ? "true" : "false"}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={included}
-                      onChange={() => toggleSize(size)}
-                    />
-                    {size}
-                  </label>
-                  {included ? (
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      className="admin-variant-qty"
-                      value={form.variantQuantities[size]}
-                      onChange={(e) => setSizeQuantity(size, e.target.value)}
-                      aria-label={`Cantidad en stock, talla ${size}`}
-                      placeholder="Cantidad"
-                    />
-                  ) : null}
+          <div className="admin-cat-group" style={{ marginTop: 8 }}>
+            <button
+              type="button"
+              className="admin-cat-group__head"
+              aria-expanded={variantsOpen}
+              onClick={() => setVariantsOpen((o) => !o)}
+            >
+              <IconFolder className="icon--sm" />
+              <span>Tallas y cantidades</span>
+              <span className="meta">
+                {Object.keys(form.variantQuantities).length > 0
+                  ? `${Object.keys(form.variantQuantities).length} talla${Object.keys(form.variantQuantities).length !== 1 ? "s" : ""}`
+                  : "Sin cargar"}
+              </span>
+              <IconChevron className="icon--sm" />
+            </button>
+            {variantsOpen ? (
+              <div style={{ padding: "0 var(--sp-5) var(--sp-4)" }}>
+                {!isPropio ? (
+                  <p className="admin-notice-ok">
+                    Esta cantidad es solo para tu control interno — la ficha
+                    pública sigue mostrando &quot;Consultar talle&quot;, el cliente no
+                    la ve ni queda limitado por ella.
+                  </p>
+                ) : null}
+                <div className="admin-variant-list">
+                  {SIZES_ADULT.map((size) => {
+                    const included = size in form.variantQuantities;
+                    return (
+                      <div key={size} className="admin-variant-row">
+                        <label
+                          className="admin-check"
+                          data-checked={included ? "true" : "false"}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={included}
+                            onChange={() => toggleSize(size)}
+                          />
+                          {size}
+                        </label>
+                        {included ? (
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            className="admin-variant-qty"
+                            value={form.variantQuantities[size]}
+                            onChange={(e) => setSizeQuantity(size, e.target.value)}
+                            aria-label={`Cantidad en stock, talla ${size}`}
+                            placeholder="Cantidad"
+                          />
+                        ) : null}
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-            </div>
-          </>
+              </div>
+            ) : null}
+          </div>
         ) : (
           <p className="admin-notice-ok">
             Este producto mostrará &quot;Consultar talle&quot; en la tienda en vez
@@ -561,8 +770,10 @@ export function ProductForm({
       </div>
 
       {isPropio ? (
-        <div className="admin-fieldset">
-          <p className="admin-fieldset__title">Proveedores</p>
+        <CollapsibleFieldset
+          title="Proveedores"
+          defaultOpen={form.suppliers.length > 0}
+        >
           <p className="admin-help" style={{ marginTop: 0 }}>
             Opcional — si comprás este producto a más de un proveedor con
             precios distintos, cargalos acá. Al registrar una venta vas a
@@ -577,117 +788,8 @@ export function ProductForm({
               (a, b) => SIZES_ADULT.indexOf(a) - SIZES_ADULT.indexOf(b),
             )}
           />
-        </div>
+        </CollapsibleFieldset>
       ) : null}
-
-      <div className="admin-fieldset">
-        <p className="admin-fieldset__title">Parches disponibles</p>
-        {patches.length === 0 ? (
-          <p className="admin-help">
-            Todavía no cargaste ningún parche — se crean desde Generales →
-            Parches.
-          </p>
-        ) : (
-          <>
-            <p className="admin-help" style={{ marginTop: 0 }}>
-              Desplegá una carpeta y marcá cuáles de esos parches se le pueden
-              poner a este producto.
-            </p>
-            {patchGroups.map((group) => {
-              const visibleItems = group.items.filter(
-                (p) => p.isVisible || form.patchIds.includes(p.id),
-              );
-              if (visibleItems.length === 0) return null;
-              const selectedCount = visibleItems.filter((p) =>
-                form.patchIds.includes(p.id),
-              ).length;
-              const isOpen = openPatchCategories.has(group.name);
-              return (
-                <div key={group.name} className="admin-cat-group">
-                  <button
-                    type="button"
-                    className="admin-cat-group__head"
-                    aria-expanded={isOpen}
-                    onClick={() => togglePatchCategory(group.name)}
-                  >
-                    <IconFolder className="icon--sm" />
-                    <span>{group.name}</span>
-                    <span className="meta">
-                      {selectedCount > 0
-                        ? `${selectedCount} seleccionado${selectedCount !== 1 ? "s" : ""}`
-                        : `${visibleItems.length} parche${visibleItems.length !== 1 ? "s" : ""}`}
-                    </span>
-                    <IconChevron className="icon--sm" />
-                  </button>
-                  {isOpen ? (
-                    <div className="admin-checklist" style={{ padding: "0 var(--sp-5) var(--sp-4)" }}>
-                      {visibleItems.map((p) => (
-                        <label
-                          key={p.id}
-                          className="admin-check"
-                          data-checked={form.patchIds.includes(p.id) ? "true" : "false"}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={form.patchIds.includes(p.id)}
-                            onChange={() => togglePatch(p.id)}
-                          />
-                          {p.images[0] ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={imageVariant(p.images[0], "thumb")}
-                              alt=""
-                              style={{ width: 20, height: 20, objectFit: "contain", marginRight: 4 }}
-                              loading="lazy"
-                            />
-                          ) : null}
-                          {p.name} · {formatPrice(p.price)}
-                          {p.stock === 0 ? (
-                            <span className="meta"> · sin stock</span>
-                          ) : null}
-                        </label>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </>
-        )}
-      </div>
-
-      <div className="admin-fieldset">
-        <p className="admin-fieldset__title">Fotos del producto</p>
-        <ImageUploader
-          images={form.images}
-          onChange={(images) => update("images", images)}
-          max={6}
-          folder={form.category || undefined}
-        />
-      </div>
-
-      <div className="admin-fieldset">
-        <p className="admin-fieldset__title">Descripción y etiquetas</p>
-        <div className="admin-field">
-          <label htmlFor="description">Descripción</label>
-          <textarea
-            id="description"
-            required
-            value={form.description}
-            onChange={(e) => update("description", e.target.value)}
-            placeholder="Tejido, corte, detalles del diseño…"
-          />
-        </div>
-        <div className="admin-field">
-          <label>Etiquetas</label>
-          <TagPicker
-            catalog={tagsCatalog}
-            value={form.tags}
-            onChange={(next) => update("tags", next)}
-            onCatalogChange={setTagsCatalog}
-          />
-        </div>
-      </div>
 
       <div className="admin-actions">
         <button

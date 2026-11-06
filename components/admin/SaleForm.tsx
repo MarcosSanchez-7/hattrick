@@ -13,7 +13,8 @@ import {
 } from "@/lib/catalog";
 import type { Customer } from "@/lib/data";
 import { formatNumber, formatPrice, parseFormattedNumber } from "@/lib/format";
-import { IconClose, IconPlus, IconSearch } from "@/components/ui/Icons";
+import { IconChevron, IconClose, IconPlus, IconSearch } from "@/components/ui/Icons";
+import { CollapsibleFieldset } from "@/components/admin/CollapsibleFieldset";
 import { LocationPicker, type LatLng } from "@/components/admin/LocationPicker";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import { todayInParaguay, toParaguayDateString } from "@/lib/timezone";
@@ -292,6 +293,20 @@ export function SaleForm({
     setLines((prev) => prev.filter((l) => l.key !== key));
   };
 
+  // En mobile cada artículo arranca colapsado (solo nombre + talla a la
+  // vista) -- mismo patrón que InventoryTable.tsx (.admin-table__row-toggle
+  // + data-expanded), que ya no tiene efecto visual en desktop
+  // (display:contents/chevron oculto, ver globals.css).
+  const [expandedLines, setExpandedLines] = useState<Set<string>>(new Set());
+  const toggleLineExpanded = (key: string) => {
+    setExpandedLines((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
   /** Elegir un proveedor autocompleta costPrice con su precio de compra —
    * sigue siendo editable a mano después, como cualquier costPrice. */
   const setLineSupplier = (key: string, supplierId: string) => {
@@ -554,18 +569,29 @@ export function SaleForm({
                   const lineProfit =
                     ((Number(l.unitPrice) || 0) - (Number(l.costPrice) || 0)) *
                     l.quantity;
+                  const isLineOpen = expandedLines.has(l.key);
                   return (
-                    <tr key={l.key}>
+                    <tr key={l.key} data-expanded={isLineOpen ? "true" : "false"}>
                       <td>
-                        <div style={{ fontWeight: 600 }}>{l.name}</div>
-                        <div className="meta">
-                          Talla {l.size} ·{" "}
-                          {l.source === "dropshipping"
-                            ? "Dropshipping"
-                            : l.source === "interno"
-                              ? "Control interno (otro proveedor)"
-                              : "Stock propio"}
-                        </div>
+                        <button
+                          type="button"
+                          className="admin-table__row-toggle"
+                          aria-expanded={isLineOpen}
+                          onClick={() => toggleLineExpanded(l.key)}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 600 }}>{l.name}</div>
+                            <div className="meta">
+                              Talla {l.size} ·{" "}
+                              {l.source === "dropshipping"
+                                ? "Dropshipping"
+                                : l.source === "interno"
+                                  ? "Control interno (otro proveedor)"
+                                  : "Stock propio"}
+                            </div>
+                          </div>
+                          <IconChevron className="icon--sm admin-table__row-chevron" />
+                        </button>
                       </td>
                       <td data-label="Detalle">
                         <input
@@ -692,8 +718,7 @@ export function SaleForm({
         ) : null}
       </div>
 
-      <div className="admin-fieldset">
-        <p className="admin-fieldset__title">Detalles de la venta</p>
+      <CollapsibleFieldset title="Detalles de la venta" defaultOpen={isEdit}>
         <div className="admin-form__grid admin-form__grid--3">
           <div className="admin-field">
             <label htmlFor="channel">Canal de venta</label>
@@ -740,10 +765,9 @@ export function SaleForm({
             />
           </div>
         </div>
-      </div>
+      </CollapsibleFieldset>
 
-      <div className="admin-fieldset">
-        <p className="admin-fieldset__title">Entrega (opcional)</p>
+      <CollapsibleFieldset title="Entrega (opcional)" defaultOpen={isEdit}>
         <p className="admin-help">
           Para tener panorama de cómo se mueven los artículos: quién lo pidió,
           adónde y por qué medio.
@@ -882,7 +906,7 @@ export function SaleForm({
             <LocationPicker value={location} onChange={setLocation} height={200} />
           </div>
         ) : null}
-      </div>
+      </CollapsibleFieldset>
 
       <div className="admin-actions">
         <button

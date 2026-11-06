@@ -13,11 +13,18 @@ export function TagPicker({
   value,
   onChange,
   onCatalogChange,
+  isFilter = false,
+  newTagPlaceholder = "Nueva etiqueta (ej. Bajo pedido)",
 }: {
   catalog: Tag[];
   value: string[];
   onChange: (tags: string[]) => void;
   onCatalogChange: (catalog: Tag[]) => void;
+  /** Con qué valor de is_filter se crea una etiqueta nueva desde ESTA
+   * instancia -- así ProductForm puede mostrar dos TagPicker (visuales /
+   * de categoría) que crean en el grupo correcto. */
+  isFilter?: boolean;
+  newTagPlaceholder?: string;
 }) {
   const [newTag, setNewTag] = useState("");
   const [creating, setCreating] = useState(false);
@@ -38,7 +45,7 @@ export function TagPicker({
       const res = await fetch("/api/admin/tags", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, color: "#2f2f2f" }),
+        body: JSON.stringify({ name, color: "#2f2f2f", isFilter }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "No se pudo crear la etiqueta.");
@@ -93,7 +100,7 @@ export function TagPicker({
               handleCreate();
             }
           }}
-          placeholder="Nueva etiqueta (ej. Bajo pedido)"
+          placeholder={newTagPlaceholder}
           style={{ flex: 1 }}
         />
         <button
