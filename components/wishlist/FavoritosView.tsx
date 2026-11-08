@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import type { Product, Tag } from "@/lib/catalog";
+import type { Tag } from "@/lib/catalog";
+import type { PublicProduct } from "@/lib/data";
 import { useWishlist } from "@/components/wishlist/WishlistProvider";
 import { ProductGrid } from "@/components/product/ProductCard";
 import { IconHeart } from "@/components/ui/Icons";
@@ -10,7 +11,7 @@ export function FavoritosView({
   products,
   tags = [],
 }: {
-  products: Product[];
+  products: PublicProduct[];
   tags?: Tag[];
 }) {
   const { slugs, hydrated } = useWishlist();

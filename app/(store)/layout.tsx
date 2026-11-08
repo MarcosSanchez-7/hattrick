@@ -1,4 +1,4 @@
-import { getAllCategories, getAllPages, getAllProducts, getSetting } from "@/lib/data";
+import { getAllCategories, getAllPages, getAllProducts, getSetting, toPublicProduct } from "@/lib/data";
 import { DEFAULT_BRANDING, DEFAULT_FOOTER, DEFAULT_NAVBAR, DEFAULT_WHOLESALE } from "@/lib/settings";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { CartProvider } from "@/components/cart/CartProvider";
@@ -21,7 +21,7 @@ export const revalidate = 60;
 export default async function StoreLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [categories, products, pages, navbarSettings, footerSettings, branding, wholesaleSettings] =
+  const [categories, allProducts, pages, navbarSettings, footerSettings, branding, wholesaleSettings] =
     await Promise.all([
       getAllCategories(),
       getAllProducts(),
@@ -31,6 +31,11 @@ export default async function StoreLayout({
       getSetting("branding", DEFAULT_BRANDING),
       getSetting("wholesale", DEFAULT_WHOLESALE),
     ]);
+  // CartProvider y Navbar son Client Components: cualquier campo que tenga
+  // este objeto viaja entero al navegador en el payload de RSC, sin importar
+  // qué pinten en pantalla -- por eso se mapea a la versión pública antes de
+  // pasarlo, en vez de pasar el Product completo (ver toPublicProduct en lib/data.ts).
+  const products = allProducts.map(toPublicProduct);
 
   const sameAs = [
     footerSettings.instagramUrl,

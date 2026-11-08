@@ -310,16 +310,39 @@ export const PATTERNS: { value: Pattern; label: string }[] = [
 // Todos reciben los datos como argumento: quien los llama decide de dónde
 // vienen (JSON en servidor, props ya cargadas en cliente).
 
-export const isOnSale = (p: Product) =>
+/** Forma mínima que necesitan los selectores de abajo. Tanto Product (panel
+ * admin) como PublicProduct (storefront, ver lib/data.ts) la cumplen, así
+ * que estas funciones sirven para los dos sin exponerle a un componente del
+ * storefront ningún campo interno solo para poder llamarlas. */
+type ProductLike = {
+  id: string;
+  slug: string;
+  name: string;
+  category: string;
+  price: number;
+  compareAt?: number | null;
+  sizes: string[];
+  soldOut?: string[];
+  tags: string[];
+  reviews: number;
+  isNew?: boolean;
+  createdAt: string;
+};
+
+export const isOnSale = <P extends ProductLike>(p: P) =>
   typeof p.compareAt === "number" && p.compareAt > p.price;
 
-export const discountPercent = (p: Product) =>
+export const discountPercent = <P extends ProductLike>(p: P) =>
   isOnSale(p) ? Math.round((1 - p.price / p.compareAt!) * 100) : 0;
 
-/** Los productos "ajeno"/"importado" no llevan stock por talla: nunca se marcan agotados. */
-export const needsSizeSelection = (p: Product) => p.stockMode === "propio";
+/** Los productos "ajeno"/"importado" no llevan stock por talla: nunca se
+ * marcan agotados. Equivalente a stockMode === "propio" sin necesitar ese
+ * campo -- el alta de producto exige al menos una talla cuando stockMode es
+ * "propio" (ver validateProductInput en lib/data.ts), así que "propio" y
+ * "tiene tallas cargadas" son la misma cosa en la práctica. */
+export const needsSizeSelection = <P extends ProductLike>(p: P) => p.sizes.length > 0;
 
-export const isSoldOut = (p: Product) =>
+export const isSoldOut = <P extends ProductLike>(p: P) =>
   needsSizeSelection(p) &&
   p.sizes.length > 0 &&
   (p.soldOut?.length ?? 0) >= p.sizes.length;
@@ -329,10 +352,10 @@ export const isSoldOut = (p: Product) =>
  * ocultarlo a mano cada vez que se agota. */
 export const isPatchAvailable = (p: Patch) => p.isVisible && p.stock > 0;
 
-export const getProduct = (products: Product[], slug: string) =>
+export const getProduct = <P extends ProductLike>(products: P[], slug: string) =>
   products.find((p) => p.slug === slug);
 
-export const getProductById = (products: Product[], id: string) =>
+export const getProductById = <P extends ProductLike>(products: P[], id: string) =>
   products.find((p) => p.id === id);
 
 export const getCategory = (categories: Category[], slug: string) =>
@@ -448,11 +471,11 @@ export function descendantSlugs(
 }
 
 /** Productos de una categoría y de todas sus subcategorías. */
-export function byCategoryTree(
-  products: Product[],
+export function byCategoryTree<P extends ProductLike>(
+  products: P[],
   categories: Category[],
   slug: string,
-): Product[] {
+): P[] {
   const slugs = new Set([slug, ...descendantSlugs(categories, slug)]);
   return products.filter((p) => slugs.has(p.category));
 }
@@ -486,27 +509,27 @@ export function wouldCreateCycle(
   return categoryAncestors(categories, newParentSlug).some((c) => c.slug === slug);
 }
 
-export const onSaleProducts = (products: Product[]) =>
+export const onSaleProducts = <P extends ProductLike>(products: P[]) =>
   products.filter(isOnSale);
 
-export const newArrivals = (products: Product[]) =>
+export const newArrivals = <P extends ProductLike>(products: P[]) =>
   products
     .filter((p) => p.isNew)
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 
-export const bestSellers = (products: Product[]) =>
+export const bestSellers = <P extends ProductLike>(products: P[]) =>
   [...products].sort((a, b) => b.reviews - a.reviews).slice(0, 8);
 
 /** Resalta en dorado el título de los productos de la categoría "Combos",
  * donde sea que se muestren (tarjeta, ficha). */
-export const isComboProduct = (product: Product) => product.category === "combos";
+export const isComboProduct = <P extends ProductLike>(product: P) => product.category === "combos";
 
 /**
  * Primero por misma categoría (más relevante: mismo equipo/torneo); si no
  * alcanza el `limit`, completa con productos que compartan al menos una
  * etiqueta, sin repetir ninguno ya elegido.
  */
-export const relatedTo = (products: Product[], product: Product, limit = 4) => {
+export const relatedTo = <P extends ProductLike>(products: P[], product: P, limit = 4) => {
   const sameCategory = products.filter(
     (p) => p.slug !== product.slug && p.category === product.category,
   );
@@ -526,7 +549,7 @@ export const relatedTo = (products: Product[], product: Product, limit = 4) => {
 };
 
 /** Búsqueda simple sobre nombre, categoría y etiquetas. */
-export function searchProducts(products: Product[], query: string): Product[] {
+export function searchProducts<P extends ProductLike>(products: P[], query: string): P[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
   const terms = q.split(/\s+/);

@@ -10,9 +10,9 @@ import {
   needsSizeSelection,
   type NoticeIcon,
   type Patch,
-  type Product,
   type ProductNotice,
 } from "@/lib/catalog";
+import type { PublicProduct } from "@/lib/data";
 import { formatPrice } from "@/lib/format";
 import { imageVariant } from "@/lib/image";
 import type { ProductInfoSettings } from "@/lib/settings";
@@ -48,7 +48,7 @@ export function ProductDetail({
   productInfo,
   personalizationPrice,
 }: {
-  product: Product;
+  product: PublicProduct;
   notices: ProductNotice[];
   productInfo: ProductInfoSettings;
   /** Precio único de personalización para todo el catálogo (Gs.). */

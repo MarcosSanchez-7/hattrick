@@ -2,7 +2,8 @@
 
 import { type CSSProperties } from "react";
 import Link from "next/link";
-import type { Product, Tag } from "@/lib/catalog";
+import type { Tag } from "@/lib/catalog";
+import type { PublicProduct } from "@/lib/data";
 import type { DtfSettings } from "@/lib/settings";
 import { imageVariant } from "@/lib/image";
 import { ProductCard } from "@/components/product/ProductCard";
@@ -15,7 +16,7 @@ export function DtfSection({
   tags = [],
 }: {
   settings: DtfSettings;
-  products: Product[];
+  products: PublicProduct[];
   tags?: Tag[];
 }) {
   const loop = products.length > 1;

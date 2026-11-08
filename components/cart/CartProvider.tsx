@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import type { Product } from "@/lib/catalog";
+import type { PublicProduct } from "@/lib/data";
 import { trackPixelEvent } from "@/components/analytics/MetaPixel";
 
 export const FREE_SHIPPING_FROM = 650000;
@@ -32,7 +32,7 @@ type StoredLine = {
 
 export type CartLine = StoredLine & {
   key: string;
-  product: Product;
+  product: PublicProduct;
   lineTotal: number;
 };
 
@@ -48,7 +48,7 @@ type CartContextValue = {
   openCart: () => void;
   closeCart: () => void;
   add: (
-    product: Product,
+    product: PublicProduct,
     size: string,
     qty?: number,
     opts?: {
@@ -86,9 +86,11 @@ function lineKey(
   return `${slug}::${size}::${note ?? ""}::${patchPart}`;
 }
 
-/** Stock real disponible para esa talla, o null si no llevamos cantidad (ajeno/importado). */
-export function availableStock(product: Product, size: string): number | null {
-  if (product.stockMode !== "propio") return null;
+/** Stock real disponible para esa talla, o null si no llevamos cantidad
+ * (ajeno/importado). PublicProduct.variants ya viene vacío para esos casos
+ * (ver toPublicProduct en lib/data.ts, mismo criterio que sizes/soldOut) --
+ * no hace falta volver a chequear el modo de stock acá. */
+export function availableStock(product: PublicProduct, size: string): number | null {
   const variant = product.variants?.find((v) => v.size === size);
   return variant ? variant.stock : null;
 }
@@ -123,7 +125,7 @@ export function CartProvider({
   products,
 }: {
   children: React.ReactNode;
-  products: Product[];
+  products: PublicProduct[];
 }) {
   const [stored, setStored] = useState<StoredLine[]>([]);
   const [hydrated, setHydrated] = useState(false);
@@ -150,7 +152,7 @@ export function CartProvider({
 
   const add = useCallback(
     (
-      product: Product,
+      product: PublicProduct,
       size: string,
       qty = 1,
       opts?: {

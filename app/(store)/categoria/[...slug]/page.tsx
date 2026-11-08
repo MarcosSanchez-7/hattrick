@@ -10,7 +10,7 @@ import {
   getCategory,
   isCategoryVisible,
 } from "@/lib/catalog";
-import { getAllCategories, getAllProducts, getAllTags } from "@/lib/data";
+import { getAllCategories, getAllProducts, getAllTags, toPublicProduct } from "@/lib/data";
 import { SITE_URL, buildBreadcrumbJsonLd } from "@/lib/site";
 import { ProductBrowser } from "@/components/product/ProductBrowser";
 import { SUBCATEGORY_ICONS } from "@/components/ui/CatalogIcons";
@@ -79,7 +79,10 @@ export default async function CategoryPage({
     permanentRedirect(`/categoria/${canonicalPath.join("/")}`);
   }
 
-  const products = byCategoryTree(allProducts, categories, category.slug);
+  // ProductBrowser es Client Component -- se mapea a la versión pública
+  // antes de pasarla en vez del Product completo (ver toPublicProduct en
+  // lib/data.ts).
+  const products = byCategoryTree(allProducts, categories, category.slug).map(toPublicProduct);
   const ancestors = categoryPath(categories, category.slug).slice(0, -1);
   const children = categoryChildren(categories, category.slug).filter((c) =>
     isCategoryVisible(categories, c.slug),

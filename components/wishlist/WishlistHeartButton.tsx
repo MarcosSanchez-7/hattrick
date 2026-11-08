@@ -1,6 +1,6 @@
 "use client";
 
-import type { Product } from "@/lib/catalog";
+import type { PublicProduct } from "@/lib/data";
 import { useWishlist } from "@/components/wishlist/WishlistProvider";
 import { IconHeart } from "@/components/ui/Icons";
 
@@ -13,7 +13,7 @@ export function WishlistHeartButton({
   product,
   className,
 }: {
-  product: Product;
+  product: PublicProduct;
   className?: string;
 }) {
   const { isSaved, toggle } = useWishlist();

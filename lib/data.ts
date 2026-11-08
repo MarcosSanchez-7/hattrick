@@ -5,6 +5,7 @@ import type {
   Category,
   Page,
   PagePlacement,
+  Pattern,
   Patch,
   Product,
   ProductNotice,
@@ -205,6 +206,88 @@ function rowToProduct(
     patches,
     suppliers,
     supplierSizeStock,
+  };
+}
+
+/**
+ * Versión de Product segura para mandar al navegador del storefront
+ * público (home, categoría, búsqueda, ficha de producto, carrito,
+ * favoritos) -- sin costPrice, wholesalePrice, internalControl, stockMode,
+ * suppliers ni supplierSizeStock. Esos campos viajaban igual que el resto
+ * porque Product (el objeto completo, pensado para el panel admin) se le
+ * pasaba directo a Client Components (CartProvider, Navbar, ProductDetail,
+ * ProductBrowser, ProductCard y lo que cuelga de ellos) -- en Next.js App
+ * Router, cualquier prop que cruza a un Client Component se serializa
+ * entera en el payload de React Server Components que llega al navegador,
+ * sin importar qué campos ese componente realmente pinte en pantalla. Se
+ * confirmó en vivo contra producción (curl a la home y a una ficha de
+ * producto): costPrice, wholesalePrice, internalControl, supplierName y
+ * unitCost aparecían en el HTML de cualquier página, no solo en el panel.
+ *
+ * rowToProduct/getAllProducts NO cambian -- el panel admin (ProductForm,
+ * InventoryTable, SaleForm) sigue pidiendo el objeto completo, como
+ * corresponde atrás del login.
+ */
+export type PublicProduct = {
+  id: string;
+  slug: string;
+  name: string;
+  category: string;
+  price: number;
+  compareAt?: number | null;
+  isVisible: boolean;
+  isNew?: boolean;
+  rating: number;
+  reviews: number;
+  /** Solo poblado para stock propio -- mismo criterio que sizes/soldOut.
+   * Un producto ajeno/importado con "control interno" SÍ tiene variants en
+   * el Product completo (ver rowToProduct), pero esas cantidades son para
+   * uso exclusivo del panel admin -- nunca deben llegar al cliente, así
+   * que acá se vuelven a filtrar aunque ya vengan filtradas en sizes/
+   * soldOut. Lo necesita availableStock() en components/cart/
+   * CartProvider.tsx para no dejar agregar al carrito más unidades de las
+   * que hay en stock real. */
+  variants?: ProductVariant[];
+  sizes: string[];
+  soldOut?: string[];
+  colors: { primary: string; secondary: string; accent: string };
+  pattern: Pattern;
+  description: string;
+  tags: string[];
+  images?: string[];
+  isCustomizable?: boolean;
+  /** Ya es información pública -- la ficha de producto arma con esto el
+   * selector de personalización (nombre, imagen y precio de cada parche;
+   * ver ProductDetail.tsx). */
+  patches?: Patch[];
+  /** Usado por ProductBrowser.tsx para la opción de orden "Novedades
+   * primero" -- es solo la fecha de alta, no revela nada sensible. */
+  createdAt: string;
+};
+
+export function toPublicProduct(product: Product): PublicProduct {
+  return {
+    id: product.id,
+    slug: product.slug,
+    name: product.name,
+    category: product.category,
+    price: product.price,
+    compareAt: product.compareAt,
+    isVisible: product.isVisible,
+    isNew: product.isNew,
+    rating: product.rating,
+    reviews: product.reviews,
+    variants: product.stockMode === "propio" ? product.variants : undefined,
+    sizes: product.sizes,
+    soldOut: product.soldOut,
+    colors: product.colors,
+    pattern: product.pattern,
+    description: product.description,
+    tags: product.tags,
+    images: product.images,
+    isCustomizable: product.isCustomizable,
+    patches: product.patches,
+    createdAt: product.createdAt,
   };
 }
 

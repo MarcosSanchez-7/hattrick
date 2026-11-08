@@ -8,9 +8,9 @@ import {
   searchProducts,
   topLevelCategories,
   type Category,
-  type Product,
   type Tag,
 } from "@/lib/catalog";
+import type { PublicProduct } from "@/lib/data";
 import { ProductBrowser } from "@/components/product/ProductBrowser";
 import { IconSearch } from "@/components/ui/Icons";
 
@@ -28,7 +28,7 @@ export function SearchPageClient({
   categories = [],
   initialQuery,
 }: {
-  products: Product[];
+  products: PublicProduct[];
   tags?: Tag[];
   categories?: Category[];
   initialQuery: string;

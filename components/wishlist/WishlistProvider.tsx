@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import type { Product } from "@/lib/catalog";
+import type { PublicProduct } from "@/lib/data";
 
 type WishlistContextValue = {
   slugs: string[];
@@ -16,10 +16,10 @@ type WishlistContextValue = {
   hydrated: boolean;
   isSaved: (slug: string) => boolean;
   /** Añade o quita según el estado actual; devuelve el nuevo estado ("added"/"removed"). */
-  toggle: (product: Product) => "added" | "removed";
+  toggle: (product: PublicProduct) => "added" | "removed";
   remove: (slug: string) => void;
   /** Último producto añadido (no al quitar) — dispara el aviso con accesos directos. */
-  lastAdded: Product | null;
+  lastAdded: PublicProduct | null;
   dismissLastAdded: () => void;
 };
 
@@ -42,7 +42,7 @@ function readStorage(): string[] {
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const [slugs, setSlugs] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
-  const [lastAdded, setLastAdded] = useState<Product | null>(null);
+  const [lastAdded, setLastAdded] = useState<PublicProduct | null>(null);
 
   useEffect(() => {
     setSlugs(readStorage());
@@ -59,7 +59,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     [slugs],
   );
 
-  const toggle = useCallback((product: Product): "added" | "removed" => {
+  const toggle = useCallback((product: PublicProduct): "added" | "removed" => {
     let result: "added" | "removed" = "added";
     setSlugs((prev) => {
       if (prev.includes(product.slug)) {
@@ -87,7 +87,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
       count: slugs.length,
       hydrated,
       isSaved,
-      toggle: (product: Product) => {
+      toggle: (product: PublicProduct) => {
         const result = toggle(product);
         if (result === "added") setLastAdded(product);
         else if (lastAdded?.slug === product.slug) setLastAdded(null);

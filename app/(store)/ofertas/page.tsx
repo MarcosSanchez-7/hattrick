@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { discountPercent, onSaleProducts } from "@/lib/catalog";
-import { getAllProducts, getAllTags } from "@/lib/data";
+import { getAllProducts, getAllTags, toPublicProduct } from "@/lib/data";
 import { ProductBrowser } from "@/components/product/ProductBrowser";
 import { Countdown } from "@/components/home/Countdown";
 
@@ -16,7 +16,9 @@ export const revalidate = 60;
 
 export default async function OfertasPage() {
   const [allProducts, tags] = await Promise.all([getAllProducts(), getAllTags()]);
-  const products = onSaleProducts(allProducts);
+  // ProductBrowser es Client Component -- se mapea a la versión pública
+  // antes de pasarla en vez del Product completo (ver toPublicProduct en lib/data.ts).
+  const products = onSaleProducts(allProducts).map(toPublicProduct);
   const max = products.length
     ? Math.max(...products.map(discountPercent))
     : 0;

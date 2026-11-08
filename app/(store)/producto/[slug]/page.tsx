@@ -11,7 +11,7 @@ import {
   resolveCategoryNotices,
   resolveCategoryShippingText,
 } from "@/lib/catalog";
-import { getAllCategories, getAllProducts, getAllTags, getSetting } from "@/lib/data";
+import { getAllCategories, getAllProducts, getAllTags, getSetting, toPublicProduct } from "@/lib/data";
 import {
   DEFAULT_CUSTOM_BANNER,
   DEFAULT_PRODUCT_INFO,
@@ -75,13 +75,19 @@ export default async function ProductPage({
       getSetting("productInfo", DEFAULT_PRODUCT_INFO),
       getSetting("customBanner", DEFAULT_CUSTOM_BANNER),
     ]);
-  const product = getProduct(products, slug);
-  if (!product) notFound();
+  const fullProduct = getProduct(products, slug);
+  if (!fullProduct) notFound();
 
-  const path = categoryPath(categories, product.category);
+  const path = categoryPath(categories, fullProduct.category);
   const category = path[path.length - 1];
-  const categoryHref = `/categoria/${categorySlugPath(categories, product.category).join("/")}`;
-  const related = relatedTo(products, product);
+  const categoryHref = `/categoria/${categorySlugPath(categories, fullProduct.category).join("/")}`;
+  // ProductDetail y ProductGrid son Client Components -- se mapea a la
+  // versión pública antes de pasarla en vez del Product completo (ver
+  // toPublicProduct en lib/data.ts); isSoldOut/relatedTo de abajo no
+  // necesitan ningún campo interno, así que se calculan antes igual sobre
+  // el producto completo sin que eso filtre nada.
+  const related = relatedTo(products, fullProduct).map(toPublicProduct);
+  const product = toPublicProduct(fullProduct);
   const notices = resolveCategoryNotices(
     categories,
     product.category,

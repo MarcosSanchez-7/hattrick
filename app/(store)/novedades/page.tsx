@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { newArrivals } from "@/lib/catalog";
-import { getAllProducts, getAllTags } from "@/lib/data";
+import { getAllProducts, getAllTags, toPublicProduct } from "@/lib/data";
 import { ProductBrowser } from "@/components/product/ProductBrowser";
 
 export const metadata: Metadata = {
@@ -15,7 +15,9 @@ export const revalidate = 60;
 
 export default async function NovedadesPage() {
   const [allProducts, tags] = await Promise.all([getAllProducts(), getAllTags()]);
-  const products = newArrivals(allProducts);
+  // ProductBrowser es Client Component -- se mapea a la versión pública
+  // antes de pasarla en vez del Product completo (ver toPublicProduct en lib/data.ts).
+  const products = newArrivals(allProducts).map(toPublicProduct);
 
   return (
     <>
