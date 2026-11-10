@@ -1,16 +1,17 @@
 import type { ReactElement } from "react";
 import {
-  IconDiamond,
-  IconFlagStripes,
+  IconBrasileirao,
+  IconBundesliga,
   IconGlobe,
-  IconHome,
   IconHourglass,
+  IconLaLiga,
+  IconLigaArgentina,
+  IconLigaParaguaya,
+  IconLigue1,
   IconMapPin,
-  IconMedal,
+  IconNBA,
   IconPremierLeague,
   IconSerieA,
-  IconStar,
-  IconSun,
   IconTag,
   IconTrophy,
   type IconProps,
@@ -29,22 +30,20 @@ export const SUBCATEGORY_ICONS: Record<string, IconComponent> = {
 };
 
 /** Etiquetas "de filtro" (ligas/competiciones, ver tags.is_filter) -- por
- * nombre exacto de la etiqueta. Premier League y Serie A usan el logo real
- * de la competición (SVG provisto por el usuario); el resto son íconos
- * genéricos (no logos oficiales, para no meterse en temas de marca). Liga
- * Paraguaya usa una casita a propósito (es la liga local de la tienda).
- * Sin ícono bueno en este set para ligas/deportes que todavía no cargamos
- * (ej. F1, NBA): cae en DEFAULT_TAG_ICON en vez de romper o dejar un hueco
- * vacío. */
+ * nombre exacto de la etiqueta. Todas usan el logo/escudo real de la
+ * competición (SVG oficial, provisto por el usuario), no íconos genéricos.
+ * Sin ícono cargado todavía para alguna liga/deporte nuevo: cae en
+ * DEFAULT_TAG_ICON en vez de romper o dejar un hueco vacío. */
 export const TAG_ICONS: Record<string, IconComponent> = {
   "Premier League": IconPremierLeague,
-  "La Liga": IconSun,
+  "La Liga": IconLaLiga,
   "Serie A": IconSerieA,
-  Bundesliga: IconStar,
-  "Ligue 1": IconDiamond,
-  Brasileirao: IconMedal,
-  "Liga Argentina": IconFlagStripes,
-  "Liga Paraguaya": IconHome,
+  Bundesliga: IconBundesliga,
+  "Ligue 1": IconLigue1,
+  Brasileirao: IconBrasileirao,
+  "Liga Argentina": IconLigaArgentina,
+  "Liga Paraguaya": IconLigaParaguaya,
+  NBA: IconNBA,
 };
 
 export const DEFAULT_TAG_ICON: IconComponent = IconTag;
