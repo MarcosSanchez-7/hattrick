@@ -228,6 +228,13 @@ function rowToProduct(
  * InventoryTable, SaleForm) sigue pidiendo el objeto completo, como
  * corresponde atrás del login.
  */
+/** Variante de talle sin el stock exacto -- ver PublicProduct.variants. */
+export type PublicProductVariant = {
+  id: string;
+  size: string;
+  inStock: boolean;
+};
+
 export type PublicProduct = {
   id: string;
   slug: string;
@@ -244,10 +251,11 @@ export type PublicProduct = {
    * el Product completo (ver rowToProduct), pero esas cantidades son para
    * uso exclusivo del panel admin -- nunca deben llegar al cliente, así
    * que acá se vuelven a filtrar aunque ya vengan filtradas en sizes/
-   * soldOut. Lo necesita availableStock() en components/cart/
-   * CartProvider.tsx para no dejar agregar al carrito más unidades de las
-   * que hay en stock real. */
-  variants?: ProductVariant[];
+   * soldOut. Sin la cantidad exacta (ver PublicProductVariant): el
+   * storefront solo necesita saber si hay o no, nunca cuánto -- mostrar el
+   * número real dejaba ver el inventario preciso por talle a cualquier
+   * visitante abriendo el código fuente. */
+  variants?: PublicProductVariant[];
   sizes: string[];
   soldOut?: string[];
   colors: { primary: string; secondary: string; accent: string };
@@ -277,7 +285,10 @@ export function toPublicProduct(product: Product): PublicProduct {
     isNew: product.isNew,
     rating: product.rating,
     reviews: product.reviews,
-    variants: product.stockMode === "propio" ? product.variants : undefined,
+    variants:
+      product.stockMode === "propio"
+        ? product.variants?.map((v) => ({ id: v.id, size: v.size, inStock: v.stock > 0 }))
+        : undefined,
     sizes: product.sizes,
     soldOut: product.soldOut,
     colors: product.colors,

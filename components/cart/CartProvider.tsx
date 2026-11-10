@@ -86,20 +86,30 @@ function lineKey(
   return `${slug}::${size}::${note ?? ""}::${patchPart}`;
 }
 
-/** Stock real disponible para esa talla, o null si no llevamos cantidad
- * (ajeno/importado). PublicProduct.variants ya viene vacío para esos casos
- * (ver toPublicProduct en lib/data.ts, mismo criterio que sizes/soldOut) --
- * no hace falta volver a chequear el modo de stock acá. */
+/** Tope de unidades por talla cuando no se expone el stock real (ver
+ * PublicProduct.variants en lib/data.ts): no es un límite de inventario
+ * real, es solo una ayuda de UX para que el cliente no pida una cantidad
+ * absurda por WhatsApp -- la venta real se valida a mano con el stock
+ * exacto en el panel (SaleForm), este número nunca fue una barrera de
+ * integridad de datos. */
+const MAX_CART_QTY = 10;
+
+/** Tope de unidades para esa talla: 0 si está agotada, MAX_CART_QTY si hay
+ * disponibilidad (sin revelar cuánto queda realmente), o null si el
+ * producto no lleva stock propio (ajeno/importado, "Consultar talle"). */
 export function availableStock(product: PublicProduct, size: string): number | null {
   const variant = product.variants?.find((v) => v.size === size);
-  return variant ? variant.stock : null;
+  if (!variant) return null;
+  return variant.inStock ? MAX_CART_QTY : 0;
 }
 
-function stockMessage(size: string, remaining: number): string {
-  if (remaining <= 0) return `No queda stock disponible de la talla ${size}.`;
-  const unidad = remaining === 1 ? "unidad" : "unidades";
-  const disponible = remaining === 1 ? "disponible" : "disponibles";
-  return `Solo ${remaining === 1 ? "queda" : "quedan"} ${remaining} ${unidad} ${disponible} de la talla ${size}.`;
+/** Aviso cuando se pide más que el tope por talla. Sin revelar el stock
+ * real: si la talla sigue disponible, un aviso de urgencia genérico; si
+ * está agotada (max === 0), no hace falta aviso aparte -- sizes/soldOut ya
+ * la muestra como "Agotado" en la ficha/tarjeta. */
+function stockWarningFor(size: string, max: number): string | null {
+  if (max <= 0) return null;
+  return `¡Últimas unidades disponibles de la talla ${size}!`;
 }
 
 function readStorage(): StoredLine[] {
@@ -172,10 +182,11 @@ export function CartProvider({
         );
         const currentQty = idx === -1 ? 0 : prev[idx].qty;
         const requested = currentQty + qty;
-        const capped = max != null ? Math.min(requested, max) : Math.min(requested, 10);
+        const capped = max != null ? Math.min(requested, max) : Math.min(requested, MAX_CART_QTY);
 
         if (max != null && requested > max) {
-          setStockWarning(stockMessage(size, capped));
+          const warning = stockWarningFor(size, max);
+          if (warning) setStockWarning(warning);
         }
 
         if (idx === -1) {
@@ -216,9 +227,10 @@ export function CartProvider({
           if (qty <= 0) return [];
           const product = products.find((p) => p.slug === l.slug);
           const max = product ? availableStock(product, l.size) : null;
-          const capped = max != null ? Math.min(qty, max) : Math.min(qty, 10);
+          const capped = max != null ? Math.min(qty, max) : Math.min(qty, MAX_CART_QTY);
           if (max != null && qty > max) {
-            setStockWarning(stockMessage(l.size, capped));
+            const warning = stockWarningFor(l.size, max);
+            if (warning) setStockWarning(warning);
           }
           return [{ ...l, qty: capped }];
         }),
