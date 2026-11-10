@@ -3143,6 +3143,14 @@ textarea {
   overflow-x: auto;
 }
 
+/* La insignia roja de "quitar" (SaleForm) se asoma a propósito 10px fuera
+   del borde de la fila -- sin este margen, ese asomo de más se contaba
+   como overflow real y disparaba un scroll horizontal de 10px, aunque el
+   resto de la tabla entrara perfecto. */
+.admin-table-wrap:has(.admin-table--sale-items) {
+  padding-right: 14px;
+}
+
 .admin-cat-group {
   border-bottom: 1px solid var(--line);
 }
@@ -3385,10 +3393,97 @@ textarea {
 /* Última columna (botón quitar, 32px) -- con el padding estándar de la
    tabla no entraba en su propia celda y empujaba el ancho total de
    .admin-table-wrap, forzando scroll horizontal aunque las demás columnas
-   entraran perfecto. */
+   entraran perfecto. Ya no reserva ancho real (ver <colgroup>, 1px) -- el
+   botón flota encima de la fila (ver .admin-table__remove-item más abajo),
+   así que esta celda solo necesita no estorbar. */
 .admin-table--sale-items td:last-child {
-  padding-inline: 4px;
-  text-align: center;
+  padding: 0;
+  width: 0;
+}
+
+/* Insignia roja de "quitar artículo", flotando en la esquina superior
+   derecha de la FILA -- antes solo pasaba esto en mobile (tarjeta
+   apilada); en desktop (tabla real) el mismo botón se queda directo en su
+   columna, con pinta de ícono suelto al final. Repetirlo acá, sin media
+   query, lo deja igual en los dos casos. */
+.admin-table--sale-items tr {
+  position: relative;
+}
+.admin-table--sale-items .admin-table__remove-item {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #f87171;
+  border: 2px solid var(--surface);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+.admin-table--sale-items .admin-table__remove-item:hover {
+  background: #ef4444;
+}
+
+/* Detalle: el input necesitaba más ancho y más tamaño de letra para que un
+   texto largo (ej. "Personalizado: Messi 10, parche LaLiga") se alcance a
+   leer en vez de quedar cortado en una caja angosta. */
+.admin-table--sale-items .admin-sale-line__detail {
+  font-size: 0.875rem;
+}
+
+/* Proveedor se mudó de columna propia a una línea chica debajo del nombre
+   del producto (la mayoría de las veces no hay nada que elegir ahí, así
+   que no se justificaba una columna entera solo para un guion). */
+.admin-sale-line__supplier {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+  padding-top: var(--sp-2);
+  border-top: 1px solid var(--line);
+}
+.admin-sale-line__supplier label {
+  flex: none;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.admin-sale-line__supplier select {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  font-size: 0.8125rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+/* Jerarquía visual entre los 4 números de cada línea: Precio venta es el
+   dato que más se mira (más grande, en negrita); Precio costo es solo
+   referencia para calcular la ganancia, no hace falta que compita en peso
+   visual -- más chico y en gris. Ganancia ya iba en verde y negrita
+   (admin-table__profit-cell); Cant. se queda neutro, es solo un número de
+   apoyo. */
+.admin-table--sale-items .admin-sale-line__price-venta {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.admin-table--sale-items .admin-sale-line__price-costo {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
+
+/* Ganancia en verde suave (--success), para distinguirla a simple vista
+   del precio de venta/costo -- tanto en la fila de cada artículo como en
+   el total de la venta. Universal a propósito (antes vivía sin querer
+   adentro del media query mobile nada más -- en desktop la Ganancia salía
+   en negro de siempre). */
+.admin-table__profit-cell,
+.totals__row--profit {
+  color: var(--success);
 }
 
 .admin-table__product {
@@ -4211,35 +4306,12 @@ textarea {
     margin-bottom: var(--sp-3);
   }
 
-  /* Botón "quitar artículo" (SaleForm): insignia roja flotando en la
-     esquina superior derecha de la tarjeta -- visible tanto colapsada como
-     desplegada (ver excepción de abajo), en vez de un ícono gris al final
-     de la tarjeta, donde se perdía. Rojo suave (no el #b3132a de las
-     acciones destructivas del admin) porque acá se ve siempre, no solo al
-     entrar en modo edición -- uno fuerte se sentía demasiado alarmante
-     para algo que se usa de forma rutinaria. */
-  .admin-table td.admin-table__remove-cell {
-    padding: 0;
-  }
-  .admin-table__remove-item {
-    position: absolute;
-    top: -10px;
-    right: -10px;
-    width: 28px;
-    height: 28px;
-    border-radius: 999px;
-    background: #f87171;
-    border: 2px solid var(--surface);
-    color: #fff;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-  }
-  .admin-table__remove-item:hover {
-    background: #ef4444;
-    border-color: var(--surface);
-  }
-  /* Excepción al "la fila colapsada solo muestra el nombre": el botón de
-     quitar se ve siempre, para no obligar a desplegar la tarjeta solo para
-     sacar un artículo cargado por error. */
+  /* El botón "quitar artículo" en sí (posición, color) ya es universal --
+     ver .admin-table--sale-items .admin-table__remove-item más arriba,
+     fuera de cualquier media query, así se ve igual en mobile y desktop.
+     Acá solo queda la excepción mobile: al "la fila colapsada solo
+     muestra el nombre", el botón de quitar se ve siempre, para no obligar
+     a desplegar la tarjeta solo para sacar un artículo cargado por error. */
   .admin-table tr[data-expanded='false'] td.admin-table__remove-cell:not([data-label]):last-child {
     display: block;
   }
@@ -4270,13 +4342,6 @@ textarea {
   .admin-table td[data-label] select.admin-variant-qty:focus {
     outline: none;
     border-bottom-color: var(--ink);
-  }
-  /* Ganancia en verde suave (--success), para distinguirla a simple vista
-     del precio de venta/costo -- tanto en la fila de cada artículo como en
-     el total de la venta. */
-  .admin-table__profit-cell,
-  .totals__row--profit {
-    color: var(--success);
   }
   .admin-table td:not([data-label]):first-child {
     padding-top: 0;

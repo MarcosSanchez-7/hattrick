@@ -26,6 +26,12 @@ type TicketLine = {
   variantId: string | null;
   productId: string;
   name: string;
+  /** Para la miniatura en la tabla -- confirmar de un vistazo que es el
+   * producto correcto, sobre todo con nombres parecidos (ej. "26/27" vs
+   * "25/26" del mismo club). */
+  images: string[];
+  colors: Product["colors"];
+  pattern: Product["pattern"];
   size: string;
   /** null = sin tope (dropshipping, no hay stock que controlar). */
   maxStock: number | null;
@@ -75,6 +81,9 @@ function saleToLines(sale: Sale, products: Product[]): TicketLine[] {
       variantId: item.variantId,
       productId: item.productId,
       name: item.name,
+      images: product?.images ?? [],
+      colors: product?.colors ?? { primary: "#111111", secondary: "#f2f2f2", accent: "#d4af37" },
+      pattern: product?.pattern ?? "solid",
       size: item.size,
       maxStock,
       quantity: item.quantity,
@@ -234,6 +243,9 @@ export function SaleForm({
           variantId: variant.id,
           productId: product.id,
           name: product.name,
+          images: product.images ?? [],
+          colors: product.colors,
+          pattern: product.pattern,
           size: variant.size,
           maxStock: variant.stock,
           quantity: 1,
@@ -266,6 +278,9 @@ export function SaleForm({
           variantId: null,
           productId: product.id,
           name: product.name,
+          images: product.images ?? [],
+          colors: product.colors,
+          pattern: product.pattern,
           size,
           maxStock: null,
           quantity: 1,
@@ -538,25 +553,26 @@ export function SaleForm({
           <div className="admin-table-wrap">
             <table className="admin-table admin-table--sale-items">
               {/* Columnas de ancho fijo para lo que tiene un contenido
-                  acotado (cantidad, precios, proveedor) -- así Artículo
-                  (sin ancho fijo) se queda con todo el resto en vez de
-                  partir "Cerro Porteño 2026" en 3-4 líneas, y la fila entra
-                  sin scroll horizontal en una pantalla normal. */}
+                  acotado (cantidad, precios) -- así Artículo (sin ancho
+                  fijo) se queda con todo el resto en vez de partir "Cerro
+                  Porteño 2026" en 3-4 líneas, y la fila entra sin scroll
+                  horizontal en una pantalla normal. Proveedor ya no es
+                  columna propia (se mudó debajo del nombre del producto,
+                  ver la celda de Artículo) y Quitar es una insignia
+                  flotante, no necesita ancho real. */}
               <colgroup>
                 <col />
-                <col style={{ width: 100 }} />
-                <col style={{ width: 80 }} />
+                <col style={{ width: 180 }} />
                 <col style={{ width: 50 }} />
-                <col style={{ width: 100 }} />
-                <col style={{ width: 100 }} />
-                <col style={{ width: 80 }} />
-                <col style={{ width: 48 }} />
+                <col style={{ width: 110 }} />
+                <col style={{ width: 90 }} />
+                <col style={{ width: 90 }} />
+                <col style={{ width: 1 }} />
               </colgroup>
               <thead>
                 <tr>
                   <th>Artículo</th>
                   <th>Detalle</th>
-                  <th>Proveedor</th>
                   <th>Cant.</th>
                   <th>Precio venta</th>
                   <th>Precio costo</th>
@@ -579,30 +595,35 @@ export function SaleForm({
                           aria-expanded={isLineOpen}
                           onClick={() => toggleLineExpanded(l.key)}
                         >
-                          <div>
-                            <div style={{ fontWeight: 600 }}>{l.name}</div>
-                            <div className="meta">
-                              Talla {l.size} ·{" "}
-                              {l.source === "dropshipping"
-                                ? "Dropshipping"
-                                : l.source === "interno"
-                                  ? "Control interno (otro proveedor)"
-                                  : "Stock propio"}
+                          <div className="admin-table__product">
+                            <div className="admin-table__thumb">
+                              <ProductVisual
+                                images={l.images}
+                                colors={l.colors}
+                                pattern={l.pattern}
+                                uid={`sale-line-${l.key}`}
+                                alt={l.name}
+                                size="thumb"
+                              />
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 600 }}>{l.name}</div>
+                              <div className="meta">
+                                Talla {l.size} ·{" "}
+                                {l.source === "dropshipping"
+                                  ? "Dropshipping"
+                                  : l.source === "interno"
+                                    ? "Control interno (otro proveedor)"
+                                    : "Stock propio"}
+                              </div>
                             </div>
                           </div>
                           <IconChevron className="icon--sm admin-table__row-chevron" />
                         </button>
-                      </td>
-                      <td data-label="Detalle">
-                        <input
-                          type="text"
-                          value={l.itemNote}
-                          className="admin-variant-qty"
-                          placeholder="Personalizado, parches…"
-                          onChange={(e) => updateLine(l.key, "itemNote", e.target.value)}
-                        />
-                      </td>
-                      <td data-label="Proveedor">
+                        {/* Proveedor queda fuera del botón (un <select> no
+                            puede ir dentro de un <button>) -- debajo del
+                            nombre en vez de su propia columna, ya que la
+                            mayoría de las veces no hay opciones que elegir. */}
                         {(() => {
                           const lineProduct = products.find((p) => p.id === l.productId);
                           // Solo se ofrecen los proveedores que tienen stock
@@ -624,25 +645,35 @@ export function SaleForm({
                                 : null;
                             })
                             .filter((s): s is NonNullable<typeof s> => s !== null);
-                          if (options.length === 0) {
-                            return <span className="meta">—</span>;
-                          }
+                          if (options.length === 0) return null;
                           return (
-                            <select
-                              className="admin-variant-qty"
-                              value={l.supplierId ?? ""}
-                              onChange={(e) => setLineSupplier(l.key, e.target.value)}
-                              aria-label="Proveedor"
-                            >
-                              <option value="">Sin elegir</option>
-                              {options.map((s) => (
-                                <option key={s.supplierId} value={s.supplierId}>
-                                  {s.supplierName} ({formatPrice(s.unitCost)})
-                                </option>
-                              ))}
-                            </select>
+                            <div className="admin-sale-line__supplier">
+                              <label>Proveedor</label>
+                              <select
+                                value={l.supplierId ?? ""}
+                                onChange={(e) => setLineSupplier(l.key, e.target.value)}
+                                aria-label="Proveedor"
+                              >
+                                <option value="">Sin elegir</option>
+                                {options.map((s) => (
+                                  <option key={s.supplierId} value={s.supplierId}>
+                                    {s.supplierName} ({formatPrice(s.unitCost)})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                           );
                         })()}
+                      </td>
+                      <td data-label="Detalle">
+                        <input
+                          type="text"
+                          value={l.itemNote}
+                          title={l.itemNote || undefined}
+                          className="admin-variant-qty admin-sale-line__detail"
+                          placeholder="Personalizado, parches…"
+                          onChange={(e) => updateLine(l.key, "itemNote", e.target.value)}
+                        />
                       </td>
                       <td data-label="Cant.">
                         <input
@@ -666,7 +697,7 @@ export function SaleForm({
                           type="text"
                           inputMode="numeric"
                           value={l.unitPrice ? formatNumber(Number(l.unitPrice)) : ""}
-                          className="admin-variant-qty"
+                          className="admin-variant-qty admin-sale-line__price-venta"
                           onChange={(e) =>
                             updateLine(l.key, "unitPrice", parseFormattedNumber(e.target.value))
                           }
@@ -677,7 +708,7 @@ export function SaleForm({
                           type="text"
                           inputMode="numeric"
                           value={l.costPrice ? formatNumber(Number(l.costPrice)) : ""}
-                          className="admin-variant-qty"
+                          className="admin-variant-qty admin-sale-line__price-costo"
                           onChange={(e) =>
                             updateLine(l.key, "costPrice", parseFormattedNumber(e.target.value))
                           }
