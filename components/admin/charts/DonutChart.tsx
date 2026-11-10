@@ -25,6 +25,10 @@ export function DonutChart({
     const fraction = d.value / total;
     const dash = fraction * circumference;
     const arc = {
+      // "label" es texto libre de quien llama (ej. nombre de categoría) --
+      // no está garantizado que sea único (dos categorías pueden llamarse
+      // igual), así que la clave de React lleva el índice también.
+      key: `${d.label}-${i}`,
       color: COLORS[i % COLORS.length],
       dasharray: `${dash} ${circumference - dash}`,
       dashoffset: -offset,
@@ -42,7 +46,7 @@ export function DonutChart({
         <g transform={`rotate(-90 ${radius} ${radius})`}>
           {arcs.map((arc) => (
             <circle
-              key={arc.label}
+              key={arc.key}
               cx={radius}
               cy={radius}
               r={innerRadius}
@@ -59,7 +63,7 @@ export function DonutChart({
       </svg>
       <ul className="admin-donut__legend">
         {arcs.map((arc) => (
-          <li key={arc.label}>
+          <li key={arc.key}>
             <span className="admin-chart-legend__swatch" style={{ background: arc.color }} />
             {arc.label}
             <span className="meta" style={{ marginLeft: 6 }}>

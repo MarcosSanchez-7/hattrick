@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { isOnSale, isSoldOut, saleProfit, saleTotal } from "@/lib/catalog";
+import { categoryPath, isOnSale, isSoldOut, saleProfit, saleTotal } from "@/lib/catalog";
 import { getAllCategories, getAllProducts, getSales } from "@/lib/data";
 import { formatPrice } from "@/lib/format";
 import { BarChart } from "@/components/admin/charts/BarChart";
@@ -64,11 +64,23 @@ export default async function AdminDashboard() {
     ventasPorMes.set(key, (ventasPorMes.get(key) ?? 0) + saleTotal(s));
   }
 
+  // Dos categorías pueden llamarse igual (ej. "Shorts" suelta y "Shorts"
+  // como subcategoría de Básquet) -- sin esto el gráfico mostraba dos
+  // porciones con el mismo texto, sin forma de distinguirlas. Si el
+  // nombre se repite, se antepone el padre inmediato solo a esas.
+  const categoryNameCounts = new Map<string, number>();
+  for (const c of categories) {
+    categoryNameCounts.set(c.name, (categoryNameCounts.get(c.name) ?? 0) + 1);
+  }
   const productosPorCategoria = categories
-    .map((c) => ({
-      label: c.name,
-      value: products.filter((p) => p.category === c.slug).length,
-    }))
+    .map((c) => {
+      const isDuplicateName = (categoryNameCounts.get(c.name) ?? 0) > 1;
+      const parent = isDuplicateName ? categoryPath(categories, c.slug).at(-2) : undefined;
+      return {
+        label: parent ? `${parent.name} › ${c.name}` : c.name,
+        value: products.filter((p) => p.category === c.slug).length,
+      };
+    })
     .filter((d) => d.value > 0);
 
   return (
