@@ -4587,8 +4587,8 @@ textarea {
   z-index: 3;
   top: var(--sp-3);
   right: var(--sp-3);
-  width: 33px;
-  height: 33px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
@@ -4606,8 +4606,8 @@ textarea {
      de acá (over-constrained) y el ícono quedaba pegado arriba a la
      izquierda en vez de centrado por el flex del botón. */
   position: static;
-  width: 18px;
-  height: 18px;
+  width: 26px;
+  height: 26px;
 }
 
 .wishlist-heart:hover {
