@@ -33,7 +33,7 @@ export function WishlistHeartButton({
         toggle(product);
       }}
     >
-      <IconHeart className="icon--sm" />
+      <IconHeart filled={saved} />
     </button>
   );
 }

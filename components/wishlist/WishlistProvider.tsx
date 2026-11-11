@@ -8,7 +8,29 @@ import {
   useMemo,
   useState,
 } from "react";
+import { toast } from "sonner";
 import type { PublicProduct } from "@/lib/data";
+import { IconHeart } from "@/components/ui/Icons";
+
+/** Un solo id fijo: togglear rápido (agregar/quitar seguido) actualiza el
+ * mismo toast en vez de apilar uno nuevo por click. */
+const WISHLIST_TOAST_ID = "wishlist-toast";
+
+/** Fondo carbón + texto blanco vía las custom properties que sonner ya usa
+ * internamente (--normal-bg/--normal-border/--normal-text, ver
+ * node_modules/sonner/dist/styles.css) -- no hace falta un toast custom. */
+const WISHLIST_TOAST_STYLE = {
+  "--normal-bg": "#18181b",
+  "--normal-border": "rgba(255, 255, 255, 0.08)",
+  "--normal-text": "#ffffff",
+  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.28)",
+} as React.CSSProperties;
+
+const wishlistToastIcon = (
+  <span style={{ color: "#ef233c", display: "inline-flex" }}>
+    <IconHeart filled className="icon--sm" />
+  </span>
+);
 
 type WishlistContextValue = {
   slugs: string[];
@@ -18,9 +40,6 @@ type WishlistContextValue = {
   /** Añade o quita según el estado actual; devuelve el nuevo estado ("added"/"removed"). */
   toggle: (product: PublicProduct) => "added" | "removed";
   remove: (slug: string) => void;
-  /** Último producto añadido (no al quitar) — dispara el aviso con accesos directos. */
-  lastAdded: PublicProduct | null;
-  dismissLastAdded: () => void;
 };
 
 const WishlistContext = createContext<WishlistContextValue | null>(null);
@@ -42,7 +61,6 @@ function readStorage(): string[] {
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const [slugs, setSlugs] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
-  const [lastAdded, setLastAdded] = useState<PublicProduct | null>(null);
 
   useEffect(() => {
     setSlugs(readStorage());
@@ -76,11 +94,8 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     setSlugs((prev) => prev.filter((s) => s !== slug));
   }, []);
 
-  const dismissLastAdded = useCallback(() => setLastAdded(null), []);
-
-  // toggle() no puede fijar lastAdded directamente porque su resultado depende
-  // del setSlugs funcional; los componentes que llaman a toggle deciden si
-  // mostrar el aviso comprobando el resultado devuelto y llamando a esto.
+  // Toast compacto, mismo id fijo para agregar y quitar -- togglear rápido
+  // reemplaza el toast anterior en vez de acumular uno por click.
   const value = useMemo<WishlistContextValue>(
     () => ({
       slugs,
@@ -89,15 +104,33 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
       isSaved,
       toggle: (product: PublicProduct) => {
         const result = toggle(product);
-        if (result === "added") setLastAdded(product);
-        else if (lastAdded?.slug === product.slug) setLastAdded(null);
+        if (result === "added") {
+          toast("Añadido a favoritos", {
+            id: WISHLIST_TOAST_ID,
+            description: `${product.name} se guardó en tu lista`,
+            icon: wishlistToastIcon,
+            duration: 3200,
+            richColors: true,
+            style: WISHLIST_TOAST_STYLE,
+          });
+        } else {
+          toast("Eliminado de favoritos", {
+            id: WISHLIST_TOAST_ID,
+            // sonner actualiza el toast existente mezclando este objeto sobre
+            // el anterior (mismo id) -- sin esto, la descripción del toast de
+            // "Añadido" previo quedaría pegada acá.
+            description: undefined,
+            icon: wishlistToastIcon,
+            duration: 3200,
+            richColors: true,
+            style: WISHLIST_TOAST_STYLE,
+          });
+        }
         return result;
       },
       remove,
-      lastAdded,
-      dismissLastAdded,
     }),
-    [slugs, hydrated, isSaved, toggle, remove, lastAdded, dismissLastAdded],
+    [slugs, hydrated, isSaved, toggle, remove],
   );
 
   return (

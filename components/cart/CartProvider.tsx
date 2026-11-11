@@ -8,10 +8,26 @@ import {
   useMemo,
   useState,
 } from "react";
+import { toast } from "sonner";
 import type { PublicProduct } from "@/lib/data";
 import { trackPixelEvent } from "@/components/analytics/MetaPixel";
+import { IconBag } from "@/components/ui/Icons";
 
 export const FREE_SHIPPING_FROM = 650000;
+
+/** Un solo id fijo: agregar/quitar seguido actualiza el mismo toast en vez
+ * de apilar uno nuevo por click (mismo patrón que WISHLIST_TOAST_ID en
+ * WishlistProvider.tsx). */
+const CART_TOAST_ID = "cart-toast";
+
+const CART_TOAST_STYLE = {
+  "--normal-bg": "#18181b",
+  "--normal-border": "rgba(255, 255, 255, 0.08)",
+  "--normal-text": "#ffffff",
+  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.28)",
+} as React.CSSProperties;
+
+const cartToastIcon = <IconBag className="icon--sm" />;
 
 /** Parche elegido, guardado como snapshot liviano (nombre+precio) — evita
  * tener que resolver el catálogo de parches de nuevo en cada lugar que lee
@@ -62,9 +78,6 @@ type CartContextValue = {
   setQty: (key: string, qty: number) => void;
   remove: (key: string) => void;
   clear: () => void;
-  /** Mensaje cuando se pidió más cantidad de la que hay en stock real. */
-  stockWarning: string | null;
-  dismissStockWarning: () => void;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -140,7 +153,6 @@ export function CartProvider({
   const [stored, setStored] = useState<StoredLine[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [stockWarning, setStockWarning] = useState<string | null>(null);
 
   useEffect(() => {
     setStored(readStorage());
@@ -176,6 +188,7 @@ export function CartProvider({
       const note = opts?.note ?? null;
       const patches = opts?.patches ?? null;
       const key = lineKey(product.slug, size, note, patches);
+      let added = false;
       setStored((prev) => {
         const idx = prev.findIndex(
           (l) => lineKey(l.slug, l.size, l.note, l.patches) === key,
@@ -183,10 +196,11 @@ export function CartProvider({
         const currentQty = idx === -1 ? 0 : prev[idx].qty;
         const requested = currentQty + qty;
         const capped = max != null ? Math.min(requested, max) : Math.min(requested, MAX_CART_QTY);
+        added = capped > currentQty;
 
         if (max != null && requested > max) {
           const warning = stockWarningFor(size, max);
-          if (warning) setStockWarning(warning);
+          if (warning) toast.warning(warning);
         }
 
         if (idx === -1) {
@@ -214,6 +228,16 @@ export function CartProvider({
         value: product.price * qty,
         currency: "PYG",
       });
+      if (added) {
+        toast("Añadido al carrito", {
+          id: CART_TOAST_ID,
+          description: `${product.name} se agregó a tu carrito`,
+          icon: cartToastIcon,
+          duration: 3200,
+          richColors: true,
+          style: CART_TOAST_STYLE,
+        });
+      }
       if (!opts?.silent) setIsOpen(true);
     },
     [],
@@ -230,7 +254,7 @@ export function CartProvider({
           const capped = max != null ? Math.min(qty, max) : Math.min(qty, MAX_CART_QTY);
           if (max != null && qty > max) {
             const warning = stockWarningFor(l.size, max);
-            if (warning) setStockWarning(warning);
+            if (warning) toast.warning(warning);
           }
           return [{ ...l, qty: capped }];
         }),
@@ -239,13 +263,31 @@ export function CartProvider({
     [products],
   );
 
-  const dismissStockWarning = useCallback(() => setStockWarning(null), []);
-
-  const remove = useCallback((key: string) => {
-    setStored((prev) =>
-      prev.filter((l) => lineKey(l.slug, l.size, l.note, l.patches) !== key),
-    );
-  }, []);
+  const remove = useCallback(
+    (key: string) => {
+      let removedProduct: PublicProduct | undefined;
+      setStored((prev) => {
+        const line = prev.find(
+          (l) => lineKey(l.slug, l.size, l.note, l.patches) === key,
+        );
+        if (line) removedProduct = products.find((p) => p.slug === line.slug);
+        return prev.filter(
+          (l) => lineKey(l.slug, l.size, l.note, l.patches) !== key,
+        );
+      });
+      if (removedProduct) {
+        toast("Producto eliminado", {
+          id: CART_TOAST_ID,
+          description: `${removedProduct.name} se quitó del carrito`,
+          icon: cartToastIcon,
+          duration: 3200,
+          richColors: true,
+          style: CART_TOAST_STYLE,
+        });
+      }
+    },
+    [products],
+  );
 
   const clear = useCallback(() => setStored([]), []);
 
@@ -287,8 +329,6 @@ export function CartProvider({
     setQty,
     remove,
     clear,
-    stockWarning,
-    dismissStockWarning,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

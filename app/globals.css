@@ -1532,8 +1532,12 @@ textarea {
   object-position: top;
 }
 
-.card:hover .card__media svg,
-.card:hover .card__media img {
+/* Combinator directo (">"), no descendiente -- el corazón/quick-add
+   también son <svg> dentro de .card__media (ver ProductCard.tsx) pero
+   viven dentro de su <button>, un nivel más adentro que la foto/ilustración
+   real; con ">" el zoom del hover los deja afuera y quedan estáticos. */
+.card:hover .card__media > svg,
+.card:hover .card__media > img {
   transform: scale(1.05) translateY(-4px);
 }
 
@@ -4415,44 +4419,6 @@ textarea {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Aviso de stock del carrito
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-.stock-toast {
-  position: fixed;
-  left: var(--sp-5);
-  bottom: var(--sp-5);
-  z-index: 120;
-  max-width: 360px;
-  background: var(--ink);
-  color: var(--on-inverse);
-  padding: var(--sp-4) var(--sp-5);
-  display: flex;
-  align-items: flex-start;
-  gap: var(--sp-3);
-  font-size: 0.8125rem;
-  animation: wishlist-toast-in 0.25s var(--ease);
-}
-
-.stock-toast__close {
-  flex: none;
-  color: var(--on-inverse);
-  opacity: 0.7;
-}
-
-.stock-toast__close:hover {
-  opacity: 1;
-}
-
-@media (max-width: 480px) {
-  .stock-toast {
-    left: var(--sp-4);
-    right: var(--sp-4);
-    max-width: none;
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
    Botón flotante de WhatsApp
    ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -4587,10 +4553,11 @@ textarea {
    Favoritos (wishlist)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-.wishlist-heart,
 .quick-add {
   position: absolute;
   z-index: 3;
+  right: var(--sp-3);
+  bottom: var(--sp-3);
   width: 34px;
   height: 34px;
   border-radius: 999px;
@@ -4605,30 +4572,50 @@ textarea {
     transform 0.2s var(--ease);
 }
 
-.wishlist-heart:hover,
 .quick-add:hover {
   background: var(--ink);
   color: var(--on-inverse);
   transform: scale(1.06);
 }
 
+/* Botón de favoritos de la tarjeta de producto. Un solo ícono (IconHeart,
+   filled={saved} -- ver WishlistHeartButton.tsx) que alterna entre contorno
+   y relleno rojo; el contenedor no cambia de tamaño/fondo entre estados
+   para que no "salte" nada, solo el color del corazón. */
 .wishlist-heart {
+  position: absolute;
+  z-index: 3;
   top: var(--sp-3);
   right: var(--sp-3);
+  width: 33px;
+  height: 33px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  color: #000;
+  transition: color 0.18s var(--ease), transform 0.18s var(--ease);
+}
+
+.wishlist-heart .icon {
+  /* .card__media svg (más abajo en este archivo) pone position:absolute;
+     inset:0 a cualquier svg dentro de la tarjeta, pensado para la foto del
+     producto -- sin este reset, ese inset:0 competía con el width/height
+     de acá (over-constrained) y el ícono quedaba pegado arriba a la
+     izquierda en vez de centrado por el flex del botón. */
+  position: static;
+  width: 18px;
+  height: 18px;
+}
+
+.wishlist-heart:hover {
+  transform: scale(1.06);
 }
 
 .wishlist-heart[data-saved='true'] {
-  background: var(--ink);
-  color: var(--on-inverse);
-}
-
-.wishlist-heart[data-saved='true'] .icon {
-  fill: currentColor;
-}
-
-.quick-add {
-  right: var(--sp-3);
-  bottom: var(--sp-3);
+  color: #ef233c;
 }
 
 .fly-to-cart {
@@ -4681,102 +4668,58 @@ textarea {
   font-size: 0.8125rem;
 }
 
-button[aria-pressed='true'] .wishlist-heart-icon {
-  fill: currentColor;
-}
-
-.wishlist-toast {
-  position: fixed;
-  right: var(--sp-5);
-  bottom: var(--sp-5);
-  z-index: 120;
-  width: min(340px, calc(100vw - var(--sp-5) * 2));
-  background: var(--surface);
-  border: 1px solid var(--ink);
-  padding: var(--sp-5);
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-4);
-  animation: wishlist-toast-in 0.25s var(--ease);
-}
-
-@keyframes wishlist-toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.wishlist-toast__close {
-  position: absolute;
-  top: var(--sp-2);
-  right: var(--sp-2);
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+/* Mismo lenguaje que .wishlist-heart (claro/apagado sin guardar, negro
+   sólido al guardar) -- acá el ícono vive dentro de un botón de texto
+   (.btn--ghost, que ya pinta su texto de var(--ink)), así que hace falta
+   la regla por separado para que el corazón empiece apagado aunque el
+   texto del botón no lo esté. */
+.wishlist-heart-icon {
   color: var(--ink-muted);
 }
 
-.wishlist-toast__close:hover {
+button[aria-pressed='true'] .wishlist-heart-icon {
   color: var(--ink);
 }
 
-.wishlist-toast__head {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  font-size: 0.8125rem;
-  font-weight: 700;
-  padding-right: var(--sp-6);
+/* Toasts de sonner (favoritos, carrito, aviso de stock): tarjeta chica y
+   redondeada, no la barra rectangular a todo el ancho. Los toasts de
+   favoritos/carrito fijan además su propio fondo carbón vía
+   --normal-bg/--normal-border/--normal-text inline (ver *_TOAST_STYLE en
+   WishlistProvider.tsx / CartProvider.tsx) y su propia sombra.*/
+[data-sonner-toaster] {
+  --border-radius: 14px;
+  font-family: inherit;
 }
 
-.wishlist-toast__head .icon {
-  fill: currentColor;
+/* La propia hoja de sonner (inyectada por <Toaster> en runtime, puede
+   quedar después de este archivo en el documento) fija --border-radius
+   de nuevo sobre el mismo selector -- a igual especificidad gana el que
+   esté después, por eso acá se fuerza con !important en vez de depender
+   solo de la custom property. */
+[data-sonner-toast] {
+  border-radius: 14px !important;
 }
 
-.wishlist-toast__product {
-  display: flex;
-  gap: var(--sp-3);
-  align-items: center;
-}
+/* Sonner fuerza el toaster/los toasts a todo el ancho de pantalla debajo
+   de los 600px (ver [data-sonner-toaster] en node_modules/sonner/dist/styles.css)
+   -- acá se vuelve a centrar y angostar para que en mobile siga siendo una
+   tarjeta chica, no una franja de punta a punta. */
+@media (max-width: 600px) {
+  /* El toaster necesita un ancho real (no "auto") para que su propio
+     centrado (left:50% + translateX(-50%)) tenga de qué centrarse -- el
+     toast de adentro usa 100% de ESE ancho en vez de un left/width propio,
+     igual que en desktop (ahí comparten --width sin esta media query). */
+  [data-sonner-toaster][data-x-position='center'] {
+    left: 50% !important;
+    right: auto !important;
+    width: min(360px, calc(100vw - 32px)) !important;
+    transform: translateX(-50%) !important;
+  }
 
-.wishlist-toast__art {
-  position: relative;
-  flex: none;
-  width: 64px;
-  height: 64px;
-  background: var(--surface-soft);
-  overflow: hidden;
-}
-
-.wishlist-toast__art img,
-.wishlist-toast__art svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  padding: 8%;
-  object-fit: contain;
-}
-
-.wishlist-toast__actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-}
-
-@media (max-width: 480px) {
-  .wishlist-toast {
-    left: var(--sp-4);
-    right: var(--sp-4);
-    bottom: var(--sp-4);
-    width: auto;
+  [data-sonner-toaster][data-x-position='center'] [data-sonner-toast] {
+    left: 0 !important;
+    right: auto !important;
+    width: 100% !important;
   }
 }
 

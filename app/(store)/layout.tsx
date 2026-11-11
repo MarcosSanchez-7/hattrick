@@ -1,11 +1,10 @@
+import { Toaster } from "sonner";
 import { getAllCategories, getAllPages, getAllProducts, getSetting, toPublicProduct } from "@/lib/data";
 import { DEFAULT_BRANDING, DEFAULT_FOOTER, DEFAULT_NAVBAR, DEFAULT_WHOLESALE } from "@/lib/settings";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { CartDrawer } from "@/components/cart/CartDrawer";
-import { CartStockToast } from "@/components/cart/CartStockToast";
 import { WishlistProvider } from "@/components/wishlist/WishlistProvider";
-import { WishlistToast } from "@/components/wishlist/WishlistToast";
 import { AnnouncementBar } from "@/components/layout/AnnouncementBar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -92,8 +91,17 @@ export default async function StoreLayout({
         <main>{children}</main>
         <Footer categories={categories} settings={footerSettings} pages={pages} />
         <CartDrawer />
-        <CartStockToast />
-        <WishlistToast />
+        {/* top-center: abajo queda el FAB de WhatsApp (.whatsapp-float) y su
+            globo (.wa-teaser); el offset deja lugar al nav sticky de arriba
+            (mismo cálculo que usan los asides sticky del catálogo/admin). */}
+        <Toaster
+          position="top-center"
+          theme="light"
+          richColors
+          closeButton
+          offset={{ top: "calc(var(--nav-h) + var(--sp-5))" }}
+          mobileOffset={{ top: "calc(var(--nav-h) + var(--sp-4))" }}
+        />
         {footerSettings.whatsappNumber && wholesaleSettings.teaserEnabled ? (
           <WhatsAppTeaser text={wholesaleSettings.teaserText} href={wholesaleSettings.teaserHref} />
         ) : null}

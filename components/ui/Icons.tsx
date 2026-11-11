@@ -25,9 +25,30 @@ export const IconUser = ({ className }: IconProps) => (
   </svg>
 );
 
-export const IconHeart = ({ className }: IconProps) => (
-  <svg className={base(className)} viewBox="0 0 24 24" aria-hidden="true">
-    <path d="m12 21.35-1.45-1.32C5.4 15.36 2 12.27 2 8.5 2 5.41 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.41 22 8.5c0 3.77-3.4 6.86-8.55 11.53z" />
+/** Mismo path para los dos estados de favoritos -- por defecto (filled=true)
+ * se renderiza sólido, como en todos los usos existentes (nav, Favoritos,
+ * ficha de producto). El botón de la tarjeta (WishlistHeartButton) pasa
+ * filled={saved} para alternar a contorno sin relleno cuando no está
+ * guardado, sin cambiar el path/tamaño -- solo fill/stroke, por eso el
+ * ícono nunca "salta" de tamaño o posición al cambiar de estado. */
+export const IconHeart = ({ className, filled = true }: IconProps & { filled?: boolean }) => (
+  <svg
+    className={base(className)}
+    viewBox="0 0 122.88 107.41"
+    aria-hidden="true"
+    style={{
+      stroke: filled ? "none" : "currentColor",
+      strokeWidth: filled ? 0 : 8,
+      transition: "stroke 0.18s ease",
+    }}
+  >
+    <path
+      fill={filled ? "currentColor" : "none"}
+      fillRule="evenodd"
+      clipRule="evenodd"
+      style={{ transition: "fill 0.18s ease" }}
+      d="M60.83,17.19C68.84,8.84,74.45,1.62,86.79,0.21c23.17-2.66,44.48,21.06,32.78,44.41 c-3.33,6.65-10.11,14.56-17.61,22.32c-8.23,8.52-17.34,16.87-23.72,23.2l-17.4,17.26L46.46,93.56C29.16,76.9,0.95,55.93,0.02,29.95 C-0.63,11.75,13.73,0.09,30.25,0.3C45.01,0.5,51.22,7.84,60.83,17.19L60.83,17.19L60.83,17.19z"
+    />
   </svg>
 );
 
