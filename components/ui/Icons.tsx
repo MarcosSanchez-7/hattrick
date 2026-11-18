@@ -40,6 +40,10 @@ export const IconHeart = ({ className, filled = true }: IconProps & { filled?: b
       stroke: filled ? "none" : "currentColor",
       strokeWidth: filled ? 0 : 8,
       transition: "stroke 0.18s ease",
+      // El path llega casi hasta el borde del viewBox (ver d= abajo) -- sin
+      // esto, el contorno (stroke) se recorta a los costados porque un svg
+      // por defecto clippea todo lo que queda afuera del viewBox.
+      overflow: "visible",
     }}
   >
     <path

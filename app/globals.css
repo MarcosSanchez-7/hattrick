@@ -3467,16 +3467,17 @@ textarea {
 /* Jerarquía visual entre los 4 números de cada línea: Precio venta es el
    dato que más se mira (más grande, en negrita); Precio costo es solo
    referencia para calcular la ganancia, no hace falta que compita en peso
-   visual -- más chico y en gris. Ganancia ya iba en verde y negrita
-   (admin-table__profit-cell); Cant. se queda neutro, es solo un número de
-   apoyo. */
+   visual -- gris y sin negrita (el tamaño NO baja de 1rem/16px: un input
+   con font-size menor dispara el auto-zoom de Safari en iOS al enfocarlo).
+   Ganancia ya iba en verde y negrita (admin-table__profit-cell); Cant. se
+   queda neutro, es solo un número de apoyo. */
 .admin-table--sale-items .admin-sale-line__price-venta {
   font-size: 1rem;
   font-weight: 700;
   color: var(--ink);
 }
 .admin-table--sale-items .admin-sale-line__price-costo {
-  font-size: 0.8125rem;
+  font-size: 1rem;
   color: var(--ink-muted);
 }
 
