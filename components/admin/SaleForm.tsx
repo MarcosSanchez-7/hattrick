@@ -13,7 +13,7 @@ import {
 } from "@/lib/catalog";
 import type { Customer } from "@/lib/data";
 import { formatNumber, formatPrice, parseFormattedNumber } from "@/lib/format";
-import { IconChevron, IconClose, IconPlus, IconSearch } from "@/components/ui/Icons";
+import { IconClose, IconMinus, IconPlus, IconSearch } from "@/components/ui/Icons";
 import { CollapsibleFieldset } from "@/components/admin/CollapsibleFieldset";
 import { LocationPicker, type LatLng } from "@/components/admin/LocationPicker";
 import { ProductVisual } from "@/components/product/ProductVisual";
@@ -308,20 +308,6 @@ export function SaleForm({
     setLines((prev) => prev.filter((l) => l.key !== key));
   };
 
-  // En mobile cada artículo arranca colapsado (solo nombre + talla a la
-  // vista) -- mismo patrón que InventoryTable.tsx (.admin-table__row-toggle
-  // + data-expanded), que ya no tiene efecto visual en desktop
-  // (display:contents/chevron oculto, ver globals.css).
-  const [expandedLines, setExpandedLines] = useState<Set<string>>(new Set());
-  const toggleLineExpanded = (key: string) => {
-    setExpandedLines((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
   /** Elegir un proveedor autocompleta costPrice con su precio de compra —
    * sigue siendo editable a mano después, como cualquier costPrice. */
   const setLineSupplier = (key: string, supplierId: string) => {
@@ -344,15 +330,6 @@ export function SaleForm({
     );
   };
 
-  const total = lines.reduce(
-    (acc, l) => acc + (Number(l.unitPrice) || 0) * l.quantity,
-    0,
-  );
-  const profit = lines.reduce(
-    (acc, l) =>
-      acc + ((Number(l.unitPrice) || 0) - (Number(l.costPrice) || 0)) * l.quantity,
-    0,
-  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -550,203 +527,198 @@ export function SaleForm({
         {lines.length === 0 ? (
           <p className="admin-help">Todavía no agregaste ningún artículo.</p>
         ) : (
-          <div className="admin-table-wrap">
-            <table className="admin-table admin-table--sale-items">
-              {/* Columnas de ancho fijo para lo que tiene un contenido
-                  acotado (cantidad, precios) -- así Artículo (sin ancho
-                  fijo) se queda con todo el resto en vez de partir "Cerro
-                  Porteño 2026" en 3-4 líneas, y la fila entra sin scroll
-                  horizontal en una pantalla normal. Proveedor ya no es
-                  columna propia (se mudó debajo del nombre del producto,
-                  ver la celda de Artículo) y Quitar es una insignia
-                  flotante, no necesita ancho real. */}
-              <colgroup>
-                <col />
-                <col style={{ width: 180 }} />
-                <col style={{ width: 50 }} />
-                <col style={{ width: 110 }} />
-                <col style={{ width: 90 }} />
-                <col style={{ width: 90 }} />
-                <col style={{ width: 1 }} />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th>Artículo</th>
-                  <th>Detalle</th>
-                  <th>Cant.</th>
-                  <th>Precio venta</th>
-                  <th>Precio costo</th>
-                  <th>Ganancia</th>
-                  <th aria-label="Quitar" />
-                </tr>
-              </thead>
-              <tbody>
-                {lines.map((l) => {
-                  const lineProfit =
-                    ((Number(l.unitPrice) || 0) - (Number(l.costPrice) || 0)) *
-                    l.quantity;
-                  const isLineOpen = expandedLines.has(l.key);
-                  return (
-                    <tr key={l.key} data-expanded={isLineOpen ? "true" : "false"}>
-                      <td>
-                        <button
-                          type="button"
-                          className="admin-table__row-toggle"
-                          aria-expanded={isLineOpen}
-                          onClick={() => toggleLineExpanded(l.key)}
-                        >
-                          <div className="admin-table__product">
-                            <div className="admin-table__thumb">
-                              <ProductVisual
-                                images={l.images}
-                                colors={l.colors}
-                                pattern={l.pattern}
-                                uid={`sale-line-${l.key}`}
-                                alt={l.name}
-                                size="thumb"
-                              />
-                            </div>
-                            <div>
-                              <div style={{ fontWeight: 600 }}>{l.name}</div>
-                              <div className="meta">
-                                Talla {l.size} ·{" "}
-                                {l.source === "dropshipping"
-                                  ? "Dropshipping"
-                                  : l.source === "interno"
-                                    ? "Control interno (otro proveedor)"
-                                    : "Stock propio"}
-                              </div>
-                            </div>
+          <div className="sale-items">
+            <div className="sale-items__head" aria-hidden="true">
+              <span>Artículo</span>
+              <span>Detalle</span>
+              <span>Cant.</span>
+              <span>Precio venta</span>
+              <span>Precio costo</span>
+              <span>Ganancia</span>
+              <span />
+            </div>
+            {lines.map((l) => {
+              const lineProfit =
+                ((Number(l.unitPrice) || 0) - (Number(l.costPrice) || 0)) * l.quantity;
+              const atMaxStock = l.maxStock != null && l.quantity >= l.maxStock;
+              return (
+                <div key={l.key} className="sale-item">
+                  <div className="sale-item__product">
+                    <div className="sale-item__thumb">
+                      <ProductVisual
+                        images={l.images}
+                        colors={l.colors}
+                        pattern={l.pattern}
+                        uid={`sale-line-${l.key}`}
+                        alt={l.name}
+                        size="thumb"
+                      />
+                    </div>
+                    <div className="sale-item__info">
+                      <div className="sale-item__name">{l.name}</div>
+                      <div className="meta">
+                        Talla {l.size} ·{" "}
+                        {l.source === "dropshipping"
+                          ? "Dropshipping"
+                          : l.source === "interno"
+                            ? "Control interno (otro proveedor)"
+                            : "Stock propio"}
+                      </div>
+                      {/* Proveedor: solo se ofrecen los que tienen stock
+                          cargado de ESTA talla puntual (ver
+                          ProductSupplierSizeStock) -- el precio sigue
+                          saliendo de la lista de precios por proveedor. */}
+                      {(() => {
+                        const lineProduct = products.find((p) => p.id === l.productId);
+                        const options = (lineProduct?.supplierSizeStock ?? [])
+                          .filter((s) => s.size === l.size && s.quantity > 0)
+                          .map((s) => {
+                            const price = lineProduct?.suppliers?.find(
+                              (p) => p.supplierId === s.supplierId,
+                            );
+                            return price
+                              ? {
+                                  supplierId: s.supplierId,
+                                  supplierName: s.supplierName,
+                                  unitCost: price.unitCost,
+                                }
+                              : null;
+                          })
+                          .filter((s): s is NonNullable<typeof s> => s !== null);
+                        if (options.length === 0) return null;
+                        return (
+                          <div className="admin-sale-line__supplier">
+                            <label>Proveedor</label>
+                            <select
+                              value={l.supplierId ?? ""}
+                              onChange={(e) => setLineSupplier(l.key, e.target.value)}
+                              aria-label="Proveedor"
+                            >
+                              <option value="">Sin elegir</option>
+                              {options.map((s) => (
+                                <option key={s.supplierId} value={s.supplierId}>
+                                  {s.supplierName} ({formatPrice(s.unitCost)})
+                                </option>
+                              ))}
+                            </select>
                           </div>
-                          <IconChevron className="icon--sm admin-table__row-chevron" />
-                        </button>
-                        {/* Proveedor queda fuera del botón (un <select> no
-                            puede ir dentro de un <button>) -- debajo del
-                            nombre en vez de su propia columna, ya que la
-                            mayoría de las veces no hay opciones que elegir. */}
-                        {(() => {
-                          const lineProduct = products.find((p) => p.id === l.productId);
-                          // Solo se ofrecen los proveedores que tienen stock
-                          // cargado de ESTA talla puntual (ver
-                          // ProductSupplierSizeStock) -- el precio sigue
-                          // saliendo de la lista de precios por proveedor.
-                          const options = (lineProduct?.supplierSizeStock ?? [])
-                            .filter((s) => s.size === l.size && s.quantity > 0)
-                            .map((s) => {
-                              const price = lineProduct?.suppliers?.find(
-                                (p) => p.supplierId === s.supplierId,
-                              );
-                              return price
-                                ? {
-                                    supplierId: s.supplierId,
-                                    supplierName: s.supplierName,
-                                    unitCost: price.unitCost,
-                                  }
-                                : null;
-                            })
-                            .filter((s): s is NonNullable<typeof s> => s !== null);
-                          if (options.length === 0) return null;
-                          return (
-                            <div className="admin-sale-line__supplier">
-                              <label>Proveedor</label>
-                              <select
-                                value={l.supplierId ?? ""}
-                                onChange={(e) => setLineSupplier(l.key, e.target.value)}
-                                aria-label="Proveedor"
-                              >
-                                <option value="">Sin elegir</option>
-                                {options.map((s) => (
-                                  <option key={s.supplierId} value={s.supplierId}>
-                                    {s.supplierName} ({formatPrice(s.unitCost)})
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          );
-                        })()}
-                      </td>
-                      <td data-label="Detalle">
-                        <input
-                          type="text"
-                          value={l.itemNote}
-                          title={l.itemNote || undefined}
-                          className="admin-variant-qty admin-sale-line__detail"
-                          placeholder="Personalizado, parches…"
-                          onChange={(e) => updateLine(l.key, "itemNote", e.target.value)}
-                        />
-                      </td>
-                      <td data-label="Cant.">
-                        <input
-                          type="number"
-                          min={1}
-                          max={l.maxStock ?? undefined}
-                          value={l.quantity}
-                          className="admin-variant-qty"
-                          onChange={(e) => {
-                            const raw = Number(e.target.value) || 1;
-                            const quantity =
-                              l.maxStock != null
-                                ? Math.max(1, Math.min(l.maxStock, raw))
-                                : Math.max(1, raw);
-                            updateLine(l.key, "quantity", quantity);
-                          }}
-                        />
-                      </td>
-                      <td data-label="Precio venta">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={l.unitPrice ? formatNumber(Number(l.unitPrice)) : ""}
-                          className="admin-variant-qty admin-sale-line__price-venta"
-                          onChange={(e) =>
-                            updateLine(l.key, "unitPrice", parseFormattedNumber(e.target.value))
-                          }
-                        />
-                      </td>
-                      <td data-label="Precio costo">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={l.costPrice ? formatNumber(Number(l.costPrice)) : ""}
-                          className="admin-variant-qty admin-sale-line__price-costo"
-                          onChange={(e) =>
-                            updateLine(l.key, "costPrice", parseFormattedNumber(e.target.value))
-                          }
-                        />
-                      </td>
-                      <td data-label="Ganancia" className="admin-table__profit-cell">
-                        {formatPrice(lineProfit)}
-                      </td>
-                      <td className="admin-table__remove-cell">
-                        <button
-                          type="button"
-                          className="admin-icon-btn admin-table__remove-item"
-                          aria-label="Quitar artículo"
-                          onClick={() => removeLine(l.key)}
-                        >
-                          <IconClose className="icon--sm" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  <div className="sale-item__field sale-item__field--detail">
+                    <label htmlFor={`${l.key}-detail`} className="sale-item__field-label">
+                      Detalle
+                    </label>
+                    <input
+                      id={`${l.key}-detail`}
+                      type="text"
+                      value={l.itemNote}
+                      title={l.itemNote || undefined}
+                      className="sale-item__input"
+                      placeholder="Personalizado, parches…"
+                      onChange={(e) => updateLine(l.key, "itemNote", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="sale-item__field sale-item__field--qty">
+                    <label htmlFor={`${l.key}-qty`} className="sale-item__field-label">
+                      Cant.
+                    </label>
+                    <div className="qty-stepper">
+                      <button
+                        type="button"
+                        aria-label="Restar una unidad"
+                        disabled={l.quantity <= 1}
+                        onClick={() => updateLine(l.key, "quantity", Math.max(1, l.quantity - 1))}
+                      >
+                        <IconMinus className="icon--sm" />
+                      </button>
+                      <input
+                        id={`${l.key}-qty`}
+                        type="number"
+                        min={1}
+                        max={l.maxStock ?? undefined}
+                        value={l.quantity}
+                        onChange={(e) => {
+                          const raw = Number(e.target.value) || 1;
+                          const quantity =
+                            l.maxStock != null
+                              ? Math.max(1, Math.min(l.maxStock, raw))
+                              : Math.max(1, raw);
+                          updateLine(l.key, "quantity", quantity);
+                        }}
+                      />
+                      <button
+                        type="button"
+                        aria-label="Sumar una unidad"
+                        disabled={atMaxStock}
+                        onClick={() =>
+                          updateLine(
+                            l.key,
+                            "quantity",
+                            l.maxStock != null
+                              ? Math.min(l.maxStock, l.quantity + 1)
+                              : l.quantity + 1,
+                          )
+                        }
+                      >
+                        <IconPlus className="icon--sm" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="sale-item__field sale-item__field--venta">
+                    <label htmlFor={`${l.key}-venta`} className="sale-item__field-label">
+                      Precio venta
+                    </label>
+                    <input
+                      id={`${l.key}-venta`}
+                      type="text"
+                      inputMode="numeric"
+                      value={l.unitPrice ? formatNumber(Number(l.unitPrice)) : ""}
+                      className="sale-item__stat-input"
+                      onChange={(e) =>
+                        updateLine(l.key, "unitPrice", parseFormattedNumber(e.target.value))
+                      }
+                    />
+                  </div>
+
+                  <div className="sale-item__field sale-item__field--costo">
+                    <label htmlFor={`${l.key}-costo`} className="sale-item__field-label">
+                      Precio costo
+                    </label>
+                    <input
+                      id={`${l.key}-costo`}
+                      type="text"
+                      inputMode="numeric"
+                      value={l.costPrice ? formatNumber(Number(l.costPrice)) : ""}
+                      className="sale-item__stat-input sale-item__stat-input--costo"
+                      onChange={(e) =>
+                        updateLine(l.key, "costPrice", parseFormattedNumber(e.target.value))
+                      }
+                    />
+                  </div>
+
+                  <div className="sale-item__field sale-item__field--profit">
+                    <span className="sale-item__field-label">Ganancia</span>
+                    <span className="sale-item__profit-value">{formatPrice(lineProfit)}</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="sale-item__remove"
+                    aria-label="Quitar artículo"
+                    onClick={() => removeLine(l.key)}
+                  >
+                    <IconClose className="icon--sm" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
-
-        {lines.length > 0 ? (
-          <div className="totals" style={{ maxWidth: 320, marginLeft: "auto" }}>
-            <div className="totals__row">
-              <span>Total venta</span>
-              <span>{formatPrice(total)}</span>
-            </div>
-            <div className="totals__row totals__row--total totals__row--profit">
-              <span>Ganancia</span>
-              <span>{formatPrice(profit)}</span>
-            </div>
-          </div>
-        ) : null}
       </div>
 
       <CollapsibleFieldset title="Detalles de la venta" defaultOpen={isEdit}>

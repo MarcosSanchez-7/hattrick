@@ -3147,14 +3147,6 @@ textarea {
   overflow-x: auto;
 }
 
-/* La insignia roja de "quitar" (SaleForm) se asoma a propósito 10px fuera
-   del borde de la fila -- sin este margen, ese asomo de más se contaba
-   como overflow real y disparaba un scroll horizontal de 10px, aunque el
-   resto de la tabla entrara perfecto. */
-.admin-table-wrap:has(.admin-table--sale-items) {
-  padding-right: 14px;
-}
-
 .admin-cat-group {
   border-bottom: 1px solid var(--line);
 }
@@ -3356,84 +3348,198 @@ textarea {
   border-bottom: 0;
 }
 
-/* Tabla de artículos de una venta (SaleForm) -- 8 columnas angostas con
-   inputs, no una lista de filas de ancho libre como el resto de las
-   tablas del admin. El padding estándar (var(--sp-5) = 24px por lado) más
-   los anchos por defecto de los inputs desbordaban cualquier pantalla que
-   no fuera ultra-wide, forzando scroll horizontal y dejando "Artículo" sin
-   espacio real (el nombre del producto partido en 3-4 líneas). Las columnas
-   angostas usan un ancho fijo (<colgroup> en el JSX) y padding reducido;
-   Artículo, sin ancho fijo, se queda con lo que sobra. table-layout:fixed
-   es necesario para que el navegador realmente respete esos anchos del
-   <colgroup> -- con el "auto" por defecto son apenas una sugerencia, y el
-   browser terminaba angostando Artículo de cualquier forma si el resto no
-   entraba, en vez de ajustarse ÉL al espacio libre real. */
-.admin-table--sale-items {
-  table-layout: fixed;
+/* Lista de artículos de una venta (SaleForm) -- cada línea es una fila de
+   grid (no <table>) para poder mostrar números grandes y legibles (precio
+   venta/costo/ganancia) sin apretarlos en celdas angostas. Mismas columnas
+   en el encabezado y en cada fila para que todo quede alineado. En mobile
+   (ver @media 640px) el grid cambia de plantilla y se apila en tarjeta,
+   mostrando siempre todos los datos (no colapsado) para que se vea
+   completo de un vistazo. */
+.sale-items {
+  margin-top: var(--sp-4);
+  border: 1px solid var(--line);
+  overflow-x: auto;
 }
-.admin-table--sale-items th,
-.admin-table--sale-items td {
-  padding-inline: var(--sp-3);
-  white-space: normal;
+.sale-items__head,
+.sale-item {
+  display: grid;
+  grid-template-columns:
+    minmax(210px, 2.4fr) minmax(110px, 1fr) 92px 120px 120px 104px 36px;
+  align-items: center;
+  gap: var(--sp-3);
 }
-.admin-table--sale-items td input.admin-variant-qty,
-.admin-table--sale-items td select.admin-variant-qty {
+.sale-items__head {
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--line);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+.sale-item {
+  padding: var(--sp-4);
+  border-bottom: 1px solid var(--line);
+}
+.sale-item:last-child {
+  border-bottom: 0;
+}
+
+.sale-item__product {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+.sale-item__thumb {
+  width: 56px;
+  height: 64px;
+  flex: none;
+  background: var(--surface-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.sale-item__thumb img,
+.sale-item__thumb svg {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.sale-item__info {
+  min-width: 0;
+}
+.sale-item__name {
+  font-weight: 700;
+  font-size: 0.9375rem;
+}
+
+.sale-item__field {
+  min-width: 0;
+}
+/* En desktop el encabezado de la lista ya nombra cada columna -- esta
+   etiqueta por campo solo se muestra apilada en mobile (ver @media 640px),
+   para no duplicar el texto. */
+.sale-item__field-label {
+  display: none;
+}
+
+.sale-item__input {
   width: 100%;
-  padding-inline: 6px;
-  text-align: center;
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  background: var(--surface);
 }
-/* La columna Cant. es la más angosta (50px) -- las flechitas nativas de
-   type=number le robaban casi todo el espacio al dígito. Sin ellas entra
-   cómodo y centrado; el stepper no se pierde: el input sigue aceptando
-   flechas de teclado y los límites min/max de todas formas. */
-.admin-table--sale-items td input[type='number'] {
+.sale-item__input:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+/* Stepper +/- para la cantidad -- más fácil de tocar en mobile que un
+   input numérico pelado, y dificulta menos pasarse del stock disponible
+   (el botón + se deshabilita solo al llegar al tope). */
+.qty-stepper {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  height: 40px;
+}
+.qty-stepper button {
+  width: 32px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: var(--surface-soft);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color 0.15s var(--ease);
+}
+.qty-stepper button:hover:not(:disabled) {
+  background: var(--surface-muted);
+}
+.qty-stepper button:disabled {
+  color: var(--ink-muted);
+  cursor: not-allowed;
+}
+.qty-stepper input {
+  width: 0;
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
   -moz-appearance: textfield;
 }
-.admin-table--sale-items td input[type='number']::-webkit-outer-spin-button,
-.admin-table--sale-items td input[type='number']::-webkit-inner-spin-button {
+.qty-stepper input::-webkit-outer-spin-button,
+.qty-stepper input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
-/* Última columna (botón quitar, 32px) -- con el padding estándar de la
-   tabla no entraba en su propia celda y empujaba el ancho total de
-   .admin-table-wrap, forzando scroll horizontal aunque las demás columnas
-   entraran perfecto. Ya no reserva ancho real (ver <colgroup>, 1px) -- el
-   botón flota encima de la fila (ver .admin-table__remove-item más abajo),
-   así que esta celda solo necesita no estorbar. */
-.admin-table--sale-items td:last-child {
-  padding: 0;
-  width: 0;
+.qty-stepper input:focus {
+  outline: none;
 }
 
-/* Insignia roja de "quitar artículo", flotando en la esquina superior
-   derecha de la FILA -- antes solo pasaba esto en mobile (tarjeta
-   apilada); en desktop (tabla real) el mismo botón se queda directo en su
-   columna, con pinta de ícono suelto al final. Repetirlo acá, sin media
-   query, lo deja igual en los dos casos. */
-.admin-table--sale-items tr {
-  position: relative;
+/* Jerarquía visual entre los 3 números de cada línea: Precio venta es el
+   dato que más se mira (grande, en negrita, con fondo propio para que
+   resalte); Precio costo es solo referencia para calcular la ganancia, no
+   hace falta que compita en peso visual. El tamaño no baja de 1rem/16px:
+   un input con font-size menor dispara el auto-zoom de Safari en iOS al
+   enfocarlo. */
+.sale-item__stat-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  padding: 9px 10px;
+  font-family: inherit;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: center;
 }
-.admin-table--sale-items .admin-table__remove-item {
-  position: absolute;
-  top: -10px;
-  right: -10px;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  background: #f87171;
-  border: 2px solid var(--surface);
-  color: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+.sale-item__stat-input--costo {
+  background: var(--surface);
+  font-weight: 600;
+  color: var(--ink-soft);
 }
-.admin-table--sale-items .admin-table__remove-item:hover {
-  background: #ef4444;
+.sale-item__stat-input:focus {
+  outline: none;
+  border-color: var(--ink);
 }
 
-/* Detalle: el input necesitaba más ancho y más tamaño de letra para que un
-   texto largo (ej. "Personalizado: Messi 10, parche LaLiga") se alcance a
-   leer en vez de quedar cortado en una caja angosta. */
-.admin-table--sale-items .admin-sale-line__detail {
-  font-size: 0.875rem;
+.sale-item__profit-value {
+  font-size: 1.0625rem;
+  font-weight: 800;
+  color: var(--success);
+}
+
+.sale-item__remove {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  justify-self: center;
+  transition: all 0.15s var(--ease);
+}
+.sale-item__remove:hover {
+  border-color: #b3132a;
+  background: #fdecec;
+  color: #b3132a;
 }
 
 /* Proveedor se mudó de columna propia a una línea chica debajo del nombre
@@ -3462,33 +3568,6 @@ textarea {
   font-size: 0.8125rem;
   border: 1px solid var(--line);
   background: var(--surface);
-}
-
-/* Jerarquía visual entre los 4 números de cada línea: Precio venta es el
-   dato que más se mira (más grande, en negrita); Precio costo es solo
-   referencia para calcular la ganancia, no hace falta que compita en peso
-   visual -- gris y sin negrita (el tamaño NO baja de 1rem/16px: un input
-   con font-size menor dispara el auto-zoom de Safari en iOS al enfocarlo).
-   Ganancia ya iba en verde y negrita (admin-table__profit-cell); Cant. se
-   queda neutro, es solo un número de apoyo. */
-.admin-table--sale-items .admin-sale-line__price-venta {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--ink);
-}
-.admin-table--sale-items .admin-sale-line__price-costo {
-  font-size: 1rem;
-  color: var(--ink-muted);
-}
-
-/* Ganancia en verde suave (--success), para distinguirla a simple vista
-   del precio de venta/costo -- tanto en la fila de cada artículo como en
-   el total de la venta. Universal a propósito (antes vivía sin querer
-   adentro del media query mobile nada más -- en desktop la Ganancia salía
-   en negro de siempre). */
-.admin-table__profit-cell,
-.totals__row--profit {
-  color: var(--success);
 }
 
 .admin-table__product {
@@ -4311,15 +4390,6 @@ textarea {
     margin-bottom: var(--sp-3);
   }
 
-  /* El botón "quitar artículo" en sí (posición, color) ya es universal --
-     ver .admin-table--sale-items .admin-table__remove-item más arriba,
-     fuera de cualquier media query, así se ve igual en mobile y desktop.
-     Acá solo queda la excepción mobile: al "la fila colapsada solo
-     muestra el nombre", el botón de quitar se ve siempre, para no obligar
-     a desplegar la tarjeta solo para sacar un artículo cargado por error. */
-  .admin-table tr[data-expanded='false'] td.admin-table__remove-cell:not([data-label]):last-child {
-    display: block;
-  }
   .admin-table td {
     border: none;
     padding: 0;
@@ -4416,6 +4486,77 @@ textarea {
     border-bottom: none;
     padding-bottom: 0;
     margin-bottom: 0;
+  }
+
+  /* Lista de artículos de una venta (SaleForm): pasa de fila de grid a
+     tarjeta apilada en 2 columnas. Todo el dato queda siempre visible (sin
+     colapsar), con etiqueta propia por campo ya que el encabezado de
+     columnas se oculta. */
+  .sale-items {
+    border: none;
+    overflow-x: visible;
+  }
+  .sale-items__head {
+    display: none;
+  }
+  .sale-item {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "product product"
+      "detail detail"
+      "qty venta"
+      "costo profit";
+    position: relative;
+    border: 1px solid var(--line);
+    padding: var(--sp-4);
+    padding-right: var(--sp-7);
+    margin-bottom: var(--sp-3);
+  }
+  .sale-item:last-child {
+    margin-bottom: 0;
+  }
+  .sale-item__product {
+    grid-area: product;
+  }
+  .sale-item__field--detail {
+    grid-area: detail;
+  }
+  .sale-item__field--qty {
+    grid-area: qty;
+  }
+  .sale-item__field--venta {
+    grid-area: venta;
+  }
+  .sale-item__field--costo {
+    grid-area: costo;
+  }
+  .sale-item__field--profit {
+    grid-area: profit;
+  }
+  .sale-item__field-label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-muted);
+  }
+  .sale-item__remove {
+    position: absolute;
+    top: var(--sp-3);
+    right: var(--sp-3);
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    background: #f87171;
+    border: 2px solid var(--surface);
+    color: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  }
+  .sale-item__remove:hover {
+    background: #ef4444;
   }
 }
 
