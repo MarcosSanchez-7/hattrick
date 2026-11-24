@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { bestSellers, byCategoryTree, categorySlugPath, getCategory, newArrivals } from "@/lib/catalog";
-import { getAllCategories, getAllProducts, getAllTags, getSetting, toPublicProduct } from "@/lib/data";
+import { getAllCategories, getAllPublicProducts, getAllTags, getSetting } from "@/lib/data";
 import {
   DEFAULT_CUSTOM_BANNER,
   DEFAULT_DTF,
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 
 export default async function HomePage() {
   const [
-    allProducts,
+    products,
     categories,
     tags,
     heroSettings,
@@ -39,7 +39,12 @@ export default async function HomePage() {
     dtfSettings,
     wholesaleSettings,
   ] = await Promise.all([
-    getAllProducts(),
+    // getAllPublicProducts() (memoizado por request, ver lib/data.ts) y no
+    // getAllProducts()+.map(toPublicProduct) local: layout.tsx pide el
+    // mismo array para Navbar/SearchOverlay -- compartir la referencia
+    // evita que React Flight serialice dos veces los campos anidados que
+    // toPublicProduct pasa sin clonar (colors/images/sizes/soldOut/tags).
+    getAllPublicProducts(),
     getAllCategories(),
     getAllTags(),
     getSetting("hero", DEFAULT_HERO),
@@ -50,10 +55,6 @@ export default async function HomePage() {
     getSetting("dtf", DEFAULT_DTF),
     getSetting("wholesale", DEFAULT_WHOLESALE),
   ]);
-  // Todo lo que sigue va a Client Components (CategoryGrid, OffersSection,
-  // DtfSection, ProductGrid) -- se mapea a la versión pública antes de usarla
-  // en vez de pasar el Product completo (ver toPublicProduct en lib/data.ts).
-  const products = allProducts.map(toPublicProduct);
   const nuevos = newArrivals(products).slice(0, 8);
   const populares = bestSellers(products).slice(0, 4);
   const firstSlideImage = heroSettings.slides[0]?.image;

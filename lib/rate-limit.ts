@@ -49,6 +49,23 @@ const adminLimiter = redis
     })
   : null;
 
+// Resolución pública del carrito (GET /api/catalog/cart-items, sin
+// sesión): legítimo que dispare más de una vez por visita (al restaurar el
+// carrito desde localStorage, y de nuevo antes de continuar a WhatsApp
+// para refrescar precio/stock -- ver CartProvider.tsx) pero sigue siendo
+// la única ruta pública sin sesión que termina en una consulta a Supabase
+// por datos arbitrarios del cliente (slugs), así que necesita un límite
+// real. 20/10s deja pasar holgado el uso normal (2-3 llamadas por sesión)
+// y frena un script que intente scrapear precios pidiendo muchos slugs
+// distintos en bucle.
+const cartResolveLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(20, "10 s"),
+      prefix: "rl:cart-resolve",
+    })
+  : null;
+
 export type RateLimitResult = {
   limited: boolean;
   retryAfterSeconds?: number;
@@ -78,4 +95,8 @@ export function checkStrictRateLimit(ip: string): Promise<RateLimitResult> {
 
 export function checkAdminRateLimit(ip: string): Promise<RateLimitResult> {
   return check(adminLimiter, ip);
+}
+
+export function checkCartResolveRateLimit(ip: string): Promise<RateLimitResult> {
+  return check(cartResolveLimiter, ip);
 }

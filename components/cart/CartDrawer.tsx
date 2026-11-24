@@ -20,8 +20,17 @@ import {
 } from "@/components/ui/Icons";
 
 export function CartDrawer() {
-  const { isOpen, closeCart, lines, subtotal, freeShipping, total, count } =
-    useCart();
+  const {
+    isOpen,
+    closeCart,
+    lines,
+    subtotal,
+    freeShipping,
+    total,
+    count,
+    resolveError,
+    retryResolve,
+  } = useCart();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeCart();
@@ -85,6 +94,15 @@ export function CartDrawer() {
               </div>
             </div>
 
+            {resolveError ? (
+              <div className="row gap-3" style={{ padding: "8px 24px 0" }}>
+                <span className="meta">No se pudo actualizar el carrito.</span>
+                <button type="button" className="link-underline meta" onClick={retryResolve}>
+                  Reintentar
+                </button>
+              </div>
+            ) : null}
+
             <div className="drawer__body">
               {lines.map((line) => (
                 <DrawerLine key={line.key} line={line} />
@@ -128,7 +146,38 @@ export function CartDrawer() {
 
 function DrawerLine({ line }: { line: CartLine }) {
   const { setQty, remove, closeCart } = useCart();
-  const { product } = line;
+  const { product, status } = line;
+
+  if (!product) {
+    return (
+      <div className="line-item">
+        <div className="line-item__art">
+          {status === "pending" ? (
+            <div className="skeleton" style={{ width: "100%", height: "100%" }} />
+          ) : null}
+        </div>
+        <div>
+          <div className="line-item__top">
+            <div>
+              <span style={{ fontWeight: 600, fontSize: "0.9375rem" }}>
+                {status === "pending" ? "Cargando…" : "Producto ya no disponible"}
+              </span>
+              <div className="meta">Talla {line.size}</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => remove(line.key)}
+              aria-label="Eliminar del carrito"
+              style={{ color: "var(--ink-muted)" }}
+            >
+              <IconTrash className="icon--sm" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const max = availableStock(product, line.size);
   const atMax = max != null ? line.qty >= max : line.qty >= 10;
 

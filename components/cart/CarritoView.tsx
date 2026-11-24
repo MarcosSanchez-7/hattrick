@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { formatPrice } from "@/lib/format";
 import { SITE_URL } from "@/lib/site";
 import {
   FREE_SHIPPING_FROM,
   availableStock,
+  deriveCartLines,
   useCart,
   type CartLine,
 } from "@/components/cart/CartProvider";
@@ -28,8 +30,18 @@ type InvoiceInfo = {
   ruc: string;
 };
 
+/** Línea ya resuelta -- solo estas entran al mensaje de WhatsApp; lo que
+ * sigue "pending" o quedó "unavailable" se excluye (igual que ya excluye el
+ * subtotal, ver CartProvider.tsx) hasta que el cliente lo saque o se
+ * resuelva. */
+type ResolvedCartLine = CartLine & { product: NonNullable<CartLine["product"]> };
+
+function isResolvedLine(line: CartLine): line is ResolvedCartLine {
+  return line.product !== null;
+}
+
 function buildWhatsAppMessage(
-  lines: CartLine[],
+  lines: ResolvedCartLine[],
   total: number,
   freeShipping: boolean,
   invoice: InvoiceInfo,
@@ -59,6 +71,7 @@ function buildWhatsAppMessage(
 export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
   const {
     lines,
+    storedLines,
     subtotal,
     freeShipping,
     total,
@@ -67,32 +80,147 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
     remove,
     clear,
     hydrated,
+    isResolving,
+    resolveError,
+    retryResolve,
+    refreshPrices,
   } = useCart();
 
   const [wantsInvoice, setWantsInvoice] = useState(false);
   const [razonSocial, setRazonSocial] = useState("");
   const [ruc, setRuc] = useState("");
   const [location, setLocation] = useState<LatLng | null>(null);
+  const [validating, setValidating] = useState(false);
+
+  // Verifica precio/stock vigentes una vez al entrar a /carrito (salta la
+  // caché de CDN, ver refreshPrices en CartProvider.tsx) -- esto es una
+  // verificación temprana/UX, no la que decide si se puede continuar: esa
+  // se repite siempre al hacer click en "Continuar por WhatsApp" (ver
+  // handleContinue más abajo), nunca solo acá.
+  const refreshPricesRef = useRef(refreshPrices);
+  refreshPricesRef.current = refreshPrices;
+  useEffect(() => {
+    refreshPricesRef.current();
+  }, []);
+
+  const hasUnavailable = lines.some((l) => l.status === "unavailable");
 
   const invoiceComplete = razonSocial.trim() !== "" && ruc.trim() !== "";
-  const canCheckout = location !== null && (!wantsInvoice || invoiceComplete);
+  const canCheckout =
+    location !== null &&
+    (!wantsInvoice || invoiceComplete) &&
+    !isResolving &&
+    !hasUnavailable &&
+    !validating;
 
-  const whatsappHref =
-    whatsappNumber && canCheckout
-      ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-          buildWhatsAppMessage(
-            lines,
-            total,
-            freeShipping,
-            {
-              wantsInvoice,
-              razonSocial: razonSocial.trim(),
-              ruc: ruc.trim(),
-            },
-            location!,
-          ),
-        )}`
-      : null;
+  const invoiceInfo: InvoiceInfo = {
+    wantsInvoice,
+    razonSocial: razonSocial.trim(),
+    ruc: ruc.trim(),
+  };
+
+  /**
+   * Única puerta real hacia WhatsApp -- se ejecuta SIEMPRE al hacer click,
+   * no solo una vez al entrar a /carrito (el cliente puede quedarse un
+   * rato completando ubicación/factura mientras el precio/stock cambia).
+   * refreshPrices() devuelve los productos recién obtenidos directo (en
+   * vez de depender de que el estado de React ya se haya re-renderizado,
+   * ver CartProvider.tsx) y acá se recalculan las líneas con ESOS datos
+   * frescos -- si algo ya no está disponible o la cantidad guardada superó
+   * el stock vigente, se avisa y se bloquea en vez de excluirlo en
+   * silencio del pedido.
+   *
+   * El wa.me se abre con window.open("", "_blank") ANTES del await (bajo
+   * el gesto del click, para que el navegador no lo trate como popup) y
+   * recién después se navega esa pestaña ya abierta -- abrir la pestaña
+   * DESPUÉS de un await casi siempre lo bloquea un popup blocker.
+   */
+  async function handleContinue() {
+    if (!whatsappNumber || !canCheckout) return;
+    setValidating(true);
+    // Sin "noopener" en las window features a propósito: ese flag hace que
+    // window.open() devuelva null (es justamente lo que "noopener"
+    // significa -- no darle al que abre una referencia a la nueva
+    // ventana), lo que habría roto todo este patrón de "abrir en blanco
+    // bajo el gesto del click, navegar recién al terminar de validar". La
+    // protección equivalente (que wa.me no pueda tocar `window.opener` de
+    // esta pestaña) se aplica más abajo con `tab.opener = null` ANTES de
+    // navegarla a una URL externa, sin perder la referencia.
+    const tab = window.open("", "_blank");
+    // `opened` controla el `finally` de abajo: la pestaña en blanco debe
+    // cerrarse en CUALQUIER salida que no termine en una navegación real a
+    // wa.me -- no solo en los tres chequeos de abajo (red/no disponible/
+    // stock), sino también ante una excepción inesperada que nadie previó,
+    // para que nunca quede una pestaña huérfana ni `validating` trabado.
+    let opened = false;
+
+    try {
+      const result = await refreshPrices();
+      if (!result.ok) {
+        toast.error("No pudimos confirmar el precio y el stock. Probá de nuevo.");
+        return;
+      }
+
+      const freshMap = new Map(result.products.map((p) => [p.slug, p]));
+      const freshLines = deriveCartLines(
+        storedLines,
+        (slug) => freshMap.get(slug),
+        (slug) => !freshMap.has(slug),
+      );
+      const unavailableNow = freshLines.filter((l) => l.status === "unavailable");
+      const overStock = freshLines.filter((l) => {
+        if (!l.product) return false;
+        const max = availableStock(l.product, l.size);
+        return max != null && l.qty > max;
+      });
+
+      if (unavailableNow.length > 0) {
+        toast.error(
+          "Uno o más productos de tu carrito ya no están disponibles. Quitalos para continuar.",
+        );
+        return;
+      }
+      if (overStock.length > 0) {
+        const names = overStock.map((l) => `${l.product!.name} (talla ${l.size})`).join(", ");
+        toast.error(`Stock insuficiente para: ${names}. Ajustá la cantidad para continuar.`);
+        return;
+      }
+
+      const resolvedFresh = freshLines.filter(isResolvedLine);
+      const freshTotal = freshLines.reduce((acc, l) => acc + l.lineTotal, 0);
+      const freshFreeShipping = freshTotal > 0 && freshTotal >= FREE_SHIPPING_FROM;
+      const message = buildWhatsAppMessage(
+        resolvedFresh,
+        freshTotal,
+        freshFreeShipping,
+        invoiceInfo,
+        location!,
+      );
+      const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+
+      trackPixelEvent("InitiateCheckout", {
+        content_ids: resolvedFresh.map((l) => l.product.id),
+        num_items: resolvedFresh.reduce((acc, l) => acc + l.qty, 0),
+        value: freshTotal,
+        currency: "PYG",
+      });
+
+      if (tab) {
+        // Corta la referencia inversa (wa.me no puede tocar `window.opener`
+        // de esta pestaña) justo antes de mandarla a un dominio externo --
+        // sin esto, perder el "noopener" de arriba sería un riesgo real de
+        // tabnabbing.
+        tab.opener = null;
+        tab.location.href = url;
+      } else {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+      opened = true;
+    } finally {
+      if (!opened) tab?.close();
+      setValidating(false);
+    }
+  }
 
   return (
     <>
@@ -135,7 +263,50 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
       ) : (
         <div className="container cart-page">
           <div>
+            {resolveError ? (
+              <div className="row gap-3" style={{ marginBottom: "var(--sp-4)" }}>
+                <span className="meta">No se pudo actualizar el carrito.</span>
+                <button type="button" className="link-underline meta" onClick={retryResolve}>
+                  Reintentar
+                </button>
+              </div>
+            ) : null}
+
             {lines.map((line) => {
+              if (!line.product) {
+                return (
+                  <div
+                    key={line.key}
+                    className="line-item"
+                    style={{ gridTemplateColumns: "110px 1fr" }}
+                  >
+                    <div className="line-item__art">
+                      {line.status === "pending" ? (
+                        <div className="skeleton" style={{ width: "100%", height: "100%" }} />
+                      ) : null}
+                    </div>
+                    <div>
+                      <div className="line-item__top">
+                        <div>
+                          <span style={{ fontWeight: 600 }}>
+                            {line.status === "pending" ? "Cargando…" : "Producto ya no disponible"}
+                          </span>
+                          <div className="meta">Talla {line.size}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => remove(line.key)}
+                          aria-label="Eliminar artículo"
+                          style={{ color: "var(--ink-muted)" }}
+                        >
+                          <IconTrash className="icon--sm" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
               const max = availableStock(line.product, line.size);
               const atMax = max != null ? line.qty >= max : line.qty >= 10;
               return (
@@ -170,6 +341,11 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
                         {line.patches?.length ? (
                           <div className="meta">
                             Parches: {line.patches.map((p) => p.name).join(", ")}
+                          </div>
+                        ) : null}
+                        {max === 0 ? (
+                          <div className="meta" style={{ color: "var(--err, #b91c1c)" }}>
+                            Agotado -- revisá antes de continuar
                           </div>
                         ) : null}
                       </div>
@@ -280,29 +456,24 @@ export function CarritoView({ whatsappNumber }: { whatsappNumber: string }) {
               ) : null}
             </div>
 
-            {whatsappHref ? (
-              <a
-                href={whatsappHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn--block"
-                onClick={() =>
-                  trackPixelEvent("InitiateCheckout", {
-                    content_ids: lines.map((l) => l.product.id),
-                    num_items: count,
-                    value: total,
-                    currency: "PYG",
-                  })
-                }
-              >
+            {whatsappNumber && canCheckout ? (
+              <button type="button" className="btn btn--block" onClick={handleContinue} disabled={validating}>
                 <IconWhatsappBadge className="icon--sm" />
-                Continuar por WhatsApp
-              </a>
+                {validating ? "Verificando precio y stock…" : "Continuar por WhatsApp"}
+              </button>
+            ) : whatsappNumber && (isResolving || validating) ? (
+              <p className="meta" style={{ textAlign: "center" }}>
+                Verificando disponibilidad…
+              </p>
+            ) : whatsappNumber && hasUnavailable ? (
+              <p className="meta" style={{ textAlign: "center" }}>
+                Quitá los productos ya no disponibles para continuar.
+              </p>
             ) : whatsappNumber && !location ? (
               <p className="meta" style={{ textAlign: "center" }}>
                 Marcá tu ubicación en el mapa para continuar.
               </p>
-            ) : whatsappNumber && !canCheckout ? (
+            ) : whatsappNumber && wantsInvoice && !invoiceComplete ? (
               <p className="meta" style={{ textAlign: "center" }}>
                 Completá razón social y RUC para continuar.
               </p>

@@ -35,6 +35,12 @@ import {
   type ImportCostInput,
 } from "@/lib/catalog";
 import { slugify, uniqueSlug } from "@/lib/slug";
+import {
+  toSharedCatalogProduct,
+  type SharedCatalogProduct,
+  type SharedCatalogProductVariant,
+} from "@/lib/shared-catalog-product";
+import { MAX_CART_RESOLVE_SLUGS } from "@/lib/cart-resolve";
 import { deleteImagesWithVariants } from "@/lib/blob";
 import type { SiteSettingsKey } from "@/lib/settings";
 import { supabaseAdmin } from "@/lib/supabase/server";
@@ -305,14 +311,12 @@ export function toPublicProduct(product: Product): PublicProduct {
 // SharedCatalogProduct/toSharedCatalogProduct viven en un módulo aparte,
 // sin dependencias de Supabase (lib/shared-catalog-product.ts), para poder
 // testear la proyección con Node nativo -- ver ese archivo para el porqué
-// y el contrato completo. Re-exportados acá para que layout.tsx y los
-// componentes que ya importan de "@/lib/data" no tengan que cambiar de
-// dónde los traen.
-export {
-  toSharedCatalogProduct,
-  type SharedCatalogProduct,
-  type SharedCatalogProductVariant,
-} from "@/lib/shared-catalog-product";
+// y el contrato completo (importados arriba, junto al resto de los
+// imports, porque getPublicProductsBySlugs más abajo también los usa
+// dentro de este mismo archivo). Re-exportados acá para que layout.tsx y
+// los componentes que ya importan de "@/lib/data" no tengan que cambiar
+// de dónde los traen.
+export { toSharedCatalogProduct, type SharedCatalogProduct, type SharedCatalogProductVariant };
 
 function rowToCategory(row: CategoryRow): Category {
   return {
@@ -446,6 +450,20 @@ async function fetchProductWithVariants(id: string): Promise<Product> {
  * esos productos, no solo el menú. El panel de admin pide includeHidden:true
  * para poder seguir viendo y editando todo.
  */
+/** Slugs de categorías ocultas, incluidas sus subcategorías (una categoría
+ * oculta "apaga" todo su subárbol aunque cada hija siga marcada visible
+ * individualmente) -- compartido por fetchAllProducts (abajo) y
+ * getPublicProductsBySlugs (resolución del carrito), antes dos copias del
+ * mismo cálculo. */
+function hiddenCategorySlugs(categories: Category[]): Set<string> {
+  const hidden = new Set<string>();
+  for (const c of categories.filter((cat) => !cat.isVisible)) {
+    hidden.add(c.slug);
+    for (const d of descendantSlugs(categories, c.slug)) hidden.add(d);
+  }
+  return hidden;
+}
+
 // cache(): layout + página + generateMetadata piden el catálogo varias
 // veces dentro del mismo request (ver auditoría de rendimiento) — React lo
 // memoiza por request para no repetir la consulta a Supabase ni el armado
@@ -474,11 +492,7 @@ const fetchAllProducts = cache(async (includeHidden: boolean): Promise<Product[]
     // tanto a los productos de esas subcategorías), aunque cada una siga
     // marcada como visible individualmente.
     const allCategories = await getAllCategories({ includeHidden: true });
-    const hiddenSlugs = new Set<string>();
-    for (const c of allCategories.filter((c) => !c.isVisible)) {
-      hiddenSlugs.add(c.slug);
-      for (const d of descendantSlugs(allCategories, c.slug)) hiddenSlugs.add(d);
-    }
+    const hiddenSlugs = hiddenCategorySlugs(allCategories);
     rows = rows.filter((r) => !hiddenSlugs.has(r.category));
   }
 
@@ -508,6 +522,80 @@ export async function getAllProducts(
   opts: { includeHidden?: boolean } = {},
 ): Promise<Product[]> {
   return fetchAllProducts(opts.includeHidden ?? false);
+}
+
+// Mismo motivo que fetchAllProducts/fetchAllCategories: memoizado por
+// request para que layout.tsx y la página que sea (home, categoría,
+// producto...) reciban el MISMO array de PublicProduct -- no uno cada
+// una. Encontrado durante la verificación de la Fase 3B: al sacarle a
+// CartProvider su copia de `products` (que antes compartía referencia con
+// la de Navbar), la página de inicio -- que arma su PROPIA lista pública
+// llamando a toPublicProduct() por separado -- dejó de beneficiarse de la
+// deduplicación por referencia que React Flight aplica a campos anidados
+// repetidos (colors/images/sizes/soldOut/tags, que toPublicProduct pasa
+// por referencia, no copia), agregando ~20KB al HTML/RSC de esa página.
+// Memoizar acá, en vez de que cada archivo llame a toPublicProduct por su
+// cuenta, hace que esa deduplicación sea garantizada (misma referencia),
+// no un efecto colateral fragil del orden de serialización.
+const fetchAllPublicProducts = cache(
+  async (includeHidden: boolean): Promise<PublicProduct[]> => {
+    const products = await fetchAllProducts(includeHidden);
+    return products.map(toPublicProduct);
+  },
+);
+
+export async function getAllPublicProducts(
+  opts: { includeHidden?: boolean } = {},
+): Promise<PublicProduct[]> {
+  return fetchAllPublicProducts(opts.includeHidden ?? false);
+}
+
+/**
+ * Resuelve SOLO los productos pedidos por slug -- para el carrito del
+ * cliente (ver app/api/catalog/cart-items/route.ts y CartProvider.tsx, que
+ * ya no reciben el catálogo completo). Como máximo 3 consultas a Supabase
+ * sin importar cuántos slugs se pidan: productos (1, con `.in()`),
+ * variantes de esos productos (1, con `.in()`, solo si alguno trackea
+ * stock), categorías (1, ya cacheada por request vía React.cache() si algo
+ * más en el mismo request ya las pidió). Mismas reglas de visibilidad que
+ * getAllProducts() público (producto oculto, o de una categoría oculta,
+ * directa o ancestro: afuera) y la misma proyección pública que ya usan
+ * Navbar/SearchOverlay (toSharedCatalogProduct) -- nunca expone patches,
+ * costos, proveedores ni ningún campo administrativo (no se piden ni se
+ * construyen acá).
+ */
+export async function getPublicProductsBySlugs(
+  slugs: string[],
+): Promise<SharedCatalogProduct[]> {
+  const uniqueSlugs = Array.from(new Set(slugs.filter(Boolean))).slice(
+    0,
+    MAX_CART_RESOLVE_SLUGS,
+  );
+  if (uniqueSlugs.length === 0) return [];
+
+  const { data, error } = await supabaseAdmin
+    .from("products")
+    .select(PRODUCT_COLUMNS)
+    .in("slug", uniqueSlugs)
+    .eq("is_visible", true);
+  if (error) fail(`No se pudieron resolver los productos: ${error.message}`);
+
+  let rows = data as ProductRow[];
+  if (rows.length === 0) return [];
+
+  const categories = await getAllCategories({ includeHidden: true });
+  const hiddenSlugs = hiddenCategorySlugs(categories);
+  rows = rows.filter((r) => !hiddenSlugs.has(r.category));
+  if (rows.length === 0) return [];
+
+  const tracksVariantsIds = rows
+    .filter((r) => r.stock_mode === "propio" || r.internal_control)
+    .map((r) => r.id);
+  const variantMap = await fetchVariantsByProduct(tracksVariantsIds);
+
+  return rows.map((row) =>
+    toSharedCatalogProduct(toPublicProduct(rowToProduct(row, variantMap.get(row.id) ?? []))),
+  );
 }
 
 const fetchAllCategories = cache(async (includeHidden: boolean): Promise<Category[]> => {
