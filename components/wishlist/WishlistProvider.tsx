@@ -10,6 +10,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import type { PublicProduct } from "@/lib/data";
+import { buildCartItemsUrl, chunkSlugs } from "@/lib/cart-resolve";
 import { IconHeart } from "@/components/ui/Icons";
 
 /** Un solo id fijo: togglear rápido (agregar/quitar seguido) actualiza el
@@ -35,6 +36,13 @@ const wishlistToastIcon = (
 type WishlistContextValue = {
   slugs: string[];
   count: number;
+  /** Cuántos de `slugs` siguen existiendo/visibles en el catálogo ahora
+   * mismo -- Navbar lo usa para el badge en vez de recibir el catálogo
+   * completo y filtrarlo ahí (ver Fase 3C). Arranca igual a `count` (no
+   * hay parpadeo a 0 mientras se resuelve) y solo baja si se confirma que
+   * algún favorito ya no está disponible; un error de red lo deja como
+   * estaba, nunca lo fuerza a 0. */
+  visibleCount: number;
   hydrated: boolean;
   isSaved: (slug: string) => boolean;
   /** Añade o quita según el estado actual; devuelve el nuevo estado ("added"/"removed"). */
@@ -61,6 +69,11 @@ function readStorage(): string[] {
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const [slugs, setSlugs] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  // Favoritos guardados que se confirmó que ya NO están visibles (ocultos
+  // o eliminados) -- solo resta del conteo mostrado, nunca dispara que se
+  // borren de `slugs`/localStorage (ver remove(), que sigue siendo 100%
+  // manual, a pedido del cliente).
+  const [unavailableSlugs, setUnavailableSlugs] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     setSlugs(readStorage());
@@ -70,6 +83,51 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!hydrated) return;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(slugs));
+  }, [slugs, hydrated]);
+
+  // Reconcilia el contador contra el catálogo real -- pide SOLO los slugs
+  // guardados (reusa /api/catalog/cart-items, mismo contrato que ya
+  // resuelve el carrito, ver lib/cart-resolve.ts) en vez de que Navbar
+  // reciba el catálogo completo para filtrarlo él mismo (Fase 3C).
+  // WishlistProvider vive en el layout compartido y no se remonta por
+  // página, así que este efecto solo corre cuando la LISTA de favoritos
+  // cambia de verdad (agregar/quitar), no en cada navegación.
+  useEffect(() => {
+    if (!hydrated) return;
+    if (slugs.length === 0) {
+      setUnavailableSlugs(new Set());
+      return;
+    }
+    let cancelled = false;
+    const controller = new AbortController();
+
+    (async () => {
+      try {
+        const chunks = chunkSlugs(slugs);
+        const perChunk = await Promise.all(
+          chunks.map(async (chunk) => {
+            const res = await fetch(buildCartItemsUrl(chunk), { signal: controller.signal });
+            if (!res.ok) throw new Error(`cart-items respondió ${res.status}`);
+            const data = (await res.json()) as { products: { slug: string }[] };
+            const foundSlugs = new Set(data.products.map((p) => p.slug));
+            return chunk.filter((s) => !foundSlugs.has(s));
+          }),
+        );
+        if (cancelled) return;
+        setUnavailableSlugs(new Set(perChunk.flat()));
+      } catch (err) {
+        if (cancelled) return;
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        // Error de red: no se toca nada -- ni slugs (ya garantizado) ni
+        // unavailableSlugs (se conserva el último resultado confiable en
+        // vez de asumir que todo sigue visible o que todo dejó de estarlo).
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [slugs, hydrated]);
 
   const isSaved = useCallback(
@@ -94,12 +152,18 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     setSlugs((prev) => prev.filter((s) => s !== slug));
   }, []);
 
+  const visibleCount = useMemo(
+    () => slugs.filter((s) => !unavailableSlugs.has(s)).length,
+    [slugs, unavailableSlugs],
+  );
+
   // Toast compacto, mismo id fijo para agregar y quitar -- togglear rápido
   // reemplaza el toast anterior en vez de acumular uno por click.
   const value = useMemo<WishlistContextValue>(
     () => ({
       slugs,
       count: slugs.length,
+      visibleCount,
       hydrated,
       isSaved,
       toggle: (product: PublicProduct) => {
@@ -130,7 +194,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
       },
       remove,
     }),
-    [slugs, hydrated, isSaved, toggle, remove],
+    [slugs, visibleCount, hydrated, isSaved, toggle, remove],
   );
 
   return (

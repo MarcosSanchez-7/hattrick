@@ -1,11 +1,5 @@
 import { Toaster } from "sonner";
-import {
-  getAllCategories,
-  getAllPages,
-  getAllPublicProducts,
-  getSetting,
-  toSharedCatalogProduct,
-} from "@/lib/data";
+import { getAllCategories, getAllPages, getAllPublicProducts, getSetting } from "@/lib/data";
 import { DEFAULT_BRANDING, DEFAULT_FOOTER, DEFAULT_NAVBAR, DEFAULT_WHOLESALE } from "@/lib/settings";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { CartProvider } from "@/components/cart/CartProvider";
@@ -26,7 +20,17 @@ export const revalidate = 60;
 export default async function StoreLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [categories, allPublicProducts, pages, navbarSettings, footerSettings, branding, wholesaleSettings] =
+  // getAllPublicProducts() se sigue pidiendo acá (segunda posición del
+  // array, deliberadamente sin nombre -- ver más abajo) aunque Navbar ya NO
+  // reciba el catálogo completo (ni CartProvider desde la Fase 3B, ni
+  // SearchOverlay/el conteo de favoritos desde la Fase 3C, ver
+  // SearchOverlay.tsx/WishlistProvider.tsx). Sacar esta consulta del
+  // layout por completo queda reservado para la Fase 3D a propósito, para
+  // poder medir SU impacto de forma aislada en vez de mezclarlo con lo que
+  // ya se ahorró acá -- mientras tanto, la página que se renderice (home,
+  // categoría...) sigue pidiendo lo mismo vía su propia llamada a
+  // getAllPublicProducts(), memoizada por request.
+  const [categories, , pages, navbarSettings, footerSettings, branding, wholesaleSettings] =
     await Promise.all([
       getAllCategories(),
       getAllPublicProducts(),
@@ -36,21 +40,6 @@ export default async function StoreLayout({
       getSetting("branding", DEFAULT_BRANDING),
       getSetting("wholesale", DEFAULT_WHOLESALE),
     ]);
-  // Navbar (y, a través suyo, SearchOverlay) es Client Component: cualquier
-  // campo que tenga este objeto viaja entero al navegador en el payload de
-  // RSC, sin importar qué pinten en pantalla -- por eso se proyecta a
-  // SharedCatalogProduct (ver lib/data.ts) en vez de pasar PublicProduct
-  // completo. CartProvider ya NO recibe este catálogo (ver Fase 3B): resuelve
-  // solo los productos que el cliente tiene en el carrito vía
-  // /api/catalog/cart-items (lib/cart-resolve.ts, lib/data.ts).
-  //
-  // getAllPublicProducts() (no un .map(toPublicProduct) local): la página
-  // que se renderice (home, categoría...) pide el MISMO array memoizado
-  // por request -- así comparten referencia (colors/images/sizes/etc, que
-  // toPublicProduct pasa sin clonar) y React Flight deduplica esos campos
-  // de verdad, en vez de depender por accidente de qué componente los
-  // serializa primero (ver getAllPublicProducts en lib/data.ts).
-  const products = allPublicProducts.map(toSharedCatalogProduct);
 
   const sameAs = [
     footerSettings.instagramUrl,
@@ -99,11 +88,7 @@ export default async function StoreLayout({
           }}
         />
         <AnnouncementBar items={navbarSettings.announcements} />
-        <Navbar
-          categories={categories}
-          products={products}
-          extraLinks={navbarSettings.extraLinks}
-        />
+        <Navbar categories={categories} extraLinks={navbarSettings.extraLinks} />
         <main>{children}</main>
         <Footer categories={categories} settings={footerSettings} pages={pages} />
         <CartDrawer />

@@ -550,6 +550,84 @@ export async function getAllPublicProducts(
   return fetchAllPublicProducts(opts.includeHidden ?? false);
 }
 
+/** Columnas para el buscador (Fase 3C) -- deliberadamente MÁS angosto que
+ * PRODUCT_COLUMNS: ni searchProducts() ni newArrivals() (lib/catalog.ts) ni
+ * la fila que pinta SearchOverlay.tsx leen variants/patches/suppliers, así
+ * que esta consulta no los pide. Medido en la propia Fase 3C: reusar
+ * getAllPublicProducts() (que SÍ trae todo eso, para la página de inicio)
+ * tardaba varios segundos por búsqueda -- sin sentido para una barra que
+ * se tipea en vivo con debounce de 300ms. */
+const SEARCH_COLUMNS =
+  "id, slug, name, category, price, compare_at, is_new, reviews, color_primary, color_secondary, color_accent, pattern, tags, images, created_at" as const;
+
+type SearchRow = {
+  id: string;
+  slug: string;
+  name: string;
+  category: string;
+  price: number | string;
+  compare_at: number | string | null;
+  is_new: boolean;
+  reviews: number;
+  color_primary: string;
+  color_secondary: string;
+  color_accent: string;
+  pattern: Product["pattern"];
+  tags: string[] | null;
+  images: string[] | null;
+  created_at: string;
+};
+
+// cache(): mismo motivo que fetchAllProducts/fetchAllCategories -- si una
+// misma invocación del Route Handler necesitara el catálogo de búsqueda
+// más de una vez (no pasa hoy, pero evita una regresión futura barata de
+// introducir), no repite la consulta.
+const fetchSearchableCatalog = cache(async (): Promise<SharedCatalogProduct[]> => {
+  const { data, error } = await supabaseAdmin
+    .from("products")
+    .select(SEARCH_COLUMNS)
+    .eq("is_visible", true)
+    .order("created_at", { ascending: true });
+  if (error) fail(`No se pudo cargar el catálogo de búsqueda: ${error.message}`);
+
+  let rows = data as SearchRow[];
+  const categories = await getAllCategories({ includeHidden: true });
+  const hiddenSlugs = hiddenCategorySlugs(categories);
+  rows = rows.filter((r) => !hiddenSlugs.has(r.category));
+
+  return rows.map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    category: row.category,
+    price: Number(row.price),
+    compareAt: row.compare_at != null ? Number(row.compare_at) : null,
+    isNew: row.is_new,
+    reviews: row.reviews,
+    // sizes/soldOut/variants quedan vacíos a propósito: ni el algoritmo de
+    // búsqueda ni la fila de resultado del overlay los necesitan (ver
+    // comentario de SEARCH_COLUMNS) -- no representan stock real, así que
+    // no se usan en ningún lugar que SÍ necesite esa certeza (carrito,
+    // ficha de producto), que siguen resolviéndose por su cuenta.
+    sizes: [],
+    colors: { primary: row.color_primary, secondary: row.color_secondary, accent: row.color_accent },
+    pattern: row.pattern,
+    tags: row.tags ?? [],
+    images: row.images ?? undefined,
+    createdAt: row.created_at,
+  }));
+});
+
+/**
+ * Catálogo acotado (solo visibles, columnas mínimas) para el endpoint de
+ * búsqueda (app/api/catalog/search/route.ts, Fase 3C) -- consulta propia y
+ * liviana, no reusa getAllPublicProducts() (esa trae variantes/parches/
+ * proveedores que la búsqueda no lee, ver SEARCH_COLUMNS más arriba).
+ */
+export async function getSearchableCatalog(): Promise<SharedCatalogProduct[]> {
+  return fetchSearchableCatalog();
+}
+
 /**
  * Resuelve SOLO los productos pedidos por slug -- para el carrito del
  * cliente (ver app/api/catalog/cart-items/route.ts y CartProvider.tsx, que

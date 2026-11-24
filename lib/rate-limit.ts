@@ -66,6 +66,22 @@ const cartResolveLimiter = redis
     })
   : null;
 
+// Búsqueda pública (GET /api/catalog/search, sin sesión): más frecuente en
+// la práctica que cart-resolve -- cada término con debounce de ~300ms
+// mientras el cliente escribe puede disparar varias peticiones por
+// sesión (ver SearchOverlay.tsx), no solo 2-3 como el carrito. 30/10s deja
+// pasar holgado una sesión de tipeo normal (la caché local + el debounce
+// ya evitan la mayoría de las peticiones repetidas del lado del cliente,
+// ver buildSearchUrl/SearchOverlay) y sigue frenando un script que
+// scrapee el catálogo completo por búsquedas en bucle.
+const searchLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(30, "10 s"),
+      prefix: "rl:search",
+    })
+  : null;
+
 export type RateLimitResult = {
   limited: boolean;
   retryAfterSeconds?: number;
@@ -99,4 +115,8 @@ export function checkAdminRateLimit(ip: string): Promise<RateLimitResult> {
 
 export function checkCartResolveRateLimit(ip: string): Promise<RateLimitResult> {
   return check(cartResolveLimiter, ip);
+}
+
+export function checkSearchRateLimit(ip: string): Promise<RateLimitResult> {
+  return check(searchLimiter, ip);
 }

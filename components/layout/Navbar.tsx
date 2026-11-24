@@ -9,7 +9,6 @@ import {
   topLevelCategories,
   type Category,
 } from "@/lib/catalog";
-import type { SharedCatalogProduct } from "@/lib/data";
 import type { NavLink } from "@/lib/settings";
 import { useCart } from "@/components/cart/CartProvider";
 import { useWishlist } from "@/components/wishlist/WishlistProvider";
@@ -25,20 +24,17 @@ import {
 
 export function Navbar({
   categories,
-  products,
   extraLinks = [],
 }: {
   categories: Category[];
-  products: SharedCatalogProduct[];
   extraLinks?: NavLink[];
 }) {
   const { count, openCart } = useCart();
-  const { slugs: wishlistSlugs } = useWishlist();
-  // No usa el conteo crudo de localStorage: si un favorito quedó oculto o
-  // se borró, seguiría contando acá aunque no aparezca en /favoritos.
-  const wishlistCount = products.filter((p) =>
-    wishlistSlugs.includes(p.slug),
-  ).length;
+  // visibleCount ya viene reconciliado contra el catálogo real (ver
+  // WishlistProvider.tsx, Fase 3C): un favorito oculto o eliminado no
+  // cuenta acá, sin que Navbar necesite recibir el catálogo completo para
+  // filtrarlo él mismo.
+  const { visibleCount: wishlistCount } = useWishlist();
   const [megaCategory, setMegaCategory] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -212,7 +208,7 @@ export function Navbar({
       </header>
 
       {searchOpen ? (
-        <SearchOverlay products={products} onClose={() => setSearchOpen(false)} />
+        <SearchOverlay onClose={() => setSearchOpen(false)} />
       ) : null}
 
       {mobileOpen ? (
