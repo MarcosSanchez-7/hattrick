@@ -1052,6 +1052,20 @@ export async function getProductSlugsAndCategoriesByIds(
   return data as { slug: string; category: string }[];
 }
 
+/** ids de los productos que tienen asignado un parche puntual (vía
+ * product_patches) -- para invalidar solo sus fichas cuando se edita o
+ * borra ese parche, en vez de todo el sitio (ver app/api/admin/patches/**).
+ * Un parche recién creado nunca tiene productos todavía (se asigna después,
+ * al editar el producto), así que crear uno no necesita esta consulta. */
+export async function getProductIdsByPatchId(patchId: string): Promise<string[]> {
+  const { data, error } = await supabaseAdmin
+    .from("product_patches")
+    .select("product_id")
+    .eq("patch_id", patchId);
+  if (error || !data) return [];
+  return (data as { product_id: string }[]).map((r) => r.product_id);
+}
+
 /** slug + categoría del producto dueño de una variante (talla) — para
  * invalidar solo esa ficha y su categoría cuando se ajusta stock, en vez de
  * todo el sitio. */

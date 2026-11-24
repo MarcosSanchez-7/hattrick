@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
 import { createPatch, DataError, getAllPatches } from "@/lib/data";
 
 export async function GET() {
@@ -7,11 +6,14 @@ export async function GET() {
   return NextResponse.json(patches);
 }
 
+// Un parche recién creado no tiene ningún producto asignado todavía (eso
+// pasa después, al editar un producto y tildarlo en su selector -- ver
+// components/admin/ProductForm.tsx, patchIds). No aparece en ninguna
+// página pública hasta entonces, así que crear uno no invalida nada.
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const patch = await createPatch(body);
-    revalidatePath("/", "layout");
     return NextResponse.json(patch, { status: 201 });
   } catch (err) {
     if (err instanceof DataError) {

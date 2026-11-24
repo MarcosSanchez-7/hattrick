@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import type { Page } from "@/lib/catalog";
 import { DataError, deletePage, getAllPages, updatePage } from "@/lib/data";
+import { pageAffectsFooter, revalidateAfterWrite, safeRevalidatePaths } from "@/lib/revalidate";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -16,11 +17,12 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
 export async function PUT(request: NextRequest, { params }: Params) {
   const { slug } = await params;
+  let oldPage: Page | undefined;
+  let page: Page;
   try {
     const body = await request.json();
-    const page = await updatePage(slug, body);
-    revalidatePath("/", "layout");
-    return NextResponse.json(page);
+    oldPage = (await getAllPages()).find((p) => p.slug === slug);
+    page = await updatePage(slug, body);
   } catch (err) {
     if (err instanceof DataError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
@@ -30,14 +32,22 @@ export async function PUT(request: NextRequest, { params }: Params) {
       { status: 500 },
     );
   }
+
+  await revalidateAfterWrite(`actualizar página ${slug}`, async () => {
+    if (pageAffectsFooter(oldPage, page)) {
+      safeRevalidatePaths([{ path: "/", type: "layout" }]);
+    } else {
+      safeRevalidatePaths([`/pagina/${slug}`]);
+    }
+  });
+
+  return NextResponse.json(page);
 }
 
 export async function DELETE(_request: NextRequest, { params }: Params) {
   const { slug } = await params;
   try {
     await deletePage(slug);
-    revalidatePath("/", "layout");
-    return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof DataError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
@@ -47,4 +57,12 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
       { status: 500 },
     );
   }
+
+  // Global, documentado: borrar una página le saca su link al Footer,
+  // compartido por todas las rutas vía el layout -- mismo motivo que crear.
+  await revalidateAfterWrite(`eliminar página ${slug}`, async () =>
+    safeRevalidatePaths([{ path: "/", type: "layout" }]),
+  );
+
+  return NextResponse.json({ ok: true });
 }

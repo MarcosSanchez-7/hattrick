@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
 import { DataError, getSetting, updateSetting } from "@/lib/data";
+import {
+  revalidateAfterWrite,
+  safeRevalidatePaths,
+  settingsRevalidationEntries,
+  type SettingsRevalidationRule,
+} from "@/lib/revalidate";
 import {
   DEFAULT_BRANDING,
   DEFAULT_CUSTOM_BANNER,
@@ -39,6 +44,41 @@ const DEFAULTS: Record<SiteSettingsKey, unknown> = {
 function isValidKey(key: string): key is SiteSettingsKey {
   return key in DEFAULTS;
 }
+
+/**
+ * Qué rutas públicas puede afectar cada ajuste -- releído de los
+ * consumidores reales (`grep getSetting("<key>"` en app/(store)), no
+ * supuesto:
+ *
+ * - "global": se lee en app/(store)/layout.tsx, compartido por TODAS las
+ *   rutas públicas (Navbar/Footer/branding/WhatsApp) -- no hay un
+ *   subconjunto más chico que lo cubra. `branding` además se lee en
+ *   app/icon.tsx y app/apple-icon.tsx (favicon) -- ambos cuelgan del
+ *   layout raíz, así que "/","layout" (lo que ya usa "global") los cubre
+ *   igual, sin necesitar una entrada aparte.
+ * - "paths": rutas públicas puntuales que lo leen.
+ * - "allProductPages": además de `paths`, se lee en CADA ficha de
+ *   producto -- se invalida con el patrón de segmento dinámico de Next en
+ *   vez de enumerar los ~140 slugs uno por uno.
+ * - sin páginas y sin "allProductPages" (saleStatusColors): no se lee en
+ *   ninguna ruta pública -- es solo un color de UI del propio panel admin.
+ */
+const SETTINGS_REVALIDATION: Record<SiteSettingsKey, SettingsRevalidationRule> = {
+  navbar: { global: true },
+  footer: { global: true },
+  branding: { global: true },
+  wholesale: { global: true },
+  hero: { paths: ["/"] },
+  home: { paths: ["/"] },
+  valueProps: { paths: ["/"] },
+  reviews: { paths: ["/"] },
+  dtf: { paths: ["/"] },
+  personalizationGallery: { paths: ["/personalizacion"] },
+  customBanner: { paths: ["/", "/personalizacion"], allProductPages: true },
+  productNotices: { paths: [], allProductPages: true },
+  productInfo: { paths: [], allProductPages: true },
+  saleStatusColors: { paths: [] },
+};
 
 /**
  * Chequeo de forma genérico contra el valor por defecto de cada ajuste: no
@@ -84,8 +124,6 @@ export async function PUT(request: NextRequest, { params }: Params) {
       );
     }
     await updateSetting(key, body);
-    revalidatePath("/", "layout");
-    return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof DataError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
@@ -95,4 +133,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
       { status: 500 },
     );
   }
+
+  await revalidateAfterWrite(`guardar configuración "${key}"`, async () =>
+    safeRevalidatePaths(settingsRevalidationEntries(SETTINGS_REVALIDATION[key])),
+  );
+
+  return NextResponse.json({ ok: true });
 }

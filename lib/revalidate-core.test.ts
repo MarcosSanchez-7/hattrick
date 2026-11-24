@@ -8,12 +8,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  categoryHasStructuralChange,
+  categoryPagePaths,
+  computeProductOnlyPaths,
   computeRevalidationPaths,
   logRevalidationFailure,
+  pageAffectsFooter,
   revalidateAfterWrite,
+  settingsRevalidationEntries,
   type ProductListingRevalidation,
 } from "./revalidate-core.ts";
-import type { Category } from "./catalog.ts";
+import type { Category, Page } from "./catalog.ts";
 
 function category(slug: string, parentSlug: string | null = null): Category {
   return {
@@ -251,4 +256,128 @@ test("logRevalidationFailure solo loguea el mensaje del error, no el stack ni ot
   assert.equal(logged.length, 1);
   const [, loggedValue] = logged[0] as [string, unknown];
   assert.equal(loggedValue, "stock_on_hand violado");
+});
+
+// ── Fase 2: reglas de invalidación de categorías/páginas/settings ────────
+
+test("categoryPagePaths expone la misma cadena raíz→hoja que ya usa computeRevalidationPaths", () => {
+  assert.deepEqual(categoryPagePaths(CATEGORIES, "premier-league"), [
+    "/categoria/futbol",
+    "/categoria/futbol/europa",
+    "/categoria/futbol/europa/premier-league",
+  ]);
+  assert.deepEqual(categoryPagePaths(CATEGORIES, "basket"), ["/categoria/basket"]);
+  assert.deepEqual(categoryPagePaths(CATEGORIES, "no-existe"), []);
+});
+
+test("categoryHasStructuralChange: false cuando solo cambia algo cosmético", () => {
+  const oldCat = category("europa", "futbol");
+  const newCat: Category = { ...oldCat, tagline: "Nuevo tagline", description: "Nueva desc" };
+  assert.equal(categoryHasStructuralChange(oldCat, newCat), false);
+});
+
+test("categoryHasStructuralChange: true si cambia el nombre", () => {
+  const oldCat = category("europa", "futbol");
+  const newCat: Category = { ...oldCat, name: "Europa (nuevo nombre)" };
+  assert.equal(categoryHasStructuralChange(oldCat, newCat), true);
+});
+
+test("categoryHasStructuralChange: true si cambia la categoría padre (reubicación)", () => {
+  const oldCat = category("europa", "futbol");
+  const newCat: Category = { ...oldCat, parentSlug: "basket" };
+  assert.equal(categoryHasStructuralChange(oldCat, newCat), true);
+});
+
+test("categoryHasStructuralChange: true si cambia la visibilidad", () => {
+  const oldCat = category("europa", "futbol");
+  const newCat: Category = { ...oldCat, isVisible: false };
+  assert.equal(categoryHasStructuralChange(oldCat, newCat), true);
+});
+
+test("categoryHasStructuralChange: true (conservador) si no se pudo leer la categoría anterior", () => {
+  const newCat = category("europa", "futbol");
+  assert.equal(categoryHasStructuralChange(undefined, newCat), true);
+});
+
+function page(overrides: Partial<Page> = {}): Page {
+  return {
+    slug: "envios",
+    title: "Envíos",
+    body: "Texto original",
+    placement: "ayuda",
+    sortOrder: 0,
+    ...overrides,
+  };
+}
+
+test("pageAffectsFooter: false cuando solo cambia el contenido (body)", () => {
+  const oldPage = page();
+  const newPage = page({ body: "Texto corregido" });
+  assert.equal(pageAffectsFooter(oldPage, newPage), false);
+});
+
+test("pageAffectsFooter: true si cambia el título", () => {
+  const oldPage = page();
+  const newPage = page({ title: "Envíos y entregas" });
+  assert.equal(pageAffectsFooter(oldPage, newPage), true);
+});
+
+test("pageAffectsFooter: true si cambia el placement", () => {
+  const oldPage = page();
+  const newPage = page({ placement: "legal" });
+  assert.equal(pageAffectsFooter(oldPage, newPage), true);
+});
+
+test("pageAffectsFooter: true si cambia el sortOrder", () => {
+  const oldPage = page();
+  const newPage = page({ sortOrder: 5 });
+  assert.equal(pageAffectsFooter(oldPage, newPage), true);
+});
+
+test("pageAffectsFooter: true (conservador) si no se pudo leer la página anterior", () => {
+  assert.equal(pageAffectsFooter(undefined, page()), true);
+});
+
+test("settingsRevalidationEntries: regla global devuelve el layout completo", () => {
+  assert.deepEqual(settingsRevalidationEntries({ global: true }), [
+    { path: "/", type: "layout" },
+  ]);
+});
+
+test("settingsRevalidationEntries: regla de rutas puntuales", () => {
+  assert.deepEqual(settingsRevalidationEntries({ paths: ["/", "/personalizacion"] }), [
+    "/",
+    "/personalizacion",
+  ]);
+});
+
+test("settingsRevalidationEntries: regla sin páginas públicas (admin-only) devuelve lista vacía", () => {
+  assert.deepEqual(settingsRevalidationEntries({ paths: [] }), []);
+});
+
+test("settingsRevalidationEntries: allProductPages agrega el patrón comodín de producto", () => {
+  assert.deepEqual(
+    settingsRevalidationEntries({ paths: ["/"], allProductPages: true }),
+    ["/", { path: "/(store)/producto/[slug]", type: "page" }],
+  );
+});
+
+// ── Verificación de Fase 2: parches no deben invalidar listados globales ──
+
+test("computeProductOnlyPaths: solo fichas de producto, sin globales ni categoría", () => {
+  const paths = computeProductOnlyPaths(["camiseta-a", "camiseta-b"]);
+  assert.deepEqual(paths, ["/producto/camiseta-a", "/producto/camiseta-b"]);
+  // A diferencia de computeRevalidationPaths, nunca debe incluir "/",
+  // "/novedades" ni "/ofertas" -- un parche no aparece en esos listados.
+  assert.equal(paths.includes("/"), false);
+  assert.equal(paths.includes("/novedades"), false);
+  assert.equal(paths.includes("/ofertas"), false);
+});
+
+test("computeProductOnlyPaths: deduplica slugs repetidos", () => {
+  assert.deepEqual(computeProductOnlyPaths(["a", "b", "a"]), ["/producto/a", "/producto/b"]);
+});
+
+test("computeProductOnlyPaths: lote vacío devuelve lista vacía", () => {
+  assert.deepEqual(computeProductOnlyPaths([]), []);
 });

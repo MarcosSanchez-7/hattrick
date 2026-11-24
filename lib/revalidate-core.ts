@@ -5,7 +5,7 @@
 // catalog.ts usa extensión .ts explícita por la misma razón -- Node ESM
 // (a diferencia del bundler de Next) exige la extensión en imports
 // relativos.
-import { categorySlugPath, type Category } from "./catalog.ts";
+import { categorySlugPath, type Category, type Page } from "./catalog.ts";
 
 export type ProductListingRevalidation = {
   slug: string;
@@ -21,12 +21,38 @@ export type ProductListingRevalidation = {
  * los productos de las subcategorías en la página del padre, así que un
  * producto en "futbol/europa/premier-league" también aparece listado en
  * "/categoria/futbol" y "/categoria/futbol/europa" -- invalidar solo la
- * hoja dejaría esas dos páginas de padre desactualizadas. */
-function categoryPagePaths(categories: Category[], categorySlug: string): string[] {
+ * hoja dejaría esas dos páginas de padre desactualizadas. Exportada (antes
+ * privada): la Fase 2 la reutiliza directamente en
+ * app/api/admin/categories/[slug]/route.ts para el caso de edición
+ * puramente cosmética (sin tocar nombre/slug/padre/visibilidad), que no
+ * necesita la invalidación global del resto de operaciones sobre
+ * categorías -- ver lib/revalidate.ts. */
+export function categoryPagePaths(categories: Category[], categorySlug: string): string[] {
   const chain = categorySlugPath(categories, categorySlug);
   const paths: string[] = [];
   for (let i = 0; i < chain.length; i++) {
     paths.push(`/categoria/${chain.slice(0, i + 1).join("/")}`);
+  }
+  return paths;
+}
+
+/**
+ * Solo las fichas de producto dadas -- sin "/", Novedades, Ofertas ni
+ * categoría. Para cambios que únicamente afectan el contenido propio de la
+ * ficha y no aparecen en ningún listado/grilla (ej. editar o borrar un
+ * parche: ProductDetail.tsx lo muestra en el selector de personalización
+ * de esa ficha puntual, pero ni ProductCard ni ninguna grilla leen datos
+ * de parches -- usar computeRevalidationPaths ahí invalidaría home/
+ * novedades/ofertas/categoría sin necesidad, ver app/api/admin/patches/**).
+ * Deduplica slugs repetidos.
+ */
+export function computeProductOnlyPaths(slugs: string[]): string[] {
+  const seen = new Set<string>();
+  const paths: string[] = [];
+  for (const slug of slugs) {
+    if (seen.has(slug)) continue;
+    seen.add(slug);
+    paths.push(`/producto/${slug}`);
   }
   return paths;
 }
@@ -71,6 +97,71 @@ export function computeRevalidationPaths(
   }
 
   return paths;
+}
+
+/**
+ * ¿Cambió algo de una categoría que Navbar/Footer/la URL de sus
+ * descendientes necesitan reflejar? El slug es inmutable (ver
+ * updateCategory en lib/data.ts), así que no entra en esta comparación --
+ * solo lo que SÍ puede cambiar en una edición y tiene alcance más allá de
+ * la propia página de la categoría: `name` (texto del link en el menú),
+ * `parentSlug` (reubica la categoría -- cambia su URL y la de todos sus
+ * descendientes) e `isVisible` (aparece/desaparece de todos lados). Si
+ * ninguno cambió, la edición es puramente cosmética (tagline/descripción/
+ * imagen/avisos/texto de envío) y alcanza con invalidar la propia página
+ * (ver categoryPagePaths / revalidateCategoryOwnPages en lib/revalidate.ts).
+ * Sin categoría anterior (no se pudo leer antes de escribir) se asume que
+ * sí cambió algo, para no subestimar el alcance.
+ */
+export function categoryHasStructuralChange(
+  oldCategory: Pick<Category, "name" | "parentSlug" | "isVisible"> | undefined,
+  newCategory: Pick<Category, "name" | "parentSlug" | "isVisible">,
+): boolean {
+  return (
+    !oldCategory ||
+    oldCategory.name !== newCategory.name ||
+    oldCategory.parentSlug !== newCategory.parentSlug ||
+    oldCategory.isVisible !== newCategory.isVisible
+  );
+}
+
+/**
+ * ¿Cambió algo de una página informativa que el Footer necesita reflejar?
+ * El slug es inmutable para páginas también (ver updatePage en
+ * lib/data.ts: "no se permite cambiarlo"). Footer.tsx agrupa los links por
+ * `placement`, muestra `title` como texto, y los ordena por `sortOrder` --
+ * si ninguno de los tres cambió, la edición es de solo `body` (el caso más
+ * común: corregir texto) y alcanza con la propia página.
+ */
+export function pageAffectsFooter(
+  oldPage: Pick<Page, "title" | "placement" | "sortOrder"> | undefined,
+  newPage: Pick<Page, "title" | "placement" | "sortOrder">,
+): boolean {
+  return (
+    !oldPage ||
+    oldPage.title !== newPage.title ||
+    oldPage.placement !== newPage.placement ||
+    oldPage.sortOrder !== newPage.sortOrder
+  );
+}
+
+export type SettingsRevalidationRule =
+  | { global: true }
+  | { global?: false; paths: string[]; allProductPages?: boolean };
+
+/** Traduce una regla de invalidación de un ajuste (ver SETTINGS_REVALIDATION
+ * en app/api/admin/settings/[key]/route.ts) a la lista de entradas que
+ * safeRevalidatePaths() espera -- separado para poder testear la
+ * traducción sin depender de next/cache. */
+export function settingsRevalidationEntries(
+  rule: SettingsRevalidationRule,
+): Array<string | { path: string; type: "page" | "layout" }> {
+  if (rule.global) return [{ path: "/", type: "layout" }];
+  const entries: Array<string | { path: string; type: "page" | "layout" }> = [...rule.paths];
+  if (rule.allProductPages) {
+    entries.push({ path: "/(store)/producto/[slug]", type: "page" });
+  }
+  return entries;
 }
 
 /** Log uniforme para fallas de invalidación -- nunca incluye el body de la
