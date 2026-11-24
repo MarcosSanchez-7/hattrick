@@ -434,20 +434,30 @@ async function fetchProductWithVariants(id: string): Promise<Product> {
  * esos productos, no solo el menú. El panel de admin pide includeHidden:true
  * para poder seguir viendo y editando todo.
  */
-export async function getAllProducts(
-  opts: { includeHidden?: boolean } = {},
-): Promise<Product[]> {
+// cache(): layout + página + generateMetadata piden el catálogo varias
+// veces dentro del mismo request (ver auditoría de rendimiento) — React lo
+// memoiza por request para no repetir la consulta a Supabase ni el armado
+// de variantes/parches/proveedores. La función cacheada toma un booleano
+// en vez del objeto `opts` de getAllProducts/getAllCategories más abajo:
+// cache() compara argumentos por SameValueZero (≈ referencia para
+// objetos), así que dos llamadas con `{ includeHidden: true }` literales
+// (dos objetos distintos aunque el contenido sea igual) NO deduplicarían
+// entre sí -- con un booleano primitivo sí, porque esos comparan por
+// valor. `getAllProducts`/`getAllCategories` siguen aceptando el mismo
+// objeto de siempre; solo normalizan a booleano antes de llamar a la
+// versión cacheada, así que ningún llamador existente cambia.
+const fetchAllProducts = cache(async (includeHidden: boolean): Promise<Product[]> => {
   let query = supabaseAdmin.from("products").select(PRODUCT_COLUMNS).order("created_at", {
     ascending: true,
   });
-  if (!opts.includeHidden) query = query.eq("is_visible", true);
+  if (!includeHidden) query = query.eq("is_visible", true);
 
   const { data, error } = await query;
   if (error) fail(`No se pudieron cargar los productos: ${error.message}`);
 
   let rows = data as ProductRow[];
 
-  if (!opts.includeHidden) {
+  if (!includeHidden) {
     // Ocultar una categoría oculta también a sus subcategorías (y por lo
     // tanto a los productos de esas subcategorías), aunque cada una siga
     // marcada como visible individualmente.
@@ -480,19 +490,29 @@ export async function getAllProducts(
       supplierSizeMap.get(row.id) ?? [],
     ),
   );
+});
+
+export async function getAllProducts(
+  opts: { includeHidden?: boolean } = {},
+): Promise<Product[]> {
+  return fetchAllProducts(opts.includeHidden ?? false);
 }
 
-export async function getAllCategories(
-  opts: { includeHidden?: boolean } = {},
-): Promise<Category[]> {
+const fetchAllCategories = cache(async (includeHidden: boolean): Promise<Category[]> => {
   let query = supabaseAdmin.from("categories").select(CATEGORY_COLUMNS).order("created_at", {
     ascending: true,
   });
-  if (!opts.includeHidden) query = query.eq("is_visible", true);
+  if (!includeHidden) query = query.eq("is_visible", true);
 
   const { data, error } = await query;
   if (error) fail(`No se pudieron cargar las categorías: ${error.message}`);
   return (data as CategoryRow[]).map(rowToCategory);
+});
+
+export async function getAllCategories(
+  opts: { includeHidden?: boolean } = {},
+): Promise<Category[]> {
+  return fetchAllCategories(opts.includeHidden ?? false);
 }
 
 export async function setProductVisibility(
@@ -1015,22 +1035,29 @@ async function syncProductSupplierSizes(
   }
 }
 
-/** Solo el slug (para invalidar la página pública exacta con revalidatePath
- * en vez de todo el sitio, ver app/api/admin/sales/route.ts y hermanas). */
-export async function getProductSlugsByIds(ids: string[]): Promise<string[]> {
+/** slug + categoría de cada producto por id (para invalidar tanto su ficha
+ * como su(s) página(s) de categoría, ver lib/revalidate.ts) -- una venta o
+ * un movimiento de stock puede afectar varios productos de categorías
+ * distintas a la vez. */
+export async function getProductSlugsAndCategoriesByIds(
+  ids: string[],
+): Promise<{ slug: string; category: string }[]> {
   const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
   if (uniqueIds.length === 0) return [];
   const { data, error } = await supabaseAdmin
     .from("products")
-    .select("slug")
+    .select("slug, category")
     .in("id", uniqueIds);
   if (error || !data) return [];
-  return data.map((p) => p.slug as string);
+  return data as { slug: string; category: string }[];
 }
 
-/** Slug del producto dueño de una variante (talla) — para invalidar solo esa
- * ficha cuando se ajusta stock, en vez de todo el sitio. */
-export async function getProductSlugByVariantId(variantId: string): Promise<string | null> {
+/** slug + categoría del producto dueño de una variante (talla) — para
+ * invalidar solo esa ficha y su categoría cuando se ajusta stock, en vez de
+ * todo el sitio. */
+export async function getProductSlugAndCategoryByVariantId(
+  variantId: string,
+): Promise<{ slug: string; category: string } | null> {
   const { data: variant } = await supabaseAdmin
     .from("product_variants")
     .select("product_id")
@@ -1039,10 +1066,11 @@ export async function getProductSlugByVariantId(variantId: string): Promise<stri
   if (!variant?.product_id) return null;
   const { data: product } = await supabaseAdmin
     .from("products")
-    .select("slug")
+    .select("slug, category")
     .eq("id", variant.product_id)
     .maybeSingle();
-  return (product?.slug as string) ?? null;
+  if (!product) return null;
+  return product as { slug: string; category: string };
 }
 
 export async function createProduct(input: ProductInput): Promise<Product> {

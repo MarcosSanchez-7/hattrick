@@ -1,35 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
 import {
   DataError,
   deleteSale,
-  getProductSlugsByIds,
+  getProductSlugsAndCategoriesByIds,
   getSaleById,
   updateSale,
   updateSaleStatus,
 } from "@/lib/data";
+import { revalidateAfterWrite, revalidateProductListings } from "@/lib/revalidate";
 
 type Params = { params: Promise<{ id: string }> };
 
-// Invalida solo las fichas de los productos afectados (antes y después del
-// cambio) en vez de todo el sitio -- ver la misma nota en sales/route.ts.
+// Invalida fichas + categoría + listados globales de los productos
+// afectados (antes y después del cambio) en vez de todo el sitio -- ver la
+// misma nota en sales/route.ts / lib/revalidate.ts.
 async function revalidateAffectedProducts(...productIdSets: (string | null | undefined)[][]) {
   const ids = productIdSets.flat().filter((id): id is string => Boolean(id));
-  const slugs = await getProductSlugsByIds(ids);
-  for (const slug of slugs) revalidatePath(`/producto/${slug}`);
+  const products = await getProductSlugsAndCategoriesByIds(ids);
+  await revalidateProductListings(
+    products.map((p) => ({ slug: p.slug, categorySlugs: [p.category] })),
+  );
 }
 
 export async function PUT(request: NextRequest, { params }: Params) {
   const { id } = await params;
+  let oldSale: Awaited<ReturnType<typeof getSaleById>>;
+  let body;
   try {
-    const oldSale = await getSaleById(id);
-    const body = await request.json();
+    oldSale = await getSaleById(id);
+    body = await request.json();
     await updateSale(id, body);
-    await revalidateAffectedProducts(
-      oldSale?.items.map((i) => i.productId) ?? [],
-      (body?.items ?? []).map((i: { productId?: string | null }) => i.productId),
-    );
-    return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof DataError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
@@ -39,6 +39,17 @@ export async function PUT(request: NextRequest, { params }: Params) {
       { status: 500 },
     );
   }
+
+  // La venta ya se actualizó -- un fallo invalidando caché de acá en más no
+  // debe reportarse como si la actualización hubiera fallado.
+  await revalidateAfterWrite(`actualizar venta ${id}`, () =>
+    revalidateAffectedProducts(
+      oldSale?.items.map((i) => i.productId) ?? [],
+      (body?.items ?? []).map((i: { productId?: string | null }) => i.productId),
+    ),
+  );
+
+  return NextResponse.json({ ok: true });
 }
 
 export async function PATCH(request: NextRequest, { params }: Params) {
@@ -64,11 +75,10 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
 export async function DELETE(_request: NextRequest, { params }: Params) {
   const { id } = await params;
+  let oldSale: Awaited<ReturnType<typeof getSaleById>>;
   try {
-    const oldSale = await getSaleById(id);
+    oldSale = await getSaleById(id);
     await deleteSale(id);
-    await revalidateAffectedProducts(oldSale?.items.map((i) => i.productId) ?? []);
-    return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof DataError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
@@ -78,4 +88,12 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
       { status: 500 },
     );
   }
+
+  // La venta ya se eliminó -- un fallo invalidando caché de acá en más no
+  // debe reportarse como si el borrado hubiera fallado.
+  await revalidateAfterWrite(`eliminar venta ${id}`, () =>
+    revalidateAffectedProducts(oldSale?.items.map((i) => i.productId) ?? []),
+  );
+
+  return NextResponse.json({ ok: true });
 }

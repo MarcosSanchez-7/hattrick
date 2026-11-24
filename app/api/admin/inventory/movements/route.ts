@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
 import {
   DataError,
   getInventoryMovements,
-  getProductSlugByVariantId,
+  getProductSlugAndCategoryByVariantId,
   registerStockAdjustment,
 } from "@/lib/data";
 import { getCurrentAdmin } from "@/lib/admin-session";
+import { revalidateAfterWrite, revalidateProduct } from "@/lib/revalidate";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -18,19 +18,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  let body;
   try {
     const admin = await getCurrentAdmin();
     if (!admin) {
       return NextResponse.json({ error: "No autorizado." }, { status: 401 });
     }
 
-    const body = await request.json();
+    body = await request.json();
     await registerStockAdjustment({ ...body, adminName: admin.name });
-    // Solo afecta el stock de una variante -- invalidar únicamente esa
-    // ficha, no todo el sitio (ver la misma nota en sales/route.ts).
-    const slug = body?.variantId ? await getProductSlugByVariantId(body.variantId) : null;
-    if (slug) revalidatePath(`/producto/${slug}`);
-    return NextResponse.json({ ok: true }, { status: 201 });
   } catch (err) {
     if (err instanceof DataError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
@@ -40,4 +36,19 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
+
+  // El movimiento ya se registró (stock ya ajustado) -- un fallo
+  // invalidando caché de acá en más no debe reportarse como si el ajuste
+  // hubiera fallado (eso llevaría a reintentar y duplicar el movimiento).
+  await revalidateAfterWrite(`ajuste de inventario (variante ${body?.variantId})`, async () => {
+    // Solo afecta el stock de una variante -- invalidar su ficha +
+    // categoría + listados globales (puede cambiar su badge "Agotado" en
+    // cualquiera), no todo el sitio (ver la misma nota en sales/route.ts).
+    const product = body?.variantId
+      ? await getProductSlugAndCategoryByVariantId(body.variantId)
+      : null;
+    if (product) await revalidateProduct(product.slug, [product.category]);
+  });
+
+  return NextResponse.json({ ok: true }, { status: 201 });
 }

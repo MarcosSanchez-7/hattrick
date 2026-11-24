@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import type { Product } from "@/lib/catalog";
 import { createProduct, DataError, getAllProducts } from "@/lib/data";
+import { revalidateAfterWrite, revalidateProduct } from "@/lib/revalidate";
 
 export async function GET() {
   const products = await getAllProducts({ includeHidden: true });
@@ -8,17 +9,10 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  let product: Product;
   try {
     const body = await request.json();
-    const product = await createProduct(body);
-    // Un producto nuevo puede aparecer en home/novedades/ofertas y tiene su
-    // propia ficha -- invalidar solo eso es mucho más rápido que todo el
-    // sitio (ver la misma nota en sales/route.ts).
-    revalidatePath("/");
-    revalidatePath("/novedades");
-    revalidatePath("/ofertas");
-    revalidatePath(`/producto/${product.slug}`);
-    return NextResponse.json(product, { status: 201 });
+    product = await createProduct(body);
   } catch (err) {
     if (err instanceof DataError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
@@ -28,4 +22,13 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
+
+  // El producto ya se creó -- un fallo invalidando caché de acá en más no
+  // debe reportarse como si la creación hubiera fallado (eso llevaría a
+  // reintentar y crear un duplicado).
+  await revalidateAfterWrite(`crear producto ${product.id}`, () =>
+    revalidateProduct(product.slug, [product.category]),
+  );
+
+  return NextResponse.json(product, { status: 201 });
 }
