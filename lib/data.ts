@@ -302,6 +302,18 @@ export function toPublicProduct(product: Product): PublicProduct {
   };
 }
 
+// SharedCatalogProduct/toSharedCatalogProduct viven en un módulo aparte,
+// sin dependencias de Supabase (lib/shared-catalog-product.ts), para poder
+// testear la proyección con Node nativo -- ver ese archivo para el porqué
+// y el contrato completo. Re-exportados acá para que layout.tsx y los
+// componentes que ya importan de "@/lib/data" no tengan que cambiar de
+// dónde los traen.
+export {
+  toSharedCatalogProduct,
+  type SharedCatalogProduct,
+  type SharedCatalogProductVariant,
+} from "@/lib/shared-catalog-product";
+
 function rowToCategory(row: CategoryRow): Category {
   return {
     slug: row.slug,

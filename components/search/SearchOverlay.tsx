@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { newArrivals, searchProducts } from "@/lib/catalog";
-import type { PublicProduct } from "@/lib/data";
+import type { SharedCatalogProduct } from "@/lib/data";
 import { formatPrice } from "@/lib/format";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import { IconClose, IconSearch } from "@/components/ui/Icons";
@@ -36,7 +36,7 @@ export function SearchOverlay({
   products,
   onClose,
 }: {
-  products: PublicProduct[];
+  products: SharedCatalogProduct[];
   onClose: () => void;
 }) {
   const [query, setQuery] = useState("");
@@ -87,7 +87,7 @@ export function SearchOverlay({
   // si sigue el link de esa sección.
   const suggestions = useMemo(() => newArrivals(products).slice(0, 6), [products]);
 
-  const renderProductRow = (p: PublicProduct, onClick: () => void) => (
+  const renderProductRow = (p: SharedCatalogProduct, onClick: () => void) => (
     <Link key={p.id} href={`/producto/${p.slug}`} className="search__row" onClick={onClick}>
       <div className="search__row-art">
         <ProductVisual

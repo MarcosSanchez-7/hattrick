@@ -9,7 +9,7 @@ import {
   topLevelCategories,
   type Category,
 } from "@/lib/catalog";
-import type { PublicProduct } from "@/lib/data";
+import type { SharedCatalogProduct } from "@/lib/data";
 import type { NavLink } from "@/lib/settings";
 import { useCart } from "@/components/cart/CartProvider";
 import { useWishlist } from "@/components/wishlist/WishlistProvider";
@@ -29,7 +29,7 @@ export function Navbar({
   extraLinks = [],
 }: {
   categories: Category[];
-  products: PublicProduct[];
+  products: SharedCatalogProduct[];
   extraLinks?: NavLink[];
 }) {
   const { count, openCart } = useCart();

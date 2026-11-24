@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { toast } from "sonner";
-import type { PublicProduct } from "@/lib/data";
+import type { SharedCatalogProduct } from "@/lib/data";
 import { trackPixelEvent } from "@/components/analytics/MetaPixel";
 import { IconBag } from "@/components/ui/Icons";
 
@@ -48,7 +48,7 @@ type StoredLine = {
 
 export type CartLine = StoredLine & {
   key: string;
-  product: PublicProduct;
+  product: SharedCatalogProduct;
   lineTotal: number;
 };
 
@@ -64,7 +64,7 @@ type CartContextValue = {
   openCart: () => void;
   closeCart: () => void;
   add: (
-    product: PublicProduct,
+    product: SharedCatalogProduct,
     size: string,
     qty?: number,
     opts?: {
@@ -100,17 +100,17 @@ function lineKey(
 }
 
 /** Tope de unidades por talla cuando no se expone el stock real (ver
- * PublicProduct.variants en lib/data.ts): no es un límite de inventario
- * real, es solo una ayuda de UX para que el cliente no pida una cantidad
- * absurda por WhatsApp -- la venta real se valida a mano con el stock
- * exacto en el panel (SaleForm), este número nunca fue una barrera de
- * integridad de datos. */
+ * SharedCatalogProduct/PublicProduct.variants en lib/data.ts): no es un
+ * límite de inventario real, es solo una ayuda de UX para que el cliente
+ * no pida una cantidad absurda por WhatsApp -- la venta real se valida a
+ * mano con el stock exacto en el panel (SaleForm), este número nunca fue
+ * una barrera de integridad de datos. */
 const MAX_CART_QTY = 10;
 
 /** Tope de unidades para esa talla: 0 si está agotada, MAX_CART_QTY si hay
  * disponibilidad (sin revelar cuánto queda realmente), o null si el
  * producto no lleva stock propio (ajeno/importado, "Consultar talle"). */
-export function availableStock(product: PublicProduct, size: string): number | null {
+export function availableStock(product: SharedCatalogProduct, size: string): number | null {
   const variant = product.variants?.find((v) => v.size === size);
   if (!variant) return null;
   return variant.inStock ? MAX_CART_QTY : 0;
@@ -148,7 +148,7 @@ export function CartProvider({
   products,
 }: {
   children: React.ReactNode;
-  products: PublicProduct[];
+  products: SharedCatalogProduct[];
 }) {
   const [stored, setStored] = useState<StoredLine[]>([]);
   const [hydrated, setHydrated] = useState(false);
@@ -174,7 +174,7 @@ export function CartProvider({
 
   const add = useCallback(
     (
-      product: PublicProduct,
+      product: SharedCatalogProduct,
       size: string,
       qty = 1,
       opts?: {
@@ -265,7 +265,7 @@ export function CartProvider({
 
   const remove = useCallback(
     (key: string) => {
-      let removedProduct: PublicProduct | undefined;
+      let removedProduct: SharedCatalogProduct | undefined;
       setStored((prev) => {
         const line = prev.find(
           (l) => lineKey(l.slug, l.size, l.note, l.patches) === key,

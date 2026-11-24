@@ -1,5 +1,12 @@
 import { Toaster } from "sonner";
-import { getAllCategories, getAllPages, getAllProducts, getSetting, toPublicProduct } from "@/lib/data";
+import {
+  getAllCategories,
+  getAllPages,
+  getAllProducts,
+  getSetting,
+  toPublicProduct,
+  toSharedCatalogProduct,
+} from "@/lib/data";
 import { DEFAULT_BRANDING, DEFAULT_FOOTER, DEFAULT_NAVBAR, DEFAULT_WHOLESALE } from "@/lib/settings";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { CartProvider } from "@/components/cart/CartProvider";
@@ -32,9 +39,12 @@ export default async function StoreLayout({
     ]);
   // CartProvider y Navbar son Client Components: cualquier campo que tenga
   // este objeto viaja entero al navegador en el payload de RSC, sin importar
-  // qué pinten en pantalla -- por eso se mapea a la versión pública antes de
-  // pasarlo, en vez de pasar el Product completo (ver toPublicProduct en lib/data.ts).
-  const products = allProducts.map(toPublicProduct);
+  // qué pinten en pantalla -- por eso se proyecta a SharedCatalogProduct
+  // (ver lib/data.ts) en vez de pasar PublicProduct completo. Una sola
+  // transformación, una sola referencia: CartProvider y Navbar reciben el
+  // mismo array (y Navbar se lo reenvía tal cual a SearchOverlay), no copias
+  // separadas.
+  const products = allProducts.map((p) => toSharedCatalogProduct(toPublicProduct(p)));
 
   const sameAs = [
     footerSettings.instagramUrl,
