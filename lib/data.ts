@@ -40,6 +40,7 @@ import {
   type SharedCatalogProduct,
   type SharedCatalogProductVariant,
 } from "@/lib/shared-catalog-product";
+import { mergeSettingValue, type SettingFetchResult } from "@/lib/settings-merge";
 import { MAX_CART_RESOLVE_SLUGS } from "@/lib/cart-resolve";
 import { deleteImagesWithVariants } from "@/lib/blob";
 import type { SiteSettingsKey } from "@/lib/settings";
@@ -317,6 +318,10 @@ export function toPublicProduct(product: Product): PublicProduct {
 // los componentes que ya importan de "@/lib/data" no tengan que cambiar
 // de dónde los traen.
 export { toSharedCatalogProduct, type SharedCatalogProduct, type SharedCatalogProductVariant };
+
+// Mismo patrón que arriba, para mergeSettingValue/SettingFetchResult (ver
+// lib/settings-merge.ts) -- usados más abajo por getSetting().
+export { mergeSettingValue, type SettingFetchResult };
 
 function rowToCategory(row: CategoryRow): Category {
   return {
@@ -3866,11 +3871,28 @@ export async function deleteImportPurchase(id: string): Promise<void> {
 // ── Configuración general del sitio ────────────────────────────────────────
 
 /**
- * Nunca debe tumbar la tienda: si la tabla no existe todavía (antes de correr
- * la migración) o hay cualquier error, se usa el valor por defecto en
- * silencio en vez de romper la página.
+ * Lectura cruda de una fila de site_settings, memoizada por request SOLO
+ * por `key` (string primitivo) -- nunca por el `fallback` de getSetting().
+ * Si memoizáramos sobre (key, fallback), dos llamadas a la MISMA key con
+ * fallbacks que no sean exactamente la misma referencia (dos objetos
+ * literales distintos, aunque tengan el mismo contenido) compararían por
+ * SameValueZero y jamás deduplicarían entre sí -- hoy no pasa porque todos
+ * los llamadores reusan las mismas constantes DEFAULT_* exportadas de
+ * lib/settings.ts, pero es una suposición fragil de la que no depende este
+ * diseño: separar "leer la fila" (cacheable por key) de "fusionar con el
+ * fallback de quien preguntó" (fuera del cache, sin memoizar) hace que la
+ * deduplicación funcione sin importar qué fallback use cada llamador, y
+ * sin que dos llamadores con fallbacks distintos para la misma key se
+ * pisen el resultado entre sí.
+ *
+ * Confirmado y medido en la Fase 7A/7B.1: "wholesale" se pide desde
+ * app/(store)/layout.tsx Y desde app/(store)/page.tsx (y también desde
+ * app/(store)/mayorista/page.tsx) en el mismo render; "footer" se pide
+ * desde layout.tsx Y desde app/(store)/mayorista/page.tsx (y desde
+ * app/(store)/carrito/page.tsx). Memoizar por key colapsa esas llamadas
+ * repetidas en una sola consulta real a Supabase por key y por request.
  */
-export async function getSetting<T>(key: SiteSettingsKey, fallback: T): Promise<T> {
+const fetchSettingRaw = cache(async (key: SiteSettingsKey): Promise<SettingFetchResult> => {
   try {
     const { data, error } = await supabaseAdmin
       .from("site_settings")
@@ -3878,11 +3900,29 @@ export async function getSetting<T>(key: SiteSettingsKey, fallback: T): Promise<
       .eq("key", key)
       .maybeSingle();
     if (error) throw error;
-    return data ? ({ ...fallback, ...(data.value as object) } as T) : fallback;
+    return data ? { found: true, value: data.value } : { found: false };
   } catch (err) {
     console.error(`No se pudo cargar la configuración "${key}", usando valores por defecto:`, err);
-    return fallback;
+    return { found: false };
   }
+});
+
+/**
+ * Nunca debe tumbar la tienda: si la tabla no existe todavía (antes de correr
+ * la migración) o hay cualquier error, se usa el valor por defecto en
+ * silencio en vez de romper la página.
+ *
+ * Nota de comportamiento (antes vs. ahora): como la lectura cruda está
+ * memoizada por request, si la PRIMERA llamada a una key dentro de un
+ * mismo render encuentra un error transitorio de Supabase, ESA decisión
+ * (usar el fallback) queda fija para el resto de ese mismo request -- ya
+ * no se reintenta en cada llamada repetida a la misma key como antes.
+ * Dentro de una sola request esto es más consistente (todos los
+ * consumidores de esa key ven el mismo resultado), no menos correcto.
+ */
+export async function getSetting<T>(key: SiteSettingsKey, fallback: T): Promise<T> {
+  const result = await fetchSettingRaw(key);
+  return mergeSettingValue(fallback, result);
 }
 
 export async function updateSetting(

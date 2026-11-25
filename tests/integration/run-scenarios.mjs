@@ -325,6 +325,35 @@ async function main() {
     return "branding es global: /mayorista (no relacionada con productos) refleja el cambio igual";
   });
 
+  await scenario("Settings: wholesale -- la misma actualización se refleja en / Y /mayorista (Fase 7B.1: memoización por clave)", "/ , /mayorista", async () => {
+    // Antes de la Fase 7B.1, layout.tsx y page.tsx (home) pedían
+    // "wholesale" por separado (dos consultas reales); mayorista/page.tsx
+    // también la pide por su cuenta. Este escenario no mide consultas
+    // (eso ya se hizo en el worktree descartable de la fase) -- solo
+    // confirma que memoizar por clave con React.cache() no introdujo
+    // ninguna inconsistencia entre las DOS páginas que la necesitan: cada
+    // una sigue viendo el valor fresco, en su propio request.
+    const current = await api("GET", "/api/admin/settings/wholesale");
+    const put = await api("PUT", "/api/admin/settings/wholesale", {
+      ...current.body,
+      title: "Mayorista Fase 7B.1",
+      homeBannerTitle: "Banner Fase 7B.1",
+      homeBannerEnabled: true,
+    });
+    assert(put.status === 200, `PUT wholesale falló: ${JSON.stringify(put.body)}`);
+
+    const mayorista = await fetchPublic("/mayorista");
+    assert(mayorista.body.includes("Mayorista Fase 7B.1"), "/mayorista no refleja el título nuevo de inmediato");
+
+    const home = await fetchPublic("/");
+    assert(home.body.includes("Banner Fase 7B.1"), "/ no refleja el banner nuevo de inmediato");
+
+    const restore = await api("PUT", "/api/admin/settings/wholesale", current.body);
+    assert(restore.status === 200, `no se pudo restaurar wholesale: ${JSON.stringify(restore.body)}`);
+
+    return "una sola actualización de \"wholesale\" se refleja correctamente en / y /mayorista a la vez, sin staleness ni inconsistencia entre ambas";
+  });
+
   await scenario("Settings: footer (whatsapp/brandDescription)", "/personalizacion", async () => {
     const before = await fetchPublic("/personalizacion");
     assert(before.body.includes("595900000000"), "debería tener ya el número sintético original");
