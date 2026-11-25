@@ -75,6 +75,7 @@ export function ProductCard({
         <Link
           href={`/producto/${product.slug}`}
           aria-label={alt}
+          prefetch={false}
           style={{ position: "absolute", inset: 0, zIndex: 1 }}
         />
 
@@ -92,6 +93,7 @@ export function ProductCard({
         <Link
           href={`/producto/${product.slug}`}
           className="card__name"
+          prefetch={false}
           data-combo={isComboProduct(product) ? "true" : "false"}
         >
           {product.name}

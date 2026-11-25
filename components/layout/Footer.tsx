@@ -59,14 +59,14 @@ export function Footer({
             <p className="label footer__col-title">Tienda</p>
             <ul>
               <li>
-                <Link href="/novedades">Nuevos ingresos</Link>
+                <Link href="/novedades" prefetch={false}>Nuevos ingresos</Link>
               </li>
               <li>
-                <Link href="/ofertas">Ofertas</Link>
+                <Link href="/ofertas" prefetch={false}>Ofertas</Link>
               </li>
               {topLevelCategories(categories).map((c) => (
                 <li key={c.slug}>
-                  <Link href={`/categoria/${c.slug}`}>{c.name}</Link>
+                  <Link href={`/categoria/${c.slug}`} prefetch={false}>{c.name}</Link>
                 </li>
               ))}
             </ul>
@@ -76,11 +76,11 @@ export function Footer({
             <p className="label footer__col-title">Ayuda</p>
             <ul>
               <li>
-                <Link href="/personalizacion">Personalización</Link>
+                <Link href="/personalizacion" prefetch={false}>Personalización</Link>
               </li>
               {ayuda.map((p) => (
                 <li key={p.slug}>
-                  <Link href={`/pagina/${p.slug}`}>{p.title}</Link>
+                  <Link href={`/pagina/${p.slug}`} prefetch={false}>{p.title}</Link>
                 </li>
               ))}
             </ul>
@@ -92,7 +92,7 @@ export function Footer({
               <ul>
                 {empresa.map((p) => (
                   <li key={p.slug}>
-                    <Link href={`/pagina/${p.slug}`}>{p.title}</Link>
+                    <Link href={`/pagina/${p.slug}`} prefetch={false}>{p.title}</Link>
                   </li>
                 ))}
               </ul>
@@ -106,7 +106,7 @@ export function Footer({
               © {new Date().getFullYear()} {settings.legalName}
             </span>
             {legal.map((p) => (
-              <Link key={p.slug} href={`/pagina/${p.slug}`}>
+              <Link key={p.slug} href={`/pagina/${p.slug}`} prefetch={false}>
                 {p.title}
               </Link>
             ))}
