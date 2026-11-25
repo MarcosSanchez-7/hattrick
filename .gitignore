@@ -3,6 +3,7 @@
 
 # Next.js
 /.next
+/.next-test
 /out
 tsconfig.tsbuildinfo
 next-env.d.ts

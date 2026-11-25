@@ -77,6 +77,14 @@ const CSP = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  // Fase 4B.2: build:test/start:test corren con SUPABASE_TEST_ENV=local
+  // (ver scripts/test-env.mjs) -- un directorio de build separado evita
+  // mezclar ese .next con el de `npm run build` normal. Importa porque
+  // las variables NEXT_PUBLIC_* quedan inlineadas en el bundle del
+  // cliente en el momento del build, no se leen de nuevo en runtime: si
+  // compartieran el mismo .next, el que se construyó último "ganaría"
+  // para los dos, sin aviso.
+  distDir: process.env.SUPABASE_TEST_ENV === "local" ? ".next-test" : ".next",
   async headers() {
     return [
       {
