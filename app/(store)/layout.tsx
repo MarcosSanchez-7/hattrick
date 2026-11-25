@@ -1,5 +1,5 @@
 import { Toaster } from "sonner";
-import { getAllCategories, getAllPages, getAllPublicProducts, getSetting } from "@/lib/data";
+import { getAllCategories, getAllPages, getSetting } from "@/lib/data";
 import { DEFAULT_BRANDING, DEFAULT_FOOTER, DEFAULT_NAVBAR, DEFAULT_WHOLESALE } from "@/lib/settings";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { CartProvider } from "@/components/cart/CartProvider";
@@ -20,20 +20,16 @@ export const revalidate = 60;
 export default async function StoreLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  // getAllPublicProducts() se sigue pidiendo acá (segunda posición del
-  // array, deliberadamente sin nombre -- ver más abajo) aunque Navbar ya NO
-  // reciba el catálogo completo (ni CartProvider desde la Fase 3B, ni
-  // SearchOverlay/el conteo de favoritos desde la Fase 3C, ver
-  // SearchOverlay.tsx/WishlistProvider.tsx). Sacar esta consulta del
-  // layout por completo queda reservado para la Fase 3D a propósito, para
-  // poder medir SU impacto de forma aislada en vez de mezclarlo con lo que
-  // ya se ahorró acá -- mientras tanto, la página que se renderice (home,
-  // categoría...) sigue pidiendo lo mismo vía su propia llamada a
-  // getAllPublicProducts(), memoizada por request.
-  const [categories, , pages, navbarSettings, footerSettings, branding, wholesaleSettings] =
+  // Ni Navbar (Fase 3B/3C) ni ningún otro consumidor de este layout
+  // necesita ya el catálogo completo -- cada página que sí lo necesita
+  // para su propio contenido (home, categoría, producto, novedades,
+  // ofertas) lo pide por su cuenta vía getAllProducts()/
+  // getAllPublicProducts(), memoizadas por request con React.cache() (ver
+  // Fase 3D). Pedirlo también acá era trabajo repetido sin ningún
+  // consumidor real.
+  const [categories, pages, navbarSettings, footerSettings, branding, wholesaleSettings] =
     await Promise.all([
       getAllCategories(),
-      getAllPublicProducts(),
       getAllPages(),
       getSetting("navbar", DEFAULT_NAVBAR),
       getSetting("footer", DEFAULT_FOOTER),
