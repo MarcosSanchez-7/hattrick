@@ -452,16 +452,76 @@ async function fetchProductWithVariants(id: string): Promise<Product> {
  */
 /** Slugs de categorías ocultas, incluidas sus subcategorías (una categoría
  * oculta "apaga" todo su subárbol aunque cada hija siga marcada visible
- * individualmente) -- compartido por fetchAllProducts (abajo) y
- * getPublicProductsBySlugs (resolución del carrito), antes dos copias del
- * mismo cálculo. */
-function hiddenCategorySlugs(categories: Category[]): Set<string> {
+ * individualmente) -- compartido por fetchAllProducts (abajo),
+ * getPublicProductsBySlugs (resolución del carrito) y getSitemapProducts
+ * (Fase 5), antes dos copias del mismo cálculo. Exportada (antes privada
+ * del archivo) para que app/sitemap.ts pueda aplicar exactamente la misma
+ * regla al armar la lista de categorías del sitemap, sin reimplementarla
+ * aparte -- la lógica de qué cuenta como "oculto" no cambia en absoluto,
+ * solo se reusa desde otro lugar. */
+export function hiddenCategorySlugs(categories: Category[]): Set<string> {
   const hidden = new Set<string>();
   for (const c of categories.filter((cat) => !cat.isVisible)) {
     hidden.add(c.slug);
     for (const d of descendantSlugs(categories, c.slug)) hidden.add(d);
   }
   return hidden;
+}
+
+/** Columnas mínimas para el sitemap (Fase 5) -- a diferencia de
+ * PRODUCT_COLUMNS, nunca necesita precio/colores/descripción/tags/etc, y
+ * sí necesita `updated_at` (que PRODUCT_COLUMNS deliberadamente no pide,
+ * ver su comentario -- nada más lo usaba hasta ahora) para poder poner un
+ * lastModified real en vez de inventarlo. */
+const SITEMAP_PRODUCT_COLUMNS = "slug, category, updated_at" as const;
+
+type SitemapProductRow = { slug: string; category: string; updated_at: string };
+
+export type SitemapProduct = { slug: string; category: string; updatedAt: string };
+
+/** Igual que fetchAllProducts, pero sin pedir nunca variantes, parches,
+ * proveedores ni su stock por talla -- el sitemap no construye nada de
+ * eso, solo URLs. Medido en la Fase 5: la consulta general trae 4 lotes
+ * de sub-fetches (product_variants/product_patches/product_suppliers/
+ * product_supplier_sizes) que esta nunca necesita. El filtro de
+ * visibilidad va directo en la consulta SQL (is_visible=true) en vez de
+ * traer todo y filtrar después -- mismo criterio que getSearchableCatalog
+ * (Fase 3C). Memoizada por request como el resto de los fetchers de este
+ * archivo -- si algo más en el mismo render ya pidió esto, no repite la
+ * consulta. */
+const fetchSitemapProducts = cache(async (): Promise<SitemapProduct[]> => {
+  const { data, error } = await supabaseAdmin
+    .from("products")
+    .select(SITEMAP_PRODUCT_COLUMNS)
+    .eq("is_visible", true)
+    .order("created_at", { ascending: true });
+  if (error) fail(`No se pudieron cargar los productos para el sitemap: ${error.message}`);
+
+  let rows = data as SitemapProductRow[];
+  // includeHidden:true a propósito: memoizado por React.cache() con la
+  // misma clave (el booleano true) que app/sitemap.ts pide para armar las
+  // rutas de categoría -- si ambos corren en el mismo request (siempre,
+  // es la misma función sitemap()), esto nunca dispara una segunda
+  // consulta a "categories", solo reusa la ya resuelta.
+  const categories = await getAllCategories({ includeHidden: true });
+  const hiddenSlugs = hiddenCategorySlugs(categories);
+  rows = rows.filter((r) => !hiddenSlugs.has(r.category));
+
+  return rows.map((row) => ({
+    slug: row.slug,
+    category: row.category,
+    updatedAt: row.updated_at,
+  }));
+});
+
+/**
+ * Catálogo acotado (solo visibles, columnas mínimas) para
+ * app/sitemap.ts (Fase 5) -- consulta propia, no reusa getAllProducts()
+ * (esa trae variantes/parches/proveedores que el sitemap no lee, ver
+ * SITEMAP_PRODUCT_COLUMNS más arriba).
+ */
+export async function getSitemapProducts(): Promise<SitemapProduct[]> {
+  return fetchSitemapProducts();
 }
 
 // cache(): layout + página + generateMetadata piden el catálogo varias
