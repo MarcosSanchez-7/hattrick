@@ -243,6 +243,37 @@ test("patrón de los route handlers: si la escritura falla, la invalidación nun
   assert.equal(invalidateWasCalled, true);
 });
 
+test("importación CSV de ventas: una invalidación fallida no transforma una importación ya guardada en un error (Fase 4B.1)", async () => {
+  // Reproduce la forma exacta de app/api/admin/sales/import/route.ts tras
+  // la corrección: el resultado de la importación (con sus propios errores
+  // por fila, si los hubo) ya está decidido ANTES de intentar invalidar --
+  // revalidateAfterWrite nunca debe poder pisarlo, ni siquiera cuando el
+  // resultado ya incluye errores parciales (filas inválidas del CSV, algo
+  // normal y no relacionado con la invalidación).
+  async function simulatedImportHandler(invalidateShouldFail: boolean) {
+    const response = { imported: 3, errors: [{ row: 5, message: "Fecha inválida." }] };
+    await revalidateAfterWrite("importar ventas históricas", async () => {
+      if (invalidateShouldFail) throw new Error("revalidatePath explotó");
+    });
+    return response;
+  }
+
+  const originalError = console.error;
+  console.error = () => {};
+  try {
+    const ok = await simulatedImportHandler(false);
+    assert.deepEqual(ok, { imported: 3, errors: [{ row: 5, message: "Fecha inválida." }] });
+
+    const okDespiteInvalidationFailure = await simulatedImportHandler(true);
+    assert.deepEqual(okDespiteInvalidationFailure, {
+      imported: 3,
+      errors: [{ row: 5, message: "Fecha inválida." }],
+    });
+  } finally {
+    console.error = originalError;
+  }
+});
+
 test("logRevalidationFailure solo loguea el mensaje del error, no el stack ni otras propiedades", () => {
   const originalError = console.error;
   const logged: unknown[] = [];

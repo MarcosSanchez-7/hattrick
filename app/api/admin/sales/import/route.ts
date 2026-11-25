@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
 import { DataError, importHistoricalSales, type SaleImportRow } from "@/lib/data";
 import { SALE_CHANNELS, type SaleChannel } from "@/lib/catalog";
+import { revalidateAfterWrite, safeRevalidatePaths } from "@/lib/revalidate";
 
 /**
  * Parser de CSV a mano (sin librerías nuevas, simétrico con el export de
@@ -207,11 +207,23 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await importHistoricalSales(parsed);
-    revalidatePath("/", "layout");
-    return NextResponse.json({
+    const response = {
       imported: result.imported,
       errors: [...errors, ...result.errors].sort((a, b) => a.row - b.row),
-    });
+    };
+
+    // La importación ya se guardó -- de acá en más, un fallo invalidando
+    // caché nunca debe reportarse como si la importación hubiera fallado
+    // (mismo patrón de aislamiento que el resto de las rutas admin, ver
+    // lib/revalidate.ts). Antes este revalidatePath corría sin aislar,
+    // dentro del mismo try/catch que la escritura -- si tiraba, el catch de
+    // abajo lo confundía con un fallo de la propia importación (hallazgo de
+    // la Fase 4A, corregido en la Fase 4B.1).
+    await revalidateAfterWrite("importar ventas históricas", async () =>
+      safeRevalidatePaths([{ path: "/", type: "layout" }]),
+    );
+
+    return NextResponse.json(response);
   } catch (err) {
     if (err instanceof DataError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
