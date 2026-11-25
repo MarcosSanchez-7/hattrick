@@ -1,0 +1,7 @@
+# Contexto del proyecto
+
+HATTRICK, ecommerce de camisetas de fútbol en Paraguay, dominio `www.hattrickpy.com` (confirmado en `lib/site.ts`, fallback de `NEXT_PUBLIC_SITE_URL`). Next.js 16 App Router, TypeScript, Supabase/PostgreSQL/PostgREST, Vercel Blob para imágenes, Vercel como hosting histórico y Cloudflare como posible intermediario (configuración de infraestructura no verificable desde el código del repositorio — tratar como no confirmado hasta que alguien lo compruebe desde el panel de Cloudflare/Vercel/DNS). WhatsApp es parte real del flujo de compra (confirmado: `components/layout/WhatsAppButton.tsx`, `WhatsAppTeaser.tsx`, uso en `CarritoView.tsx`/`CartProvider.tsx`) — nunca enviar mensajes reales ni disparar ese flujo contra números reales durante pruebas.
+
+Objetivo actual: reducir consumo de infraestructura (solicitudes, consultas a Supabase, bytes transferidos, regeneraciones ISR) preservando experiencia, stock, precios, visibilidad, SEO y administración existentes. Producción en Vercel suspendida según el historial de fases anteriores; la decisión de hosting definitivo está pendiente. No desplegar nada hasta autorización explícita y separada.
+
+Objetivo educativo posterior (no autorizado todavía, no iniciar): "HATTRICK LAB" — estudiar los diffs y checkpoints de este proyecto, reproducir los problemas encontrados y elaborar buenas prácticas reutilizables para otros proyectos Next.js/Supabase.
