@@ -5,7 +5,10 @@ import { DEFAULT_CUSTOM_BANNER, DEFAULT_PERSONALIZATION_GALLERY } from "@/lib/se
 import { imageVariant } from "@/lib/image";
 import { CustomBanner } from "@/components/home/CustomBanner";
 
-export const revalidate = 60;
+// Fase 4C: 3600s -- no lee catálogo (confirmado en la Fase 3D); sus
+// settings (customBanner, personalizationGallery) ya invalidan esta ruta
+// on demand. El TTL es un respaldo generoso, no la vía principal.
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Personalización",

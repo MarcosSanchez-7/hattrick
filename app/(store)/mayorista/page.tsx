@@ -6,7 +6,10 @@ import { imageVariant } from "@/lib/image";
 import { JerseyArt } from "@/components/product/JerseyArt";
 import { IconCheck } from "@/components/ui/Icons";
 
-export const revalidate = 60;
+// Fase 4C: 3600s -- no lee catálogo (confirmado en la Fase 3D); sus únicos
+// settings (wholesale, footer) ya invalidan globalmente on demand. El TTL
+// es un respaldo generoso, no la vía principal.
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Mayorista",

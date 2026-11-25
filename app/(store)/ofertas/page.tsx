@@ -12,7 +12,10 @@ export const metadata: Metadata = {
   alternates: { canonical: "/ofertas" },
 };
 
-export const revalidate = 60;
+// Fase 4C: 300s -- igual que novedades, ya invalidada on demand en cada
+// escritura de producto; valor más bajo que el resto a propósito (listado
+// de campaña/urgencia, ver evaluación de la Fase 4A). El TTL es respaldo.
+export const revalidate = 300;
 
 export default async function OfertasPage() {
   const [allProducts, tags] = await Promise.all([getAllProducts(), getAllTags()]);

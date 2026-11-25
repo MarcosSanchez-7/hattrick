@@ -11,11 +11,21 @@ import { Footer } from "@/components/layout/Footer";
 import { WhatsAppButton } from "@/components/layout/WhatsAppButton";
 import { WhatsAppTeaser } from "@/components/layout/WhatsAppTeaser";
 
-// Mismo revalidate que las paginas hijas (ver app/(store)/page.tsx y
-// hermanas) -- un layout con force-dynamic anula el revalidate de sus
-// paginas hijas por mas que ellas lo declaren, asi que tiene que coincidir
-// acá tambien o el cache nunca se activa de verdad.
-export const revalidate = 60;
+// Fase 4C: 86400s (24h) -- Navbar/Footer/branding/categorías/settings ya
+// dependen de invalidación bajo demanda (revalidatePath global en cada
+// escritura relevante, ver lib/revalidate.ts), nunca del TTL, para
+// reflejar cambios administrativos -- confirmado con los 28 escenarios de
+// integración de la Fase 4B.3. Este valor es solo la red de respaldo para
+// el caso (raro) de que esa invalidación falle en silencio.
+//
+// No hace falta que coincida con el de las páginas hijas: gana el valor
+// MÁS BAJO de toda la jerarquía layout+página (confirmado leyendo
+// node_modules/next/dist/docs/01-app/02-guides/caching-without-cache-components.md
+// en la Fase 4A) -- un layout en 86400s con una página hija en 300s sigue
+// revalidando esa ruta cada 300s real. El layout en un valor alto no
+// "apaga" el TTL más corto de ninguna página; solo deja de ser ÉL el
+// cuello de botella en las rutas que ya tienen su propio valor más bajo.
+export const revalidate = 86400;
 
 export default async function StoreLayout({
   children,

@@ -17,9 +17,15 @@ import { SUBCATEGORY_ICONS } from "@/components/ui/CatalogIcons";
 
 type Params = { slug: string[] };
 
-export const revalidate = 60;
+// Fase 4C: 900s -- cambios estructurales de categoría ya son invalidación
+// global on demand, y los cosméticos invalidan selectivamente esta cadena
+// (ver lib/revalidate.ts, categoryHasStructuralChange/
+// revalidateCategoryOwnPages); precio/stock/visibilidad de producto
+// también invalidan la categoría del producto. Confirmado con los 28
+// escenarios de integración de la Fase 4B.3. El TTL es respaldo.
+export const revalidate = 900;
 
-// Sin esto, revalidate=60 no hace nada en un segmento dinamico ([...slug])
+// Sin esto, revalidate=900 no hace nada en un segmento dinamico ([...slug])
 // -- ver la misma nota en producto/[slug]/page.tsx.
 export async function generateStaticParams() {
   const categories = await getAllCategories({ includeHidden: true });

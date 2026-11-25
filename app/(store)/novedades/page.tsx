@@ -11,7 +11,11 @@ export const metadata: Metadata = {
   alternates: { canonical: "/novedades" },
 };
 
-export const revalidate = 60;
+// Fase 4C: 900s -- alta/edición/ocultación de producto ya invalidan
+// "/novedades" on demand (revalidateProductListings siempre la incluye,
+// ver lib/revalidate-core.ts), confirmado con los 28 escenarios de
+// integración de la Fase 4B.3. El TTL es respaldo.
+export const revalidate = 900;
 
 export default async function NovedadesPage() {
   const [allProducts, tags] = await Promise.all([getAllProducts(), getAllTags()]);

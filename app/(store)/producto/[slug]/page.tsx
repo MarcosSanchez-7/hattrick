@@ -23,12 +23,16 @@ import { ProductGrid } from "@/components/product/ProductCard";
 
 type Params = { slug: string };
 
-export const revalidate = 60;
+// Fase 4C: 900s -- precio/stock/visibilidad/slug ya invalidan la ficha on
+// demand en cada escritura (revalidateProduct/revalidateProductListings,
+// ver lib/revalidate.ts), confirmado con los 28 escenarios de integración
+// de la Fase 4B.3. El TTL es respaldo, no la vía principal.
+export const revalidate = 900;
 
-// Sin esto, revalidate=60 no hace nada en un segmento dinamico ([slug]) --
+// Sin esto, revalidate=900 no hace nada en un segmento dinamico ([slug]) --
 // Next.js sigue tratando la ruta como 100% dinamica (sin cache real) si no
 // sabe de antemano que paths existen. Con esto, cada producto se pre-renderiza
-// en el build y despues se revalida cada 60s (ISR real), en vez de correr la
+// en el build y despues se revalida cada 900s (ISR real), en vez de correr la
 // consulta a Supabase en cada visita.
 export async function generateStaticParams() {
   const products = await getAllProducts();

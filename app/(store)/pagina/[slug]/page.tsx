@@ -5,10 +5,15 @@ import { getAllPages } from "@/lib/data";
 
 type Params = { slug: string };
 
-export const revalidate = 60;
+// Fase 4C: 86400s -- editar solo el body invalida selectivamente esta
+// página; editar título/placement/sortOrder invalida globalmente (afecta
+// el Footer, ver pageAffectsFooter en lib/revalidate-core.ts). Ambos casos
+// ya son on demand, confirmado con los 28 escenarios de integración de la
+// Fase 4B.3. El TTL es un respaldo generoso, no la vía principal.
+export const revalidate = 86400;
 
-// Sin esto, revalidate=60 no hace nada en un segmento dinamico ([slug]) --
-// ver la misma nota en producto/[slug]/page.tsx.
+// Sin esto, revalidate=86400 no hace nada en un segmento dinamico ([slug])
+// -- ver la misma nota en producto/[slug]/page.tsx.
 export async function generateStaticParams() {
   const pages = await getAllPages();
   return pages.map((p) => ({ slug: p.slug }));

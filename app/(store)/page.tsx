@@ -20,7 +20,12 @@ import { CustomBanner } from "@/components/home/CustomBanner";
 import { ReviewsSection } from "@/components/home/ReviewsSection";
 import { ProductGrid } from "@/components/product/ProductCard";
 
-export const revalidate = 60;
+// Fase 4C: 900s -- precio/stock/visibilidad ya invalidan esta ruta on
+// demand en cada escritura de producto/venta/inventario (revalidateProduct/
+// revalidateProductListings, ver lib/revalidate.ts), confirmado con los 28
+// escenarios de integración de la Fase 4B.3. El TTL es respaldo, no la vía
+// principal de actualización.
+export const revalidate = 900;
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
