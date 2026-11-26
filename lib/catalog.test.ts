@@ -10,7 +10,7 @@
 // Corre con: node --test lib/catalog.test.ts
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { newArrivals, searchProducts, type Product } from "./catalog.ts";
+import { newArrivals, relatedTo, searchProducts, type Product } from "./catalog.ts";
 
 function product(overrides: Partial<Product> = {}): Product {
   return {
@@ -134,4 +134,155 @@ test("newArrivals: ordena del más reciente al más viejo por createdAt", () => 
     results.map((p) => p.slug),
     ["nuevo", "medio", "viejo"],
   );
+});
+
+// ── relatedTo() -- Fase 7B.3-B ──────────────────────────────────────────
+// relatedTo() dejó de tomar el catálogo completo para pasar a tomar una
+// proyección liviana de candidatos (ver RelatedCandidate en lib/data.ts) +
+// el producto completo actual, como DOS tipos independientes (P y Q, ver
+// RelatedSelectable). Estas pruebas congelan el algoritmo exacto (no
+// cambió) y, explícitamente, confirman que funciona igual con la
+// proyección mínima que con el Product completo -- la equivalencia que
+// justifica la nueva arquitectura.
+
+/** Forma mínima que usa la nueva arquitectura (ver RelatedCandidate en
+ * lib/data.ts) -- deliberadamente SIN price/images/sizes/soldOut/reviews,
+ * para probar que relatedTo() selecciona igual sin esos campos. */
+function candidate(overrides: {
+  id: string;
+  slug: string;
+  category: string;
+  tags?: string[];
+  createdAt?: string;
+}) {
+  return {
+    tags: [],
+    createdAt: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+test("relatedTo: misma categoría primero, excluye al propio producto, respeta el límite", () => {
+  const current = product({ id: "p0", slug: "actual", category: "futbol" });
+  const pool = [
+    product({ id: "p1", slug: "a", category: "futbol" }),
+    product({ id: "p0", slug: "actual", category: "futbol" }), // el propio producto, también en el pool
+    product({ id: "p2", slug: "b", category: "futbol" }),
+    product({ id: "p3", slug: "c", category: "futbol" }),
+    product({ id: "p4", slug: "d", category: "futbol" }), // 5to de la categoría, sobra con limit=4
+    product({ id: "p5", slug: "e", category: "basket" }),
+  ];
+  const result = relatedTo(pool, current, 4);
+  assert.deepEqual(result.map((p) => p.slug), ["a", "b", "c", "d"]);
+  assert.ok(!result.some((p) => p.slug === "actual"), "nunca incluye al propio producto");
+});
+
+test("relatedTo: con pocos candidatos de la misma categoría, completa con coincidencias de tags sin repetir", () => {
+  const current = product({ id: "p0", slug: "actual", category: "futbol", tags: ["retro", "manga-larga"] });
+  const pool = [
+    product({ id: "p1", slug: "misma-cat", category: "futbol", tags: [] }),
+    product({ id: "p2", slug: "por-tag-1", category: "basket", tags: ["retro"] }),
+    product({ id: "p3", slug: "por-tag-2", category: "rugby", tags: ["manga-larga"] }),
+    product({ id: "p4", slug: "sin-tag-ni-cat", category: "hockey", tags: ["otra-cosa"] }),
+  ];
+  const result = relatedTo(pool, current, 4);
+  // 1 por categoría + 2 por tag = 3, sin el 4to (no comparte categoría ni tag)
+  assert.deepEqual(result.map((p) => p.slug), ["misma-cat", "por-tag-1", "por-tag-2"]);
+});
+
+test("relatedTo: un candidato ya elegido por categoría no se repite si también matchea por tag", () => {
+  const current = product({ id: "p0", slug: "actual", category: "futbol", tags: ["retro"] });
+  const pool = [
+    product({ id: "p1", slug: "misma-cat-y-tag", category: "futbol", tags: ["retro"] }),
+  ];
+  const result = relatedTo(pool, current, 4);
+  assert.deepEqual(result.map((p) => p.slug), ["misma-cat-y-tag"]);
+});
+
+test("relatedTo: tags vacíos en el producto actual -- no intenta la rama de tags aunque falten candidatos", () => {
+  const current = product({ id: "p0", slug: "actual", category: "futbol", tags: [] });
+  const pool = [
+    product({ id: "p1", slug: "misma-cat", category: "futbol", tags: [] }),
+    product({ id: "p2", slug: "otra-cat-pero-con-tag-en-comun", category: "basket", tags: [] }),
+  ];
+  const result = relatedTo(pool, current, 4);
+  assert.deepEqual(result.map((p) => p.slug), ["misma-cat"]);
+});
+
+test("relatedTo: menos candidatos que el límite -- devuelve solo los que hay, sin relleno artificial", () => {
+  const current = product({ id: "p0", slug: "actual", category: "unica" });
+  const pool = [product({ id: "p1", slug: "solo-uno", category: "unica" })];
+  const result = relatedTo(pool, current, 4);
+  assert.deepEqual(result.map((p) => p.slug), ["solo-uno"]);
+});
+
+test("relatedTo: sin categoría ni tags compartidos -- devuelve vacío, no tira", () => {
+  const current = product({ id: "p0", slug: "actual", category: "unica", tags: [] });
+  const pool = [product({ id: "p1", slug: "otra-cat", category: "otra", tags: ["x"] })];
+  assert.deepEqual(relatedTo(pool, current, 4), []);
+});
+
+test("relatedTo: preserva el orden de entrada (created_at ASC ya aplicado por quien llama), incluso con fechas idénticas", () => {
+  const current = product({ id: "p0", slug: "actual", category: "futbol" });
+  // Mismo createdAt en los tres -- relatedTo() no define un criterio de
+  // desempate propio; el orden resultante es el orden de `pool` tal cual
+  // llega. Esto documenta una limitación preexistente (no determinista si
+  // la consulta SQL que arma `pool` no diera un orden estable), no una
+  // regresión de esta fase -- no se introduce ningún criterio nuevo.
+  const tie = "2026-01-01T00:00:00.000Z";
+  const pool = [
+    product({ id: "p1", slug: "primero", category: "futbol", createdAt: tie }),
+    product({ id: "p2", slug: "segundo", category: "futbol", createdAt: tie }),
+    product({ id: "p3", slug: "tercero", category: "futbol", createdAt: tie }),
+  ];
+  assert.deepEqual(
+    relatedTo(pool, current, 4).map((p) => p.slug),
+    ["primero", "segundo", "tercero"],
+  );
+  // Si `pool` llega en otro orden (ej. la BD lo devolvió distinto), el
+  // resultado cambia en consecuencia -- confirma que el orden depende
+  // exclusivamente de la entrada, no de ningún campo propio del producto.
+  const reversed = [...pool].reverse();
+  assert.deepEqual(
+    relatedTo(reversed, current, 4).map((p) => p.slug),
+    ["tercero", "segundo", "primero"],
+  );
+});
+
+test("relatedTo: los agotados pueden aparecer -- no filtra por stock/soldOut", () => {
+  const current = product({ id: "p0", slug: "actual", category: "futbol" });
+  const pool = [
+    product({ id: "p1", slug: "agotado", category: "futbol", sizes: ["M"], soldOut: ["M"] }),
+  ];
+  assert.deepEqual(relatedTo(pool, current, 4).map((p) => p.slug), ["agotado"]);
+});
+
+test("relatedTo: equivalencia exacta usando la proyección liviana (RelatedCandidate) en vez del Product completo", () => {
+  // El mismo escenario de categoría+tags que arriba, pero `products` es la
+  // forma mínima que trae la nueva arquitectura (sin price/images/sizes/
+  // soldOut/reviews) -- `product` (el actual) sigue siendo el Product
+  // completo real, como en app/(store)/producto/[slug]/page.tsx. Esto es
+  // la prueba de equivalencia que justifica reducir el contrato de tipos.
+  const current = product({ id: "p0", slug: "actual", category: "futbol", tags: ["retro", "manga-larga"] });
+  const candidates = [
+    candidate({ id: "c1", slug: "misma-cat", category: "futbol", tags: [] }),
+    candidate({ id: "c2", slug: "por-tag-1", category: "basket", tags: ["retro"] }),
+    candidate({ id: "c3", slug: "por-tag-2", category: "rugby", tags: ["manga-larga"] }),
+    candidate({ id: "c4", slug: "sin-match", category: "hockey", tags: ["otra-cosa"] }),
+  ];
+  const resultFromCandidates = relatedTo(candidates, current, 4);
+
+  const asFullProducts = [
+    product({ id: "c1", slug: "misma-cat", category: "futbol", tags: [] }),
+    product({ id: "c2", slug: "por-tag-1", category: "basket", tags: ["retro"] }),
+    product({ id: "c3", slug: "por-tag-2", category: "rugby", tags: ["manga-larga"] }),
+    product({ id: "c4", slug: "sin-match", category: "hockey", tags: ["otra-cosa"] }),
+  ];
+  const resultFromFullCatalog = relatedTo(asFullProducts, current, 4);
+
+  assert.deepEqual(
+    resultFromCandidates.map((c) => c.slug),
+    resultFromFullCatalog.map((p) => p.slug),
+  );
+  assert.deepEqual(resultFromCandidates.map((c) => c.slug), ["misma-cat", "por-tag-1", "por-tag-2"]);
 });

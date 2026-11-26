@@ -73,6 +73,52 @@ function htmlText(value) {
     .replaceAll("'", "&#x27;");
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** El nombre puede aparecer también en navbar, footer o relacionados. Esta
+ * comprobación lo ancla al <h1> que ProductDetail renderiza para la ficha
+ * principal, por lo que un 200 de otra ruta no puede aprobar por coincidencia
+ * accidental de texto. */
+function assertProductDetailIdentity(body, expectedName, label) {
+  const escapedName = escapeRegExp(htmlText(expectedName));
+  const mainHeading = new RegExp(`<h1\\b[^>]*\\bclass="h1"[^>]*>\\s*${escapedName}\\s*<\\/h1>`);
+  assert(mainHeading.test(body), `${label} no contiene el <h1> principal esperado para "${expectedName}"`);
+}
+
+function assertVisibleProductSecurityResponse(res) {
+  assert(res.status === 200, `esperaba 200 para poder evaluar ausencia de campos admin-only, llegó ${res.status}`);
+  assertProductDetailIdentity(res.body, "Camiseta de Prueba Visible", "la ficha pública");
+  for (const leak of ["costPrice", "wholesalePrice", "internalControl", "stockMode", "supplierName", "unitCost"]) {
+    assert(!res.body.includes(leak), `el campo admin-only "${leak}" apareció en el HTML público`);
+  }
+  assert(!res.body.toLowerCase().includes("proveedor"), "la palabra 'proveedor' apareció en el HTML público");
+}
+
+/** Prueba controlada de LA MISMA aserción usada contra el servidor, sin
+ * cambiar fetchPublic ni simular una ruta: verifica que las cuatro clases de
+ * falso positivo conocidas son rechazadas por el contrato del escenario. */
+function assertSecurityScenarioRejectsFalsePositives() {
+  const expectedHeading = '<h1 class="h1" data-combo="false">Camiseta de Prueba Visible</h1>';
+  const cases = [
+    { name: "500 con body vacío", response: { status: 500, body: "" } },
+    { name: "200 con body vacío", response: { status: 200, body: "" } },
+    { name: "200 de otra ficha", response: { status: 200, body: '<h1 class="h1">Otra ficha</h1>' } },
+    { name: "200 correcto con fuga administrativa", response: { status: 200, body: `${expectedHeading} costPrice` } },
+  ];
+
+  for (const testCase of cases) {
+    let rejected = false;
+    try {
+      assertVisibleProductSecurityResponse(testCase.response);
+    } catch {
+      rejected = true;
+    }
+    assert(rejected, `la aserción de seguridad aceptó indebidamente ${testCase.name}`);
+  }
+}
+
 /** Comprueba la restauración visible sin comparar el HTML completo. El
  * banner de home es opcional: si está apagado, page-reveal es la estructura
  * estable que confirma una home real; si está prendido, también se exige su
@@ -383,6 +429,235 @@ async function main() {
 
     return "agotado al poner stock en 0, disponible de nuevo tras restaurar -- ambos reflejados de inmediato";
   });
+
+  // ── FASE 7B.3-B: consultas específicas de producto ──────────────────
+  // test-camiseta-visible y test-camiseta-agotada comparten categoría
+  // (test-futbol) y son las únicas dos visibles de esa categoría -- se
+  // muestran como "relacionado" la una de la otra (ver relatedTo() en
+  // lib/catalog.ts). Útiles como par real para probar selección/orden y
+  // la dependencia indirecta sin depender del dataset sintético.
+
+  await scenario("Producto: slug inexistente -- 404 (ficha por slug, sin catálogo completo)", "/producto/no-existe-este-slug", async () => {
+    const res = await fetchPublic("/producto/no-existe-este-slug-fase-7b3b");
+    assert(res.status === 404, `esperaba 404, llegó ${res.status}`);
+    return "slug inexistente responde 404";
+  });
+
+  await scenario("Producto: categoría con ancestro oculto -- 404 aunque el producto esté is_visible=true", "/producto/test-camiseta-categoria-oculta", async () => {
+    const res = await fetchPublic("/producto/test-camiseta-categoria-oculta");
+    assert(res.status === 404, `esperaba 404 por cascada de categoría oculta, llegó ${res.status}`);
+    return "cascada de categoría oculta sigue aplicando con la consulta por slug";
+  });
+
+  await scenario("Producto: ficha pública no expone costPrice/wholesalePrice/proveedores/stockMode", "/producto/test-camiseta-visible", async () => {
+    assertSecurityScenarioRejectsFalsePositives();
+    const res = await fetchPublic("/producto/test-camiseta-visible");
+    // Fase 7B.3-R (hallazgo de Codex): fetchPublic() convierte cualquier
+    // status >=400 en body:"" -- sin este assert, un 500 con cuerpo vacío
+    // aprobaría esta prueba por vacuidad (!"".includes(x) es siempre
+    // true). Ver la comprobación controlada en la sección 3 del
+    // entregable de esta fase para una demostración explícita.
+    assertVisibleProductSecurityResponse(res);
+    return "la misma aserción rechaza 500/body vacío/otra ficha/fuga admin y confirma el <h1> principal de la ficha esperada";
+  });
+
+  await scenario(
+    "Producto: equivalencia real de relacionados -- slugs/orden exacto/cantidad/sin duplicados/excluye propio+ocultos+ancestro oculto",
+    "/producto/test-7b3b-related-current",
+    async () => {
+      // Fixtures deterministas propias (no las 2 visibles del seed, que
+      // no alcanzan para probar orden ni límite): categoría padre visible
+      // + categoría hija OCULTA (prueba exclusión por ancestro oculto) +
+      // 6 productos creados en secuencia estricta (created_at ASC real).
+      const createdIds = [];
+      const createdCategorySlugs = [];
+      const cleanupFailures = [];
+      let originalError = null;
+
+      async function deleteCreated(path, label) {
+        try {
+          const res = await api("DELETE", path);
+          if (res.status !== 200) cleanupFailures.push(`${label}: DELETE respondió ${res.status} (${JSON.stringify(res.body)})`);
+        } catch (err) {
+          cleanupFailures.push(`${label}: DELETE lanzó ${String(err.message ?? err)}`);
+        }
+      }
+
+      async function createTempProduct(slug, overrides) {
+        const res = await api("POST", "/api/admin/products", {
+          slug,
+          name: slug,
+          category: "test-7b3b-related",
+          price: 100000,
+          colors: { primary: "#000000", secondary: "#111111", accent: "#222222" },
+          pattern: "solid",
+          description: "Temporal -- Fase 7B.3-R, se borra al final.",
+          stockMode: "ajeno",
+          tags: [],
+          ...overrides,
+        });
+        assert(res.status === 201, `no se pudo crear ${slug}: ${JSON.stringify(res.body)}`);
+        assert(typeof res.body.id === "string", `la creación de ${slug} no devolvió id para su limpieza`);
+        createdIds.push(res.body.id);
+        return res.body;
+      }
+
+      try {
+        const parentCat = await api("POST", "/api/admin/categories", {
+          slug: "test-7b3b-related",
+          name: "7B3B Relacionados (temporal)",
+          tagline: "",
+          description: "",
+        });
+        assert(parentCat.status === 201, `no se pudo crear la categoría temporal: ${JSON.stringify(parentCat.body)}`);
+        createdCategorySlugs.push("test-7b3b-related");
+        const hiddenChildCat = await api("POST", "/api/admin/categories", {
+          slug: "test-7b3b-related-hidden-child",
+          name: "7B3B Hija Oculta (temporal)",
+          tagline: "",
+          description: "",
+          parentSlug: "test-7b3b-related",
+          isVisible: false,
+        });
+        assert(hiddenChildCat.status === 201, `no se pudo crear la subcategoría oculta temporal: ${JSON.stringify(hiddenChildCat.body)}`);
+        createdCategorySlugs.push("test-7b3b-related-hidden-child");
+
+        const current = await createTempProduct("test-7b3b-related-current", { tags: ["tag-7b3b-comun"] });
+        const b1 = await createTempProduct("test-7b3b-related-b1", {});
+        const b2 = await createTempProduct("test-7b3b-related-b2", {});
+        const c1 = await createTempProduct("test-7b3b-related-c1", { category: "test-basket", tags: ["tag-7b3b-comun"] });
+        const hiddenSameCat = await createTempProduct("test-7b3b-related-hidden-samecat", { isVisible: false });
+        const hiddenAncestor = await createTempProduct("test-7b3b-related-hidden-ancestor", {
+          category: "test-7b3b-related-hidden-child",
+          tags: ["tag-7b3b-comun"],
+        });
+
+        const res = await fetchPublic(`/producto/${current.slug}`);
+        assert(res.status === 200, `esperaba 200 en la ficha del producto actual, llegó ${res.status}`);
+
+        const sectionStart = res.body.indexOf("También te puede interesar");
+        assert(sectionStart !== -1, "falta la sección de relacionados");
+        const relatedHtml = res.body.slice(sectionStart);
+        const hrefs = [...relatedHtml.matchAll(/href="\/producto\/([a-z0-9-]+)"/g)].map((m) => m[1]);
+        const seenSlugs = new Set();
+        const orderedSlugs = [];
+        for (const slug of hrefs) {
+          if (seenSlugs.has(slug)) continue;
+          seenSlugs.add(slug);
+          orderedSlugs.push(slug);
+        }
+
+        const expected = [b1.slug, b2.slug, c1.slug];
+        assert(
+          orderedSlugs.length === expected.length && expected.every((s, i) => orderedSlugs[i] === s),
+          `relacionados esperados ${JSON.stringify(expected)} en ese orden exacto, llegó ${JSON.stringify(orderedSlugs)}`,
+        );
+        assert(!orderedSlugs.includes(current.slug), "el propio producto aparece entre sus relacionados");
+        assert(!orderedSlugs.includes(hiddenSameCat.slug), "un producto oculto de la misma categoría aparece como relacionado");
+        assert(!orderedSlugs.includes(hiddenAncestor.slug), "un producto con categoría de ancestro oculto aparece como relacionado (comparte tag, debería excluirse antes de llegar a relatedTo())");
+        assert(new Set(orderedSlugs).size === orderedSlugs.length, "hay slugs duplicados entre los relacionados");
+
+        return `pipeline real de selección+hidratación: relacionados exactos y en orden [${orderedSlugs.join(", ")}], sin duplicados, excluye propio/oculto/ancestro-oculto`;
+      } catch (err) {
+        originalError = err;
+        throw err;
+      } finally {
+        for (const id of [...createdIds].reverse()) await deleteCreated(`/api/admin/products/${id}`, `producto temporal ${id}`);
+        for (const slug of [...createdCategorySlugs].reverse()) await deleteCreated(`/api/admin/categories/${slug}`, `categoría temporal ${slug}`);
+        if (cleanupFailures.length > 0) {
+          const message = `falló la limpieza de fixtures de relacionados: ${cleanupFailures.join("; ")}`;
+          console.error(`[limpieza] ${message}`);
+          if (!originalError) throw new Error(message);
+        }
+      }
+    },
+  );
+
+  await scenario(
+    "Producto: dependencia indirecta de relacionados -- diagnóstico de paridad con el comportamiento preexistente (no una garantía permanente de 900s)",
+    "/producto/test-camiseta-visible , /producto/test-camiseta-agotada",
+    async () => {
+      // test-camiseta-agotada aparece como relacionado en la ficha de
+      // test-camiseta-visible. Esta prueba demuestra tres cosas por
+      // separado: (1) la escritura administrativa se aplicó de verdad en
+      // Postgres; (2) la invalidación DIRECTA (la propia ficha de
+      // agotada) sigue funcionando; (3) en este entorno controlado,
+      // calentando la caché de la ficha ajena ANTES de mutar y sin
+      // ninguna otra escritura de por medio, esa ficha ajena no tiene
+      // ninguna invalidación dirigida a ella. Si sigue cacheada, puede
+      // servir la versión anterior; si otra causa la regeneró, puede ya
+      // estar actualizada. Es una observación diagnóstica de paridad con
+      // el comportamiento preexistente (no una prueba de que el sistema
+      // DEBA quedar desactualizado) -- 900s es respaldo, no un máximo
+      // garantizado de desactualización.
+      const warm = await fetchPublic("/producto/test-camiseta-visible");
+      assert(warm.status === 200, `esperaba 200 al calentar la caché, llegó ${warm.status}`);
+      assertProductDetailIdentity(warm.body, "Camiseta de Prueba Visible", "la ficha ajena al calentar la caché");
+
+      const get = await api("GET", "/api/admin/products/p-test-agotado");
+      assert(get.status === 200, `no se pudo leer el producto relacionado original: ${JSON.stringify(get.body)}`);
+      assert(get.body.id === "p-test-agotado" && get.body.slug === "test-camiseta-agotada", "el GET administrativo devolvió un producto relacionado inesperado");
+      const originalPrice = get.body.price;
+      const newPrice = originalPrice === 111111 ? 222222 : 111111;
+
+      const put = await api("PUT", "/api/admin/products/p-test-agotado", productToInput(get.body, { price: newPrice }));
+      assert(put.status === 200, `la modificación administrativa de agotada falló: ${JSON.stringify(put.body)}`);
+      const dbPrice = psql(`select price from products where id='p-test-agotado';`);
+      assert(
+        dbPrice === `${newPrice}.00` || dbPrice === String(newPrice),
+        `el precio nuevo no quedó persistido en Postgres: ${dbPrice}`,
+      );
+
+      const ownAfter = await fetchPublic("/producto/test-camiseta-agotada");
+      assert(ownAfter.status === 200, `esperaba 200 en la propia ficha de agotada, llegó ${ownAfter.status}`);
+      assertProductDetailIdentity(ownAfter.body, "Camiseta de Prueba Agotada", "la propia ficha actualizada");
+      assert(ownAfter.body.includes(String(newPrice)), "la propia ficha de agotada no refleja su nuevo precio de inmediato (regresión en la invalidación directa)");
+
+      const relatedViewer = await fetchPublic("/producto/test-camiseta-visible");
+      assert(relatedViewer.status === 200, `esperaba 200, llegó ${relatedViewer.status}`);
+      assertProductDetailIdentity(relatedViewer.body, "Camiseta de Prueba Visible", "la ficha ajena tras la mutación");
+      const showsNewPrice = relatedViewer.body.includes(String(newPrice));
+      const showsOriginalPrice = relatedViewer.body.includes(String(originalPrice));
+      assert(showsNewPrice !== showsOriginalPrice, "la ficha ajena no permite identificar un precio relacionado válido (falta o mezcla precio original/nuevo)");
+      const relatedObservation = showsNewPrice ? "actualizada" : "temporalmente desactualizada";
+
+      // restaurar
+      const get2 = await api("GET", "/api/admin/products/p-test-agotado");
+      assert(get2.status === 200 && get2.body.id === "p-test-agotado", "no se pudo releer el producto relacionado para restaurarlo");
+      const restore = await api("PUT", "/api/admin/products/p-test-agotado", productToInput(get2.body, { price: originalPrice }));
+      assert(restore.status === 200, `la restauración administrativa de agotada falló: ${JSON.stringify(restore.body)}`);
+      const restoredPrice = psql(`select price from products where id='p-test-agotado';`);
+      assert(restoredPrice === `${originalPrice}.00` || restoredPrice === String(originalPrice), `el precio original no se restauró en Postgres: ${restoredPrice}`);
+
+      return `propia ficha invalidada correctamente (200, identidad y precio nuevo presentes); observación no normativa de la ficha ajena: ${relatedObservation} (cache=${relatedViewer.cache})`;
+    },
+  );
+
+  await scenario(
+    "Producto: metadata (<title>) refleja un cambio de nombre de inmediato -- confirma que generateMetadata y el body comparten datos frescos",
+    "/producto/test-camiseta-visible",
+    async () => {
+      const get = await api("GET", "/api/admin/products/p-test-visible");
+      const originalName = get.body.name;
+      const newName = "Camiseta De Prueba Visible Renombrada 7B3B";
+
+      const put = await api("PUT", "/api/admin/products/p-test-visible", productToInput(get.body, { name: newName }));
+      assert(put.status === 200, `PUT falló: ${JSON.stringify(put.body)}`);
+      const after = await fetchPublic("/producto/test-camiseta-visible");
+      assert(after.status === 200, `esperaba 200 tras renombrar, llegó ${after.status}`);
+      assert(after.body.includes(`<title>${newName}`), "el <title> no refleja el nombre nuevo de inmediato");
+      assert(after.body.includes(newName), "el nombre nuevo no aparece en el cuerpo de la página");
+
+      // restaurar
+      const get2 = await api("GET", "/api/admin/products/p-test-visible");
+      await api("PUT", "/api/admin/products/p-test-visible", productToInput(get2.body, { name: originalName }));
+      const restored = await fetchPublic("/producto/test-camiseta-visible");
+      assert(restored.status === 200, `esperaba 200 tras restaurar, llegó ${restored.status}`);
+      assert(restored.body.includes(`<title>${originalName}`), "no se restauró el nombre original");
+
+      return "metadata y cuerpo de la página reflejan el mismo nombre actualizado, sin desincronía (200 confirmado en ambos pasos)";
+    },
+  );
 
   // ── VENTAS E INVENTARIO ──────────────────────────────────────────────
   let saleId = null;

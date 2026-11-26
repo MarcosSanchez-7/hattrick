@@ -15,9 +15,12 @@
 | 11 | `c80300e` | perf(seo): cache sitemap and minimize catalog queries |
 | 12 | `3c7db70` | perf(navigation): reduce automatic prefetch in product cards and footer |
 | 13 | `21b0efb` | perf(data): memoize site settings by key per render |
+| 14 | `b889146` | docs(agents): establish shared Claude and Codex workflow |
+| 15 | `a1f919a` | test(integration): harden wholesale restoration and cache assertions |
+| 16 | `426f5f9` | perf(data): deduplicate category queries per render |
 
-Hash completo del checkpoint 13 (el más reciente, confirmado con `git log -1`): `21b0efb25a587ecbb530aecfb850f14c2b8d2872`.
+Hash completo del checkpoint 16 (el más reciente confirmado con `git log -1` al momento de escribir esto, Fase 7B.3-R): `426f5f9e75fb4a569a5f205262456617e868aa92`.
 
-Todos los hashes de esta tabla fueron verificados contra `git log --oneline` durante la integración documental multiagente (checkpoint base `21b0efb25a587ecbb530aecfb850f14c2b8d2872`, rama `main`). Ninguno fue inventado ni asumido.
+Todos los hashes de esta tabla fueron verificados contra `git log --oneline` (reverificado en la Fase 7B.3-R, no solo heredado de la integración documental original). Ninguno fue inventado ni asumido. **No existe checkpoint 17** al momento de escribir esto -- la Fase 7B.3-B (implementación de consultas específicas de producto) está completada y auditada (7B.3-C) con observaciones, corregida en 7B.3-R, pero sin commit todavía: el propietario decide cuándo y con qué mensaje se cierra ese checkpoint. No se inventa su hash de antemano.
 
 Al cerrar un commit nuevo autorizado, el escritor del turno agrega su fila aquí con hash real (nunca inventado), mensaje exacto, alcance, pruebas ejecutadas y limitaciones — antes de ceder el turno en `HANDOFF.md`.

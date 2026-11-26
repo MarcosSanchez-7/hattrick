@@ -5,13 +5,21 @@ import { notFound } from "next/navigation";
 import {
   categoryPath,
   categorySlugPath,
-  getProduct,
   isSoldOut,
   relatedTo,
   resolveCategoryNotices,
   resolveCategoryShippingText,
 } from "@/lib/catalog";
-import { getAllCategories, getAllProducts, getAllTags, getSetting, toPublicProduct } from "@/lib/data";
+import {
+  getAllCategories,
+  getAllTags,
+  getProductBySlug,
+  getProductsByIds,
+  getRelatedCandidates,
+  getSetting,
+  getSitemapProducts,
+  toPublicProduct,
+} from "@/lib/data";
 import {
   DEFAULT_CUSTOM_BANNER,
   DEFAULT_PRODUCT_INFO,
@@ -34,8 +42,15 @@ export const revalidate = 900;
 // sabe de antemano que paths existen. Con esto, cada producto se pre-renderiza
 // en el build y despues se revalida cada 900s (ISR real), en vez de correr la
 // consulta a Supabase en cada visita.
+//
+// Fase 7B.3-B: antes pedía getAllProducts() (catálogo completo + las 4
+// relaciones de TODOS los productos) solo para mapear a {slug}. Acá
+// alcanza con slug -- getSitemapProducts() (app/sitemap.ts la usa con el
+// mismo criterio) ya filtra exactamente igual (is_visible propio +
+// cascada de categoría oculta, mismo orden created_at ASC) sin pedir
+// variantes/parches/proveedores/precio/etc. de nadie.
 export async function generateStaticParams() {
-  const products = await getAllProducts();
+  const products = await getSitemapProducts();
   return products.map((p) => ({ slug: p.slug }));
 }
 
@@ -45,7 +60,14 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProduct(await getAllProducts(), slug);
+  // Misma función que el cuerpo de la página (abajo) -- memoizada por
+  // request con la clave `slug`, así que pedirla aca Y en el body no
+  // duplica la consulta real: comparten el mismo resultado cacheado
+  // dentro de un mismo render/regeneración (confirmado por medición, Fase
+  // 7B.3-B). Una proyección "solo metadata" más chica rompería ese
+  // compartido -- sería una clave de caché distinta, sumando una consulta
+  // en vez de ahorrarla.
+  const product = await getProductBySlug(slug);
   if (!product) return { title: "Producto no encontrado" };
   const image = product.images?.[0];
   return {
@@ -70,27 +92,35 @@ export default async function ProductPage({
   params: Promise<Params>;
 }) {
   const { slug } = await params;
-  const [products, categories, tags, productNotices, productInfo, customBanner] =
+  const [fullProduct, categories, tags, productNotices, productInfo, customBanner] =
     await Promise.all([
-      getAllProducts(),
+      getProductBySlug(slug),
       getAllCategories(),
       getAllTags(),
       getSetting("productNotices", DEFAULT_PRODUCT_NOTICES),
       getSetting("productInfo", DEFAULT_PRODUCT_INFO),
       getSetting("customBanner", DEFAULT_CUSTOM_BANNER),
     ]);
-  const fullProduct = getProduct(products, slug);
   if (!fullProduct) notFound();
 
   const path = categoryPath(categories, fullProduct.category);
   const category = path[path.length - 1];
   const categoryHref = `/categoria/${categorySlugPath(categories, fullProduct.category).join("/")}`;
+  // Fase 7B.3-B: ya no se trae el catálogo completo con todas sus
+  // relaciones para elegir hasta 4 relacionados -- se selecciona con una
+  // proyección liviana (RelatedCandidate: id/slug/category/tags/createdAt,
+  // mismo universo visible y mismo orden created_at ASC que antes) y
+  // SOLO se hidratan (variantes/parches/proveedores/stock) los ya
+  // elegidos. relatedTo() no cambió de algoritmo, solo de qué tipos acepta
+  // (ver lib/catalog.ts) -- la selección y el orden final son idénticos a
+  // los que daba sobre el catálogo completo.
+  const candidates = await getRelatedCandidates();
+  const selectedCandidates = relatedTo(candidates, fullProduct);
+  const relatedProducts = await getProductsByIds(selectedCandidates.map((c) => c.id));
   // ProductDetail y ProductGrid son Client Components -- se mapea a la
   // versión pública antes de pasarla en vez del Product completo (ver
-  // toPublicProduct en lib/data.ts); isSoldOut/relatedTo de abajo no
-  // necesitan ningún campo interno, así que se calculan antes igual sobre
-  // el producto completo sin que eso filtre nada.
-  const related = relatedTo(products, fullProduct).map(toPublicProduct);
+  // toPublicProduct en lib/data.ts).
+  const related = relatedProducts.map(toPublicProduct);
   const product = toPublicProduct(fullProduct);
   const notices = resolveCategoryNotices(
     categories,

@@ -562,6 +562,24 @@ const fetchAllProducts = cache(async (includeHidden: boolean): Promise<Product[]
     rows = rows.filter((r) => !hiddenSlugs.has(r.category));
   }
 
+  return hydrateProductRows(rows);
+});
+
+export async function getAllProducts(
+  opts: { includeHidden?: boolean } = {},
+): Promise<Product[]> {
+  return fetchAllProducts(opts.includeHidden ?? false);
+}
+
+/** Pide las 4 relaciones de un lote de filas de "products" y las combina
+ * en `Product[]` vía rowToProduct -- extraído de fetchAllProducts (Fase
+ * 7B.3-B) porque fetchProductBySlug/fetchProductsByIds de abajo necesitan
+ * exactamente el mismo paso para UN producto o unos pocos, no para todo el
+ * catálogo. No se tocó fetchProductWithVariants (relectura administrativa
+ * post-escritura, ver createProduct/updateProduct): sigue con su propio
+ * Promise.all inline, sin pasar por este helper, para no arriesgar su
+ * contrato de "siempre fresco" por una limpieza cosmética. */
+async function hydrateProductRows(rows: ProductRow[]): Promise<Product[]> {
   const tracksVariantsIds = rows
     .filter((r) => r.stock_mode === "propio" || r.internal_control)
     .map((r) => r.id);
@@ -582,12 +600,146 @@ const fetchAllProducts = cache(async (includeHidden: boolean): Promise<Product[]
       supplierSizeMap.get(row.id) ?? [],
     ),
   );
+}
+
+/**
+ * Ficha pública de UN producto por slug (Fase 7B.3-B) -- a diferencia de
+ * getAllProducts(), nunca trae el catálogo completo ni las relaciones de
+ * productos que no son este. Mismo criterio de visibilidad que
+ * getAllProducts({includeHidden:false}): propia is_visible=true Y su
+ * categoría (ni ningún ancestro) oculta -- un producto oculto o con
+ * categoría oculta se trata exactamente igual que uno inexistente.
+ * Memoizado por request con cache() igual que fetchAllProducts, pero
+ * clave es el slug (string primitivo) en vez de un booleano -- esto es lo
+ * que permite que generateMetadata y el cuerpo de la página (ambos piden
+ * el MISMO slug) comparten una sola consulta real por render, confirmado
+ * por medición (ver informe de la fase, no solo por la documentación de
+ * Next.js).
+ */
+const fetchProductBySlug = cache(async (slug: string): Promise<Product | undefined> => {
+  const { data, error } = await supabaseAdmin
+    .from("products")
+    .select(PRODUCT_COLUMNS)
+    .eq("slug", slug)
+    .eq("is_visible", true)
+    .maybeSingle();
+  if (error) fail(`No se pudo cargar el producto: ${error.message}`);
+  if (!data) return undefined;
+
+  const row = data as ProductRow;
+  const allCategories = await getAllCategories({ includeHidden: true });
+  if (hiddenCategorySlugs(allCategories).has(row.category)) return undefined;
+
+  const [hydrated] = await hydrateProductRows([row]);
+  return hydrated;
 });
 
-export async function getAllProducts(
-  opts: { includeHidden?: boolean } = {},
-): Promise<Product[]> {
-  return fetchAllProducts(opts.includeHidden ?? false);
+export async function getProductBySlug(slug: string): Promise<Product | undefined> {
+  return fetchProductBySlug(slug);
+}
+
+/** Columnas mínimas para seleccionar relacionados (Fase 7B.3-B) -- lo único
+ * que relatedTo() (lib/catalog.ts) necesita para decidir QUÉ productos son
+ * relacionados, sin traer precio/imágenes/tallas/stock/reviews de todo el
+ * catálogo solo para filtrarlos en memoria. `id` y `created_at` no los lee
+ * relatedTo() directamente, pero hacen falta para preservar el orden
+ * (created_at ASC, igual que getAllProducts) y para poder hidratar después
+ * solo a los seleccionados por id. */
+const RELATED_CANDIDATE_COLUMNS = "id, slug, category, tags, created_at" as const;
+
+type RelatedCandidateRow = {
+  id: string;
+  slug: string;
+  category: string;
+  tags: string[] | null;
+  created_at: string;
+};
+
+export type RelatedCandidate = {
+  id: string;
+  slug: string;
+  category: string;
+  tags: string[];
+  createdAt: string;
+};
+
+/** Mismo criterio de visibilidad que fetchAllProducts({includeHidden:false})
+ * -- is_visible propio + cascada de categoría oculta -- y mismo orden
+ * (created_at ASC), para que relatedTo() reciba exactamente el mismo
+ * universo y en el mismo orden que recibía con el catálogo completo.
+ * Memoizada por request (zero-arg, como fetchAllCategories/getSitemapProducts)
+ * -- una sola vez por render sin importar cuántas fichas la pidan. */
+const fetchRelatedCandidates = cache(async (): Promise<RelatedCandidate[]> => {
+  const { data, error } = await supabaseAdmin
+    .from("products")
+    .select(RELATED_CANDIDATE_COLUMNS)
+    .eq("is_visible", true)
+    .order("created_at", { ascending: true });
+  if (error) fail(`No se pudieron cargar los candidatos a relacionados: ${error.message}`);
+
+  let rows = data as RelatedCandidateRow[];
+  const allCategories = await getAllCategories({ includeHidden: true });
+  const hiddenSlugs = hiddenCategorySlugs(allCategories);
+  rows = rows.filter((r) => !hiddenSlugs.has(r.category));
+
+  return rows.map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    category: row.category,
+    tags: row.tags ?? [],
+    createdAt: row.created_at,
+  }));
+});
+
+export async function getRelatedCandidates(): Promise<RelatedCandidate[]> {
+  return fetchRelatedCandidates();
+}
+
+/** Hidrata por id SOLO los productos ya seleccionados (ej. hasta 4
+ * relacionados elegidos por relatedTo() sobre la proyección liviana de
+ * arriba) -- nunca el catálogo completo. `.in("id", ids)` no garantiza
+ * devolver las filas en el orden de `ids`; se reordena explícitamente
+ * porque ese orden ya lo decidió relatedTo() (categoría exacta primero,
+ * tags después, created_at ASC) y es parte del contrato a preservar.
+ *
+ * Fase 7B.3-R (hallazgo de la auditoría 7B.3-C de Codex): esta función NO
+ * confiaba en nada propio para la visibilidad -- dependía por completo de
+ * que `ids` ya viniera filtrado por el candidate-set de
+ * getRelatedCandidates(). Eso es cierto para el único llamador real hoy,
+ * pero deja la función insegura por diseño si algo cambia de estado entre
+ * ambas lecturas (sin transacción -- esa falta de snapshot es preexistente
+ * en todo el archivo, no se resuelve acá) o si un llamador futuro le pasa
+ * ids sin ese filtro previo. Se reaplica `is_visible=true` en la MISMA
+ * consulta (sin costo adicional) y la cascada de categoría oculta vía
+ * `hiddenCategorySlugs` sobre `getAllCategories({includeHidden:true})` --
+ * esta última también sin consulta adicional en el caso común, porque esa
+ * función está memoizada por request (cache() zero-arg) y
+ * getRelatedCandidates()/fetchProductBySlug() ya la piden en el mismo
+ * render. Un id que deje de ser visible entre la selección de candidatos
+ * y esta hidratación (o que ya no exista) simplemente se omite,
+ * conservando el orden de los que sí siguen siendo públicos -- sin ningún
+ * relleno nuevo. Esto no elimina la ausencia de snapshot transaccional
+ * (dos lecturas separadas siguen pudiendo ver estados distintos); cierra
+ * específicamente la dirección insegura (que algo oculto se filtre hacia
+ * el cliente), no toda condición de carrera posible. */
+export async function getProductsByIds(ids: string[]): Promise<Product[]> {
+  if (ids.length === 0) return [];
+
+  const { data, error } = await supabaseAdmin
+    .from("products")
+    .select(PRODUCT_COLUMNS)
+    .in("id", ids)
+    .eq("is_visible", true);
+  if (error) fail(`No se pudieron cargar los productos relacionados: ${error.message}`);
+
+  let rows = data as ProductRow[];
+  const allCategories = await getAllCategories({ includeHidden: true });
+  const hiddenSlugs = hiddenCategorySlugs(allCategories);
+  rows = rows.filter((r) => !hiddenSlugs.has(r.category));
+
+  const hydrated = await hydrateProductRows(rows);
+  const byId = new Map(hydrated.map((p) => [p.id, p]));
+  return ids.map((id) => byId.get(id)).filter((p): p is Product => p !== undefined);
 }
 
 // Mismo motivo que fetchAllProducts/fetchAllCategories: memoizado por

@@ -524,12 +524,34 @@ export const bestSellers = <P extends ProductLike>(products: P[]) =>
  * donde sea que se muestren (tarjeta, ficha). */
 export const isComboProduct = <P extends ProductLike>(product: P) => product.category === "combos";
 
+/** Campos mínimos que relatedTo() necesita para decidir selección (Fase
+ * 7B.3-B) -- antes tomaba ProductLike completo (12 campos: precio,
+ * imágenes, tallas, stock, reviews...) solo para leer slug/category/tags.
+ * `products` y `product` quedan como dos parámetros de tipo INDEPENDIENTES
+ * (P y Q) a propósito: permite pasar una proyección liviana de candidatos
+ * (ver RelatedCandidate en lib/data.ts) como `products` y el Product
+ * completo del producto actual como `product`, sin forzar a que ambos
+ * sean exactamente el mismo tipo. Desde 7B.3-B, el único consumidor real
+ * (app/(store)/producto/[slug]/page.tsx) efectivamente pasa DOS TIPOS
+ * DISTINTOS (RelatedCandidate[] y Product) -- esa es la razón de ser de
+ * este cambio, no un caso hipotético: sin esta relajación, TypeScript no
+ * aceptaría esa llamada. */
+type RelatedSelectable = {
+  slug: string;
+  category: string;
+  tags: string[];
+};
+
 /**
  * Primero por misma categoría (más relevante: mismo equipo/torneo); si no
  * alcanza el `limit`, completa con productos que compartan al menos una
  * etiqueta, sin repetir ninguno ya elegido.
  */
-export const relatedTo = <P extends ProductLike>(products: P[], product: P, limit = 4) => {
+export const relatedTo = <P extends RelatedSelectable, Q extends RelatedSelectable>(
+  products: P[],
+  product: Q,
+  limit = 4,
+) => {
   const sameCategory = products.filter(
     (p) => p.slug !== product.slug && p.category === product.category,
   );
