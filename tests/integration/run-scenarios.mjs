@@ -11,6 +11,120 @@ function assert(cond, msg) {
   if (!cond) throw new Error(`ASSERT FALLÓ: ${msg}`);
 }
 
+const WHOLESALE_KEY = "wholesale";
+let wholesaleRestoreFailure = null;
+
+function stableJson(value) {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  if (value !== null && typeof value === "object") {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function sqlLiteral(value) {
+  return `'${value.replaceAll("'", "''")}'`;
+}
+
+/** Captura la fila física: `exists` diferencia ausencia de `value: null`.
+ * `site_settings.value` es JSONB NOT NULL, así que SQL NULL no es posible,
+ * pero el JSON literal null sí es representable y se conserva tal cual. */
+function captureWholesaleRow() {
+  const raw = psql(
+    `select json_build_object('key', key, 'value', value, 'updatedAt', updated_at)::text from site_settings where key='${WHOLESALE_KEY}';`,
+  );
+  if (!raw) return { exists: false };
+
+  const row = JSON.parse(raw);
+  assert(row.key === WHOLESALE_KEY, "la captura cruda devolvió una key inesperada");
+  assert(typeof row.updatedAt === "string", "la captura cruda no incluye updated_at");
+  return { exists: true, value: row.value, updatedAt: row.updatedAt };
+}
+
+function assertWholesaleRowEquals(actual, expected) {
+  assert(actual.exists === expected.exists, "la existencia de wholesale no se restauró");
+  if (!expected.exists) return;
+  assert(stableJson(actual.value) === stableJson(expected.value), "el JSON crudo de wholesale no se restauró");
+  assert(actual.updatedAt === expected.updatedAt, "updated_at de wholesale no se restauró");
+}
+
+/** Restaura las únicas tres columnas del esquema. No se usa UPDATE porque el
+ * trigger site_settings_set_updated_at reemplaza el timestamp capturado. */
+function restoreWholesaleRow(snapshot) {
+  if (!snapshot.exists) {
+    psqlExec(`delete from site_settings where key='${WHOLESALE_KEY}';`);
+  } else {
+    const value = sqlLiteral(JSON.stringify(snapshot.value));
+    const updatedAt = sqlLiteral(snapshot.updatedAt);
+    psqlExec(
+      `delete from site_settings where key='${WHOLESALE_KEY}'; ` +
+      `insert into site_settings (key, value, updated_at) values ('${WHOLESALE_KEY}', ${value}::jsonb, ${updatedAt}::timestamptz);`,
+    );
+  }
+  assertWholesaleRowEquals(captureWholesaleRow(), snapshot);
+}
+
+function htmlText(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#x27;");
+}
+
+/** Comprueba la restauración visible sin comparar el HTML completo. El
+ * banner de home es opcional: si está apagado, page-reveal es la estructura
+ * estable que confirma una home real; si está prendido, también se exige su
+ * contenedor y, cuando no está vacío, su título original. */
+function assertRestoredWholesalePages(home, mayorista, originalPublicValue) {
+  assert(home.status === 200, `/ debe responder 200 tras restaurar wholesale, llegó ${home.status}`);
+  assert(mayorista.status === 200, `/mayorista debe responder 200 tras restaurar wholesale, llegó ${mayorista.status}`);
+  assert(!home.body.includes("Banner Fase 7B.1"), "/ quedó con contenido wholesale obsoleto tras restaurar");
+  assert(!mayorista.body.includes("Mayorista Fase 7B.1"), "/mayorista quedó con contenido wholesale obsoleto tras restaurar");
+
+  assert(home.body.includes("page-reveal"), "/ no conserva su estructura pública estable tras restaurar");
+  assert(mayorista.body.includes("custom__copy"), "/mayorista no conserva su estructura pública estable tras restaurar");
+
+  const mayoristaTitle = typeof originalPublicValue.title === "string" ? originalPublicValue.title : "";
+  if (mayoristaTitle) {
+    assert(mayorista.body.includes(htmlText(mayoristaTitle)), "/mayorista no refleja su título original tras restaurar");
+  } else {
+    // Un título vacío es válido: se confirma el h1 estructural, no texto
+    // inventado ni un HTML completo frágil.
+    assert(mayorista.body.includes('class="h1"'), "/mayorista no conserva el h1 estructural tras restaurar");
+  }
+
+  const homeBannerEnabled = originalPublicValue.homeBannerEnabled === true;
+  const hasHomeBanner = home.body.includes("wholesale-cta");
+  assert(hasHomeBanner === homeBannerEnabled, "/ no coincide con el estado original de homeBannerEnabled");
+  if (homeBannerEnabled) {
+    assert(home.body.includes("wholesale-cta__inner"), "/ no conserva la estructura del banner mayorista original");
+    const homeBannerTitle = typeof originalPublicValue.homeBannerTitle === "string" ? originalPublicValue.homeBannerTitle : "";
+    if (homeBannerTitle) {
+      assert(home.body.includes(htmlText(homeBannerTitle)), "/ no refleja el título original del banner mayorista");
+    }
+  }
+}
+
+/** La restauración cruda evita fusionar defaults. Antes de ella se hace un
+ * PUT administrativo válido con el GET original para conservar la
+ * invalidación global existente; luego se repone la fila física exacta y se
+ * comprueba que / y /mayorista ya no sirven el valor de prueba. */
+async function invalidateAndRestoreWholesale(snapshot, originalPublicValue) {
+  const invalidate = await api("PUT", `/api/admin/settings/${WHOLESALE_KEY}`, originalPublicValue);
+  assert(invalidate.status === 200, `no se pudo invalidar antes de restaurar wholesale: ${JSON.stringify(invalidate.body)}`);
+
+  restoreWholesaleRow(snapshot);
+
+  const restored = await api("GET", `/api/admin/settings/${WHOLESALE_KEY}`);
+  assert(restored.status === 200, `GET wholesale posterior a restauración falló: ${JSON.stringify(restored.body)}`);
+  assert(stableJson(restored.body) === stableJson(originalPublicValue), "GET wholesale posterior no coincide con el valor público original");
+
+  const [home, mayorista] = await Promise.all([fetchPublic("/"), fetchPublic("/mayorista")]);
+  assertRestoredWholesalePages(home, mayorista, originalPublicValue);
+}
+
 /** Estado de UNA talla puntual en el payload de la ficha de producto --
  * a diferencia de buscar "Agotad" en toda la página (que también puede
  * matchear el badge de OTRO producto en la grilla de "relacionados"),
@@ -29,6 +143,58 @@ async function scenario(name, route, fn) {
     record({ scenario: name, route, ms: now() - t0, pass: true, notes: notes ?? "" });
   } catch (err) {
     record({ scenario: name, route, ms: now() - t0, pass: false, notes: String(err.message ?? err) });
+  }
+}
+
+async function testWholesale() {
+  // Antes de la Fase 7B.1, layout.tsx y page.tsx (home) pedían
+  // "wholesale" por separado (dos consultas reales); mayorista/page.tsx
+  // también la pide por su cuenta. Este escenario no mide consultas
+  // (eso ya se hizo en el worktree descartable de la fase) -- solo
+  // confirma que memoizar por clave con React.cache() no introdujo
+  // ninguna inconsistencia entre las DOS páginas que la necesitan: cada
+  // una sigue viendo el valor fresco, en su propio request.
+  const rawBefore = captureWholesaleRow();
+  const current = await api("GET", "/api/admin/settings/wholesale");
+  assert(current.status === 200, `GET wholesale falló: ${JSON.stringify(current.body)}`);
+  let originalError;
+  let writeAttempted = false;
+  try {
+    writeAttempted = true;
+    const put = await api("PUT", "/api/admin/settings/wholesale", {
+      ...current.body,
+      title: "Mayorista Fase 7B.1",
+      homeBannerTitle: "Banner Fase 7B.1",
+      homeBannerEnabled: true,
+    });
+    assert(put.status === 200, `PUT wholesale falló: ${JSON.stringify(put.body)}`);
+
+    const mayorista = await fetchPublic("/mayorista");
+    assert(mayorista.body.includes("Mayorista Fase 7B.1"), "/mayorista no refleja el título nuevo de inmediato");
+
+    const home = await fetchPublic("/");
+    assert(home.body.includes("Banner Fase 7B.1"), "/ no refleja el banner nuevo de inmediato");
+
+    return "una sola actualización de \"wholesale\" se refleja correctamente en / y /mayorista a la vez, sin staleness ni inconsistencia entre ambas";
+  } catch (err) {
+    // Si una aserción falla después del PUT, el error original sigue siendo
+    // el resultado del escenario; finally igual intenta devolver el fixture
+    // a su estado inicial.
+    originalError = err;
+    throw err;
+  } finally {
+    if (writeAttempted) {
+      try {
+        await invalidateAndRestoreWholesale(rawBefore, current.body);
+      } catch (restoreError) {
+        // No reemplazar una falla funcional previa: se registra por separado
+        // que el entorno puede haber quedado contaminado y se conserva la
+        // causa original. main() se detiene antes de escenarios dependientes.
+        wholesaleRestoreFailure = restoreError;
+        console.error("No se pudo restaurar wholesale tras el escenario:", restoreError);
+        if (!originalError) throw restoreError;
+      }
+    }
   }
 }
 
@@ -326,33 +492,9 @@ async function main() {
   });
 
   await scenario("Settings: wholesale -- la misma actualización se refleja en / Y /mayorista (Fase 7B.1: memoización por clave)", "/ , /mayorista", async () => {
-    // Antes de la Fase 7B.1, layout.tsx y page.tsx (home) pedían
-    // "wholesale" por separado (dos consultas reales); mayorista/page.tsx
-    // también la pide por su cuenta. Este escenario no mide consultas
-    // (eso ya se hizo en el worktree descartable de la fase) -- solo
-    // confirma que memoizar por clave con React.cache() no introdujo
-    // ninguna inconsistencia entre las DOS páginas que la necesitan: cada
-    // una sigue viendo el valor fresco, en su propio request.
-    const current = await api("GET", "/api/admin/settings/wholesale");
-    const put = await api("PUT", "/api/admin/settings/wholesale", {
-      ...current.body,
-      title: "Mayorista Fase 7B.1",
-      homeBannerTitle: "Banner Fase 7B.1",
-      homeBannerEnabled: true,
-    });
-    assert(put.status === 200, `PUT wholesale falló: ${JSON.stringify(put.body)}`);
-
-    const mayorista = await fetchPublic("/mayorista");
-    assert(mayorista.body.includes("Mayorista Fase 7B.1"), "/mayorista no refleja el título nuevo de inmediato");
-
-    const home = await fetchPublic("/");
-    assert(home.body.includes("Banner Fase 7B.1"), "/ no refleja el banner nuevo de inmediato");
-
-    const restore = await api("PUT", "/api/admin/settings/wholesale", current.body);
-    assert(restore.status === 200, `no se pudo restaurar wholesale: ${JSON.stringify(restore.body)}`);
-
-    return "una sola actualización de \"wholesale\" se refleja correctamente en / y /mayorista a la vez, sin staleness ni inconsistencia entre ambas";
+    return testWholesale();
   });
+  if (wholesaleRestoreFailure) throw wholesaleRestoreFailure;
 
   await scenario("Settings: footer (whatsapp/brandDescription)", "/personalizacion", async () => {
     const before = await fetchPublic("/personalizacion");

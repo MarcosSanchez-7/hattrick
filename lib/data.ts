@@ -503,11 +503,12 @@ const fetchSitemapProducts = cache(async (): Promise<SitemapProduct[]> => {
   if (error) fail(`No se pudieron cargar los productos para el sitemap: ${error.message}`);
 
   let rows = data as SitemapProductRow[];
-  // includeHidden:true a propósito: memoizado por React.cache() con la
-  // misma clave (el booleano true) que app/sitemap.ts pide para armar las
-  // rutas de categoría -- si ambos corren en el mismo request (siempre,
-  // es la misma función sitemap()), esto nunca dispara una segunda
-  // consulta a "categories", solo reusa la ya resuelta.
+  // includeHidden:true a propósito: se necesita el árbol completo para
+  // que hiddenCategorySlugs() excluya también descendientes de ancestros
+  // ocultos. app/sitemap.ts pide esa misma lista al armar las rutas de
+  // categoría. La medición histórica de la Fase 5 observó dos consultas a
+  // `categories` por regeneración; no se asume ni se atribuye una causa
+  // interna definitiva a esa distribución desde este comentario.
   const categories = await getAllCategories({ includeHidden: true });
   const hiddenSlugs = hiddenCategorySlugs(categories);
   rows = rows.filter((r) => !hiddenSlugs.has(r.category));

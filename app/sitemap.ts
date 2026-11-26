@@ -22,10 +22,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // arriba) incluso si algún ancestro estuviera oculto -- la visibilidad
   // real para el listado de categorías del sitemap se decide aparte, con
   // hiddenCategorySlugs, igual que ya hace getAllProducts() internamente
-  // (ver lib/data.ts). getSitemapProducts() pide este mismo booleano
-  // internamente; medido (ver reporte de la Fase 5) que React.cache() NO
-  // dedupe esta llamada entre ambos sitios en sitemap.ts, así que esto
-  // cuesta 2 consultas a `categories`, no 1.
+  // (ver lib/data.ts). getSitemapProducts() también necesita esta lista
+  // completa para filtrar productos. La medición histórica de la Fase 5
+  // observó dos consultas a `categories` durante una regeneración (4
+  // consultas totales: productos 1, categorías 2, páginas 1); no se
+  // atribuye aquí una causa interna definitiva a esa distribución.
   const [categories, products, pages] = await Promise.all([
     getAllCategories({ includeHidden: true }),
     getSitemapProducts(),
