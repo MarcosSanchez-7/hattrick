@@ -742,21 +742,33 @@ export async function getPublicProductsBySlugs(
   );
 }
 
-const fetchAllCategories = cache(async (includeHidden: boolean): Promise<Category[]> => {
-  let query = supabaseAdmin.from("categories").select(CATEGORY_COLUMNS).order("created_at", {
-    ascending: true,
-  });
-  if (!includeHidden) query = query.eq("is_visible", true);
-
-  const { data, error } = await query;
+// La lectura cruda no acepta argumentos: React.cache() comparte esta única
+// consulta dentro del mismo render/request entre consumidores públicos y
+// administrativos. La variante pública se deriva debajo, sin convertir esta
+// memoización en una caché persistente ni alterar las invalidaciones ISR.
+const fetchAllCategories = cache(async (): Promise<Category[]> => {
+  const { data, error } = await supabaseAdmin
+    .from("categories")
+    .select(CATEGORY_COLUMNS)
+    .order("created_at", { ascending: true });
   if (error) fail(`No se pudieron cargar las categorías: ${error.message}`);
   return (data as CategoryRow[]).map(rowToCategory);
+});
+
+// La consulta pública histórica filtraba solo is_visible=true. Se conserva
+// exactamente esa semántica: los descendientes de un ancestro oculto siguen
+// presentes aquí si tienen su propia bandera visible; los consumidores que
+// necesitan ocultarlos en cascada ya piden el árbol completo y aplican
+// hiddenCategorySlugs()/isCategoryVisible().
+const fetchVisibleCategories = cache(async (): Promise<Category[]> => {
+  const categories = await fetchAllCategories();
+  return categories.filter((category) => category.isVisible);
 });
 
 export async function getAllCategories(
   opts: { includeHidden?: boolean } = {},
 ): Promise<Category[]> {
-  return fetchAllCategories(opts.includeHidden ?? false);
+  return opts.includeHidden ? fetchAllCategories() : fetchVisibleCategories();
 }
 
 export async function setProductVisibility(
