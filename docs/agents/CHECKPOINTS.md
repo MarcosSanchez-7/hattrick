@@ -20,9 +20,10 @@
 | 16 | `426f5f9` | perf(data): deduplicate category queries per render |
 | 17 | `2665f41` | perf(data): scope product detail queries and related hydration |
 | 18 | `10fd04c` | perf(data): separate public product hydration from admin data |
+| 19 | `5a5b346` | perf(data): optimize public catalog listings and hydration |
 
-Hash completo del checkpoint 18 (el más reciente confirmado con `git log -1` al iniciar 7B.5-B): `10fd04c2c259e6ae35b3b366a223857b53e7794a`.
+Hash completo del checkpoint 19 (base real de 7C): `5a5b346b52a8c900581a6c76949573be9628f295`.
 
-Todos los hashes de esta tabla fueron verificados contra `git log --oneline` (reverificado para 7B.5-B). Ninguno fue inventado ni asumido. El checkpoint 18 ya existe y es la base de esta fase; 7B.5-B queda sin commit hasta una autorización posterior del propietario. **No existe checkpoint 19** -- su hash no se inventa de antemano.
+Todos los hashes de esta tabla fueron verificados contra `git log --oneline`. Ninguno fue inventado ni asumido. El checkpoint 19 es la base real de 7C; 7C queda cerrada documentalmente tras su auditoría independiente y correcciones de límites metodológicos. 7B.6 sigue diferida y la Fase 8 requiere autorización explícita.
 
 Al cerrar un commit nuevo autorizado, el escritor del turno agrega su fila aquí con hash real (nunca inventado), mensaje exacto, alcance, pruebas ejecutadas y limitaciones — antes de ceder el turno en `HANDOFF.md`.

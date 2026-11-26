@@ -49,6 +49,101 @@ No verificadas independientemente en esta integración documental (son resultado
   - Columnas de `products` eliminadas de estas consultas públicas: `cost_price`, `wholesale_price`, `internal_control`. La relación de parches ya no pide `category`; aún lee `is_visible` y `stock_on_hand` en servidor para derivar `isAvailable`, pero esos valores no cruzan el contrato React Flight. Las relaciones de proveedores no se consultan en el candidato. No se extrapolan estos bytes a facturación ni a todos los listados.
   - HTML que contiene RSC, medido con `accept-encoding: identity` sobre builds Turbopack seriales: ficha propia **48 934→48 903 bytes**; ficha ajena **39 438→39 437 bytes**. Es una sola observación por ruta, suficiente para registrar que la reducción de PostgREST no se traduce linealmente a HTML y no para declarar un porcentaje general.
 
+## 7C-B — comparación acumulada checkpoint 12 vs checkpoint 19
+
+Mediciones NUEVAS de esta fase, separadas de todas las anteriores — no sumar sus porcentajes con los de 7B.1/7B.3/7B.4/7B.5 arriba (son checkpoints distintos, denominadores distintos). CP12 = `3c7db7030d0ca53805b241d29c153944ce174f6e` (baseline, previo a todo 7B). CP19 = `5a5b346b52a8c900581a6c76949573be9628f295` (HEAD actual). Mide el impacto ACUMULADO de 7B completo, no una sola optimización ni todas las optimizaciones históricas del proyecto. Sin estimación monetaria en ningún punto de esta sección.
+
+**Aislamiento:** dos copias independientes vía `git archive` en `C:\hattrick-7c-cp12` / `C:\hattrick-7c-cp19` (nunca `git checkout`/stash/worktree en el árbol principal), cada una con su propio `node_modules` (24 477 archivos, verificado idéntico por conteo), su propio `.env.test.local` generado localmente (`SUPABASE_TEST_ENV=local` confirmado) y una instrumentación temporal idéntica en `lib/supabase/server.ts` de cada copia. El wrapper contó **invocaciones/intentos de `fetch` a endpoints PostgREST por tabla**, sin registrar headers ni credenciales; no permite por sí solo afirmar solicitudes de red efectivas porque su posición relativa a la caché de Next no quedó preservada. Ambas copias comparten el mismo Supabase local (un solo dataset activo por ronda, nunca dos ejecuciones simultáneas). Bundler confirmado por log en ambas copias: **Turbopack** (`▲ Next.js 16.4.6 (Turbopack)`) — ninguna comparación cruza bundlers.
+
+**Hallazgo metodológico (corrección aplicada a mitad de fase, documentado por transparencia):** `HATTRICK_7C_HTTP_LOG` pasada por entorno de shell nunca llegaba al proceso de build — `lib/test-env-loader.ts` descarta toda variable del proceso padre fuera de un allowlist reducido antes de construir el entorno aislado (medida de seguridad preexistente, no un bug). Solución: la variable se agregó como línea dentro de cada `.env.test.local` (archivo temporal de cada copia, nunca el repositorio principal). Además, el `fetch-cache` de Next persiste en disco entre invocaciones repetidas de `build:test` sobre el mismo `distDir` — confirmado observando archivos de caché con timestamps de dos builds distintos. A partir de ese hallazgo, todo build "oficial" de esta sección se corrió con `.next-test` eliminado antes de cada ejecución; el piloto inicial N=7 y la primera ronda N=50 corridos ANTES de esa corrección quedan descartados como mediciones de ejecuciones SQL independientes (se reemplazaron por las cifras limpias de abajo). El conteo de invocaciones del wrapper del piloto conserva su propio log limpio, pero sigue siendo un conteo de intentos, no una medición de red efectiva.
+
+**Dataset sintético:** generado con un script temporal fuera del repositorio (`generate_series`, nunca modifica `seed.sql`), cubriendo explícitamente productos propios/ajenos/importados, agotados (`sold_out`/`stock_on_hand=0`), ofertas (`compare_at`), novedades (`is_new`), una categoría oculta y una categoría visible con ancestro oculto. Distribución verificada en N=300 (antes de restaurar): propio 104, ajeno 98, importado 98, ocultos 27, ofertas 59, novedades 42, con `sold_out` 22, bajo categoría oculta 74, bajo ancestro oculto 1 (fixture fija, no escala con N). Equivalencia CP12↔CP19 verificada por **hash MD5 determinista** (agregado ordenado de `products`+`product_variants`+`product_patches`+`product_suppliers`+`product_supplier_sizes`+`categories`, no solo conteos) antes de cada build de cada checkpoint en cada ronda de N — coincidió exactamente en las cuatro rondas (N=7/50/147/300).
+
+### Build — invocaciones/intentos de `fetch` a PostgREST observados por wrapper (por tabla)
+
+| N (total catálogo) | CP12 total | CP19 total | Reducción (denominador CP12) |
+|---|---|---|---|
+| 7   | 286   | 252  | 11,9% |
+| 50  | 911   | 751  | 17,6% |
+| 147 | 3 595 | 1 839 | 48,8% |
+| 300 | 10 561 | 3 554 | **66,3%** |
+
+N=300 por tabla — CP12: `product_patches` 2 354, `product_suppliers` 2 354, `product_supplier_sizes` 2 354, `site_settings` 1 540, `product_variants` 856, `categories` 445, `pages` 230, `products` 215, `tags` 213. CP19: `site_settings` 1 537, `products` 625, `product_patches` 410, `product_variants` 307, `categories` 232, `pages` 230, `tags` 213 — **CP19 no consulta `product_suppliers`/`product_supplier_sizes` en absoluto durante el build público** (consistente con la separación de hidratación pública de 7B.4/7B.5). Reproducibilidad confirmada: CP12 dio exactamente 10 561 en dos builds limpios independientes (rep1 y rep3); CP19 dio exactamente 3 554 en sus dos builds limpios (rep1 y rep3) — determinista para un dataset fijo, sin aleatoriedad entre corridas.
+
+**Triplicado N=300 — limitación de medición:** la repetición 2 de ambos checkpoints tiene su archivo de log del wrapper contaminado (no se limpió entre reps 1 y 2, quedó acumulado) — se descarta esa cifra en vez de reportarla como independiente. La duración de CP19 rep2 tampoco se capturó de forma fiable (el proceso excedió el límite de espera de la herramienta y terminó en segundo plano) — **no disponible**. Build limpio, exit 0, confirmado por los tres intentos en ambos checkpoints; solo el conteo/tiempo independiente de esa repetición puntual falta.
+
+### Build — tiempo de pared (segundos, mismo proceso, Turbopack, `.next-test` eliminado antes de cada corrida)
+
+| N | CP12 | CP19 |
+|---|---|---|
+| 7   | 47 | 47 |
+| 50  | 53 | 65 |
+| 147 | 52 | 58 |
+| 300 | 55, 71, 62 | 53, no disponible (rep2), 61 |
+
+Sin ganador consistente: CP12 fue igual o más rápido en varias corridas pese a registrar 3-30× más invocaciones del wrapper. La divergencia frente a `pg_stat_statements` muestra que ambas métricas observan capas distintas; no identifica por sí sola el recorrido exacto de caché ni el tráfico efectivo. **No se afirma que un checkpoint construya más rápido que el otro** — la muestra es demasiado chica para significancia estadística, tal como exige el protocolo.
+
+### Build — ejecuciones SQL reales (`pg_stat_statements`, una muestra aislada por checkpoint y N, reset inmediatamente antes de cada muestra)
+
+| N | Tabla | CP12 | CP19 |
+|---|---|---|---|
+| 7   | products | 4 | 13 |
+| 7   | tags | 8 | 16 |
+| 7   | product_patches | 3 | 5 |
+| 7   | **total** | **50** | **63** |
+| 50  | products | 5 | 54 |
+| 50  | tags | 10 | 61 |
+| 50  | product_patches | 4 | 50 |
+| 50  | **total** | **64** | **220** |
+| 147 | products | 8 | 124 |
+| 147 | tags | 16 | 130 |
+| 147 | product_patches | 16 | 125 |
+| 147 | **total** | **155** | **486** |
+| 300 | products | 9 | 363 |
+| 300 | tags | 18 | 387 |
+| 300 | product_patches | 57 | 363 |
+| 300 | **total (sin suppliers en CP19, no aplica)** | **312** | **1 403** |
+
+**Patrón observado en las cuatro escalas:** las ejecuciones SQL de `products`/`tags`/`product_patches` en CP12 crecen muy poco con N (4→5→8→9 en `products`), mientras que en CP19 crecen de forma aproximadamente lineal con N (13→54→124→363). Es compatible con la hipótesis de que CP12 reutiliza consultas de catálogo idénticas durante el build, mientras que la arquitectura específica-por-ficha de CP19 (7B.3) usa consultas parametrizadas por `slug` o IDs que no se pueden reutilizar del mismo modo. Es una explicación plausible, **no una causa confirmada**: no se preservó instrumentación interna de Next ni el punto exacto del wrapper respecto de su caché. La tabla prueba conteos de ejecuciones SQL observadas, no tráfico de red efectivo ni coste SQL: no se midieron suficientemente tiempo SQL acumulado, filas procesadas/devueltas, planes, I/O o bytes JSON CP12↔CP19. **Muestra única por celda** (no triplicada, por límite de tiempo de la fase) — no se afirma significancia estadística sobre esta tabla, solo el patrón direccional.
+
+### Runtime — cuerpos HTML con RSC embebido (`next start`, bytes recibidos por curl, dos solicitudes por ruta)
+
+| Ruta | N=7 CP12 | N=7 CP19 | N=300 CP12 | N=300 CP19 | Reducción N=300 (denominador CP12) |
+|---|---|---|---|---|---|
+| home (`/`) | 85 704 | 84 881 | 253 829 | 209 372 | 17,5% |
+| categoría | 39 578 | 39 066 | 536 283 | 506 073 | 5,6% |
+| ficha | 48 848 | 48 905 | 70 729 | 70 796 | −0,1% (CP19 levemente mayor) |
+| novedades | 32 450 | 32 318 | 138 086 | 131 734 | 4,6% |
+| ofertas | 33 338 | 33 202 | 186 633 | 177 582 | 4,8% |
+| /buscar | 46 271 | 45 448 | 792 429 | 747 150 | 5,7% |
+| /favoritos | 30 676 | 29 853 | 181 371 | 136 092 | **25,0%** |
+| /carrito | 28 375 | 28 375 | 28 606 | 28 606 | 0% (idéntico, no depende del catálogo) |
+| sitemap.xml | 3 309 | 3 309 | 38 914 | 38 914 | 0% (idéntico, ver auditoría de parches 7B.4) |
+
+La reducción de bytes de estos cuerpos crece con N en casi todas las rutas de catálogo — consistente con que el ahorro de 7B.5-B (columnas públicas más angostas) se acumula por fila, mientras que a N=7 el ahorro absoluto es pequeño. La ficha de producto es la excepción esperada: su contrato público (`PublicPatch.isAvailable`) es un campo booleano que sustituye a dos campos crudos (`stock`,`category`) de tamaño similar — diferencia neta despreciable, confirmado también por diff byte a byte del HTML estático (`producto/test-camiseta-visible.html`): única diferencia real es `"stock":50,"category":null` (CP12) vs `"isAvailable":true` (CP19) en un parche embebido, resto idéntico. No son bytes de RSC independiente ni una medición de transferencia comprimida: no se conservó `Content-Encoding` ni el desglose de los dos cuerpos por ruta.
+
+**Caché (`x-nextjs-cache`) — hallazgo no explicado, reportado tal cual:** a N=7, ambos checkpoints mostraron `HIT` en la PRIMERA solicitud real tras `next start` (sin `MISS` previo observado) en las 5 rutas con revalidación. A N=300, CP19 mostró `MISS→HIT` en esas mismas 5 rutas (home/categoría/ficha/novedades/ofertas) mientras que CP12 mostró `HIT` en la primera solicitud también a N=300. La causa no fue instrumentada (podría ser orden de generación estática, tamaño de página, o timing del primer `curl` relativo al arranque del servidor) — se reporta como observación cruda, no como atribución a una fase.
+
+### Pruebas de integración existentes, reejecutadas sin modificar (reutilizadas para medir, no reescritas)
+
+- `tests/integration/run-scenarios.mjs` (N=7): **CP12 22/22**, **CP19 32/32** — CP19 tiene 10 escenarios adicionales que no existen en CP12 (contrato público sin `costPrice`/`wholesalePrice`/proveedores/`stockMode`, equivalencia real de relacionados, exclusión por ancestro oculto en listados, metadata sincronizada) porque esos contratos no existían aún en el checkpoint 12 — no es una regresión de CP12, es la prueba de que las garantías añadidas por 7B.3/7B.4/7B.5 funcionan en CP19. Incluye el escenario de "invalidación administrativa": cambio de precio real vía API admin autenticada, cache `antes=HIT`→`después=MISS`, escritura ~220ms, lectura posterior ~100-140ms, ambos muy por debajo del TTL de 60s de esa ruta — confirmado en ambos checkpoints.
+- `tests/integration/run-sitemap.mjs` (N=300): **7/7 en ambos**. Confirma de nuevo (ya documentado en 7B.4) que una escritura administrativa real NO invalida `/sitemap.xml` bajo demanda (solo TTL de 3600s o build nuevo) — comportamiento idéntico en CP12 y CP19, no es una regresión introducida por 7B.
+- `tests/integration/run-cart-search-cache.mjs` (N=300): **6/6 en ambos** — carrito/buscador/favoritos reflejan cambios de precio/ocultamiento de inmediato (política propia independiente del TTL de ISR) en ambos checkpoints.
+- `tests/integration/run-prefetch-policy.mjs` (N=147, desktop + móvil dentro de la misma suite vía Playwright): **18/18 en ambos**. Sin diferencia de política de prefetch entre CP12 y CP19 — esperado, porque CP12 ES el commit que introdujo la reducción de prefetch (checkpoint 12 = `perf(navigation): reduce automatic prefetch in product cards and footer`); esta comparación confirma que esa política se preservó sin regresión en todo el rango 7B, no que exista una mejora adicional en ese tramo.
+
+### Limitaciones y resultados no disponibles
+
+- Ejecuciones SQL: una sola muestra por celda (checkpoint × N), no triplicada — no se afirma significancia estadística sobre esa tabla específica, solo el patrón direccional.
+- Duración de build de CP19 N=300 repetición 2: **no disponible** (timeout de la herramienta, el proceso completó en segundo plano sin que se capturara su tiempo de pared de forma fiable).
+- Conteo de invocaciones del wrapper de la repetición 2 (ambos checkpoints, N=300): **no disponible** (log no limpiado entre repeticiones, descartado en vez de reportado como contaminado).
+- ISR vía expiración natural de TTL (esperar 15m/1h/1d reales) no se ejecutó — inviable en el tiempo de la fase. En su lugar se usó la invalidación bajo demanda real (mutación admin autenticada + lectura pública inmediata), que es el mecanismo que correlaciona mutación+DB+primera lectura+contenido exigido por el protocolo; no mide específicamente la regeneración por vencimiento de TTL puro.
+- Prefetch: medido solo a N=147 (según el protocolo); no se repitió a N=7/300.
+- No se observó un estado `STALE` ni ISR por expiración natural; las cabeceras `x-nextjs-cache` solo aportan las observaciones HIT/MISS documentadas arriba.
+- El wrapper temporal no quedó preservado: no es posible demostrar ahora que interceptara después de la caché de Next, su cobertura de todos los workers ni solicitudes de red efectivas.
+- No hay medidas comparables CP12↔CP19 de tiempo SQL acumulado, filas, I/O, planes ni bytes JSON; el número de ejecuciones SQL no es un sustituto de coste.
+- Los bytes runtime son cuerpos HTML con RSC embebido; no cuantifican Flight/RSC separado ni transferencia comprimida.
+- Sin estimación de ahorro monetario ni de facturación de hosting en ningún punto de esta sección.
+
 ## Protocolo para futuras mediciones
 
 Registrar siempre: commit/checkpoint, dataset sintético usado y filas por tabla, entorno (local/worktree), estado de caché, número de repeticiones, si la medición es de build o de runtime, HTTP efectivamente ejecutado (no construcción de query builder), filas, bytes, tiempos, errores encontrados y limitaciones del experimento — sin incluir secretos. Separar siempre estimación de medición real, y nunca mezclar métricas distintas (solicitudes vs. bytes vs. filas vs. latencia) bajo un solo porcentaje sin aclarar cuál es cuál.
