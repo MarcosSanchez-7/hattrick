@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getAllCategories, getAllProducts, getAllTags, toPublicProduct } from "@/lib/data";
+import { getAllCategories, getAllTags, getPublicCatalogProducts } from "@/lib/data";
 import { SearchPageClient } from "@/components/search/SearchPageClient";
 
 export const metadata: Metadata = {
@@ -16,14 +16,11 @@ export default async function BuscarPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q = "" } = await searchParams;
-  const [allProducts, tags, categories] = await Promise.all([
-    getAllProducts(),
+  const [products, tags, categories] = await Promise.all([
+    getPublicCatalogProducts(),
     getAllTags(),
     getAllCategories(),
   ]);
-  // SearchPageClient es Client Component -- se mapea a la versión pública
-  // antes de pasarla en vez del Product completo (ver toPublicProduct en lib/data.ts).
-  const products = allProducts.map(toPublicProduct);
 
   return (
     <SearchPageClient

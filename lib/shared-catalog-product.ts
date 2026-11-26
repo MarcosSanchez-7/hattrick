@@ -16,18 +16,20 @@ export type SharedCatalogProductVariant = {
  * Subconjunto de PublicProduct (ver lib/data.ts) -- exactamente los campos
  * que CartProvider/CartDrawer/CarritoView (precio, stock por talla vía
  * `variants`, miniatura, link), Navbar (solo `slug`, para reconciliar el
- * conteo de favoritos) y SearchOverlay + los selectores de lib/catalog.ts
+ * conteo de favoritos), SearchOverlay y los selectores de lib/catalog.ts
  * (searchProducts/newArrivals, que exigen la forma "ProductLike" completa
  * aunque en tiempo de ejecución no lean cada campo) necesitan.
  *
- * app/(store)/layout.tsx le pasa esto a CartProvider y Navbar en vez de
- * PublicProduct completo -- quedan afuera `description`, `patches`,
- * `isVisible`, `rating` e `isCustomizable`, que ninguno de esos
- * componentes lee jamás (medido en la Fase 3: ~27 KB de 144 KB del
- * catálogo público completo, con 128 productos visibles). Las páginas que
- * sí necesitan esos campos (ficha de producto, grillas) se siguen
- * sirviendo con su propio getAllProducts() + toPublicProduct de siempre --
- * no comparten esta proyección.
+ * Quedan afuera `description`, `patches`, `isVisible`, `rating` e
+ * `isCustomizable` (medido en la Fase 3: ~27 KB de 144 KB del catálogo
+ * público completo, con 128 productos visibles). Desde la Fase 7B.5-B,
+ * esta es también la proyección de TODOS los listados públicos (home,
+ * categoría, novedades, ofertas, /buscar, favoritos vía
+ * getPublicCatalogProducts() en lib/data.ts) -- confirmado campo por
+ * campo que ProductCard/ProductGrid/ProductBrowser/CategoryGrid tampoco
+ * leen esos cinco campos. Solo la ficha de producto y sus relacionados
+ * (getProductBySlug()/getProductsByIds(), que sí necesitan `patches`)
+ * siguen sirviéndose con PublicProduct completo.
  */
 export type SharedCatalogProduct = {
   id: string;

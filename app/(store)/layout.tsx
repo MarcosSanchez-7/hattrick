@@ -32,11 +32,11 @@ export default async function StoreLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   // Ni Navbar (Fase 3B/3C) ni ningún otro consumidor de este layout
   // necesita ya el catálogo completo -- cada página que sí lo necesita
-  // para su propio contenido (home, categoría, producto, novedades,
-  // ofertas) lo pide por su cuenta vía getAllProducts()/
-  // getAllPublicProducts(), memoizadas por request con React.cache() (ver
-  // Fase 3D). Pedirlo también acá era trabajo repetido sin ningún
-  // consumidor real.
+  // para su propio contenido (home, categoría, novedades, ofertas,
+  // /buscar, favoritos) lo pide por su cuenta vía getPublicCatalogProducts()
+  // (listados, Fase 7B.5-B) o getProductBySlug()/getProductsByIds()
+  // (ficha), todas memoizadas por request con React.cache() (ver Fase 3D).
+  // Pedirlo también acá era trabajo repetido sin ningún consumidor real.
   const [categories, pages, navbarSettings, footerSettings, branding, wholesaleSettings] =
     await Promise.all([
       getAllCategories(),

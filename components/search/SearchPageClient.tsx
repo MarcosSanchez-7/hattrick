@@ -10,7 +10,7 @@ import {
   type Category,
   type Tag,
 } from "@/lib/catalog";
-import type { PublicProduct } from "@/lib/data";
+import type { SharedCatalogProduct } from "@/lib/data";
 import { ProductBrowser } from "@/components/product/ProductBrowser";
 import { IconSearch } from "@/components/ui/Icons";
 
@@ -28,7 +28,7 @@ export function SearchPageClient({
   categories = [],
   initialQuery,
 }: {
-  products: PublicProduct[];
+  products: SharedCatalogProduct[];
   tags?: Tag[];
   categories?: Category[];
   initialQuery: string;

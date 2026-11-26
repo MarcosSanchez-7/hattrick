@@ -10,7 +10,7 @@ npm run supabase:stop
 npm run supabase:reset     # reset DESTRUCTIVO del contenido — solo con turno exclusivo
 npm run test:env:generate  # genera .env.test.local desde "supabase status", nunca desde .env.local
 npx tsc --noEmit
-npm test                   # 149 pruebas unitarias, node --test lib/*.test.ts
+npm test                   # 165 pruebas unitarias reportadas más recientemente, node --test lib/*.test.ts
 npm run build:test         # build contra .next-test, distDir separado del build normal
 npm run start:test         # sirve ese build en el puerto 3100
 npm run dev:test           # equivalente de next dev, mismo entorno aislado
@@ -20,13 +20,15 @@ Suites de integración reales en `tests/integration/` (requieren `build:test` + 
 
 | Archivo | Escenarios |
 |---|---|
-| `run-scenarios.mjs` | 23 |
+| `run-scenarios.mjs` | 32 |
 | `run-cart-search-cache.mjs` | 6 |
 | `run-ttl-verification.mjs` | 5 |
 | `run-sitemap.mjs` | 7 |
 | `run-prefetch-policy.mjs` | 18 (navegador real, Playwright) |
 
-Total confirmado en el checkpoint 13: **149 unitarias + 41 de integración (23+6+5+7) + 18 de navegador = 208**. El escenario de importación CSV de ventas dentro de `run-scenarios.mjs` es conocido por fallar si se corre dos veces sin resetear la base entre medio (deja una fila que colisiona con la siguiente corrida) — no es una regresión de código, es contaminación de estado entre corridas repetidas en la misma sesión; resetear con `supabase db reset` antes de una corrida que necesite ser limpia.
+Resultados más recientes reportados por Claude Code durante 7B.5-B (históricos; **no reejecutados por Codex durante el cierre**): TypeScript correcto; **165/165** unitarias; build aislado correcto; **32/32** de `run-scenarios.mjs`, **6/6** carrito/búsqueda, **7/7** sitemap, **18/18** prefetch y **5/5** TTL. Total: **233** pruebas y escenarios.
+
+Total histórico confirmado en el checkpoint 13: **149 unitarias + 41 de integración (23+6+5+7) + 18 de navegador = 208**. El escenario de importación CSV de ventas dentro de `run-scenarios.mjs` es conocido por fallar si se corre dos veces sin resetear la base entre medio (deja una fila que colisiona con la siguiente corrida) — no es una regresión de código, es contaminación de estado entre corridas repetidas en la misma sesión; resetear con `supabase db reset` antes de una corrida que necesite ser limpia.
 
 Limitación de cobertura de 7B.1: las siete pruebas unitarias de `lib/settings-merge.test.ts` verifican la fusión pura de valores y fallbacks, pero no reproducen por sí solas la deduplicación real de `React.cache()` dentro de un render de Next/React. Esa propiedad se valida por la implementación y las mediciones/integraciones registradas de la fase; no se debe presentar la suite unitaria pura como prueba aislada de la caché de render.
 

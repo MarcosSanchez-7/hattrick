@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CONSULT_SIZE_LABEL, needsSizeSelection } from "@/lib/catalog";
-import type { PublicProduct } from "@/lib/data";
+import type { SharedCatalogProduct } from "@/lib/data";
 import { useCart } from "@/components/cart/CartProvider";
 import { IconBag } from "@/components/ui/Icons";
 
@@ -49,7 +49,7 @@ export function QuickAddButton({
   product,
   className,
 }: {
-  product: PublicProduct;
+  product: SharedCatalogProduct;
   className?: string;
 }) {
   const { add } = useCart();

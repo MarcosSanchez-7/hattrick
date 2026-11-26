@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAllProducts, getAllTags, toPublicProduct } from "@/lib/data";
+import { getAllTags, getPublicCatalogProducts } from "@/lib/data";
 import { FavoritosView } from "@/components/wishlist/FavoritosView";
 
 export const metadata: Metadata = {
@@ -12,10 +12,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function FavoritosPage() {
-  const [allProducts, tags] = await Promise.all([getAllProducts(), getAllTags()]);
-  // FavoritosView es Client Component -- se mapea a la versión pública
-  // antes de pasarla en vez del Product completo (ver toPublicProduct en lib/data.ts).
-  const products = allProducts.map(toPublicProduct);
+  const [products, tags] = await Promise.all([getPublicCatalogProducts(), getAllTags()]);
 
   return (
     <>

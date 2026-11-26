@@ -6,7 +6,7 @@ import {
   isSoldOut,
   type Tag,
 } from "@/lib/catalog";
-import type { PublicProduct } from "@/lib/data";
+import type { SharedCatalogProduct } from "@/lib/data";
 import { formatPrice } from "@/lib/format";
 import { readableTextColor } from "@/lib/color";
 import { ProductVisual } from "@/components/product/ProductVisual";
@@ -19,7 +19,7 @@ export function ProductCard({
   tags = [],
   badge,
 }: {
-  product: PublicProduct;
+  product: SharedCatalogProduct;
   tags?: Tag[];
   /** Badge fijo que no depende de product.tags (ej. "Bajo pedido" en la
    * vidriera de DTF, ver DtfSection.tsx) -- siempre se muestra, sin que el
@@ -116,7 +116,7 @@ export function ProductGrid({
   tags = [],
   columns = 4,
 }: {
-  products: PublicProduct[];
+  products: SharedCatalogProduct[];
   tags?: Tag[];
   columns?: 3 | 4;
 }) {

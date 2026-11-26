@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { bestSellers, byCategoryTree, categorySlugPath, getCategory, newArrivals } from "@/lib/catalog";
-import { getAllCategories, getAllPublicProducts, getAllTags, getSetting } from "@/lib/data";
+import { getAllCategories, getPublicCatalogProducts, getAllTags, getSetting } from "@/lib/data";
 import {
   DEFAULT_CUSTOM_BANNER,
   DEFAULT_DTF,
@@ -44,12 +44,13 @@ export default async function HomePage() {
     dtfSettings,
     wholesaleSettings,
   ] = await Promise.all([
-    // getAllPublicProducts() (memoizado por request, ver lib/data.ts) y no
-    // getAllProducts()+.map(toPublicProduct) local: layout.tsx pide el
-    // mismo array para Navbar/SearchOverlay -- compartir la referencia
-    // evita que React Flight serialice dos veces los campos anidados que
-    // toPublicProduct pasa sin clonar (colors/images/sizes/soldOut/tags).
-    getAllPublicProducts(),
+    // getPublicCatalogProducts() (memoizado por request, ver lib/data.ts) y
+    // no getAllProducts()+.map(toPublicProduct) local: trae únicamente las
+    // columnas/relaciones que novedades/más vendidos/combos/ofertas/
+    // CategoryGrid necesitan (sin product_patches/product_suppliers/
+    // product_supplier_sizes), compartiendo una sola referencia entre las
+    // secciones de esta misma página (Fase 7B.5-B).
+    getPublicCatalogProducts(),
     getAllCategories(),
     getAllTags(),
     getSetting("hero", DEFAULT_HERO),

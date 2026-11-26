@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { toast } from "sonner";
-import type { PublicProduct } from "@/lib/data";
+import type { SharedCatalogProduct } from "@/lib/data";
 import { buildCartItemsUrl, chunkSlugs } from "@/lib/cart-resolve";
 import { IconHeart } from "@/components/ui/Icons";
 
@@ -46,7 +46,7 @@ type WishlistContextValue = {
   hydrated: boolean;
   isSaved: (slug: string) => boolean;
   /** Añade o quita según el estado actual; devuelve el nuevo estado ("added"/"removed"). */
-  toggle: (product: PublicProduct) => "added" | "removed";
+  toggle: (product: SharedCatalogProduct) => "added" | "removed";
   remove: (slug: string) => void;
 };
 
@@ -135,7 +135,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     [slugs],
   );
 
-  const toggle = useCallback((product: PublicProduct): "added" | "removed" => {
+  const toggle = useCallback((product: SharedCatalogProduct): "added" | "removed" => {
     let result: "added" | "removed" = "added";
     setSlugs((prev) => {
       if (prev.includes(product.slug)) {
@@ -166,7 +166,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
       visibleCount,
       hydrated,
       isSaved,
-      toggle: (product: PublicProduct) => {
+      toggle: (product: SharedCatalogProduct) => {
         const result = toggle(product);
         if (result === "added") {
           toast("Añadido a favoritos", {

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { Tag } from "@/lib/catalog";
-import type { PublicProduct } from "@/lib/data";
+import type { SharedCatalogProduct } from "@/lib/data";
 import { ProductGrid } from "@/components/product/ProductCard";
 import { DEFAULT_TAG_ICON, TAG_ICONS } from "@/components/ui/CatalogIcons";
 
@@ -21,7 +21,7 @@ export function ProductBrowser({
   tags = [],
   defaultSort = "destacados",
 }: {
-  products: PublicProduct[];
+  products: SharedCatalogProduct[];
   tags?: Tag[];
   /** Ej. "novedad" en /novedades: arranca ordenado por fecha de alta sin
    * que el cliente tenga que tocar el selector. */

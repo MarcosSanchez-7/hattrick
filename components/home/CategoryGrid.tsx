@@ -6,7 +6,7 @@ import {
   topLevelCategories,
   type Category,
 } from "@/lib/catalog";
-import type { PublicProduct } from "@/lib/data";
+import type { SharedCatalogProduct } from "@/lib/data";
 import { imageVariant } from "@/lib/image";
 import { ProductVisual } from "@/components/product/ProductVisual";
 import { IconArrow, IconChevron } from "@/components/ui/Icons";
@@ -17,7 +17,7 @@ export function CategoryGrid({
   products,
 }: {
   categories: Category[];
-  products: PublicProduct[];
+  products: SharedCatalogProduct[];
 }) {
   const topCategories = topLevelCategories(categories);
   const loop = topCategories.length > 1;

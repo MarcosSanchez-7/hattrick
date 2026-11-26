@@ -3,7 +3,7 @@
 import { type CSSProperties } from "react";
 import Link from "next/link";
 import type { Tag } from "@/lib/catalog";
-import type { PublicProduct } from "@/lib/data";
+import type { SharedCatalogProduct } from "@/lib/data";
 import type { DtfSettings } from "@/lib/settings";
 import { imageVariant } from "@/lib/image";
 import { ProductCard } from "@/components/product/ProductCard";
@@ -16,7 +16,7 @@ export function DtfSection({
   tags = [],
 }: {
   settings: DtfSettings;
-  products: PublicProduct[];
+  products: SharedCatalogProduct[];
   tags?: Tag[];
 }) {
   const loop = products.length > 1;

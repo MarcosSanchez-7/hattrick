@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { Tag } from "@/lib/catalog";
-import type { PublicProduct } from "@/lib/data";
+import type { SharedCatalogProduct } from "@/lib/data";
 import { useWishlist } from "@/components/wishlist/WishlistProvider";
 import { ProductGrid } from "@/components/product/ProductCard";
 import { IconHeart } from "@/components/ui/Icons";
@@ -11,7 +11,7 @@ export function FavoritosView({
   products,
   tags = [],
 }: {
-  products: PublicProduct[];
+  products: SharedCatalogProduct[];
   tags?: Tag[];
 }) {
   const { slugs, hydrated } = useWishlist();

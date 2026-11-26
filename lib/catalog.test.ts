@@ -108,7 +108,7 @@ test("searchProducts: no filtra por visibilidad -- es responsabilidad de quien a
   const products = [product({ name: "Camiseta Oculta", isVisible: false })];
   // searchProducts no sabe nada de isVisible; si un producto oculto llega
   // hasta acá, lo encuentra igual -- la exclusión real pasa ANTES, en
-  // getAllProducts()/getAllPublicProducts() (lib/data.ts), que nunca
+  // getAllProducts()/getPublicCatalogProducts() (lib/data.ts), que nunca
   // devuelven productos ocultos salvo que se pida includeHidden:true.
   assert.equal(searchProducts(products, "oculta").length, 1);
 });

@@ -10,7 +10,7 @@ import {
   getCategory,
   isCategoryVisible,
 } from "@/lib/catalog";
-import { getAllCategories, getAllProducts, getAllTags, toPublicProduct } from "@/lib/data";
+import { getAllCategories, getAllTags, getPublicCatalogProducts } from "@/lib/data";
 import { SITE_URL, buildBreadcrumbJsonLd } from "@/lib/site";
 import { ProductBrowser } from "@/components/product/ProductBrowser";
 import { SUBCATEGORY_ICONS } from "@/components/ui/CatalogIcons";
@@ -71,7 +71,7 @@ export default async function CategoryPage({
   // decide aparte, con isCategoryVisible.
   const [categories, allProducts, tags] = await Promise.all([
     getAllCategories({ includeHidden: true }),
-    getAllProducts(),
+    getPublicCatalogProducts(),
     getAllTags(),
   ]);
   const category = getCategory(categories, slugParts[slugParts.length - 1]);
@@ -85,10 +85,9 @@ export default async function CategoryPage({
     permanentRedirect(`/categoria/${canonicalPath.join("/")}`);
   }
 
-  // ProductBrowser es Client Component -- se mapea a la versión pública
-  // antes de pasarla en vez del Product completo (ver toPublicProduct en
-  // lib/data.ts).
-  const products = byCategoryTree(allProducts, categories, category.slug).map(toPublicProduct);
+  // getPublicCatalogProducts() ya devuelve el contrato que ProductBrowser
+  // necesita (Fase 7B.5-B) -- sin conversión adicional.
+  const products = byCategoryTree(allProducts, categories, category.slug);
   const ancestors = categoryPath(categories, category.slug).slice(0, -1);
   const children = categoryChildren(categories, category.slug).filter((c) =>
     isCategoryVisible(categories, c.slug),

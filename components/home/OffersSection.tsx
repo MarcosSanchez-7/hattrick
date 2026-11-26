@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { onSaleProducts, type Tag } from "@/lib/catalog";
-import type { PublicProduct } from "@/lib/data";
+import type { SharedCatalogProduct } from "@/lib/data";
 import { ProductGrid } from "@/components/product/ProductCard";
 import { Countdown } from "@/components/home/Countdown";
 
@@ -8,7 +8,7 @@ export function OffersSection({
   products,
   tags = [],
 }: {
-  products: PublicProduct[];
+  products: SharedCatalogProduct[];
   tags?: Tag[];
 }) {
   const onSale = onSaleProducts(products).slice(0, 4);

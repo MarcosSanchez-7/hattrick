@@ -945,6 +945,92 @@ async function main() {
     }
   });
 
+  await scenario(
+    "Listados públicos (home/categoría/novedades/ofertas/buscar/favoritos) no leen parches -- Fase 7B.5-B",
+    "/ , /categoria/test-futbol, /novedades, /ofertas, /buscar, /favoritos",
+    async () => {
+      const patchList = await api("GET", "/api/admin/patches");
+      assert(patchList.status === 200, `GET administrativo de parches falló: ${JSON.stringify(patchList.body)}`);
+      const originalPatch = patchList.body.find((patch) => patch.id === "patch-test-mundial");
+      assert(originalPatch, "no se encontró patch-test-mundial para el fixture");
+
+      const fixture = {
+        ...originalPatch,
+        name: "Parche Listado 7B5B Unico",
+        category: "interno-7b5b",
+        stock: 919,
+        isVisible: true,
+      };
+      let writeAttempted = false;
+      let originalError;
+      try {
+        writeAttempted = true;
+        const put = await api("PUT", "/api/admin/patches/patch-test-mundial", fixture);
+        assert(put.status === 200, `PUT del parche fixture falló: ${JSON.stringify(put.body)}`);
+
+        // Cada ruta se valida con HTTP 200 + un marcador positivo
+        // representativo de contenido REAL de esa ruta (no genérico),
+        // antes de comprobar la ausencia del nombre/categoría/stock únicos
+        // del parche fixture -- así una ausencia nunca aprueba por un 200
+        // vacío o la página equivocada.
+        const checks = [
+          { path: "/", positive: "page-reveal" },
+          { path: "/categoria/test-futbol", positive: "Camiseta de Prueba Visible" },
+          { path: "/novedades", positive: "Camiseta de Prueba Nueva" },
+          { path: "/ofertas", positive: "Camiseta de Prueba en Oferta" },
+          { path: "/buscar?q=camiseta", positive: "Buscar" },
+          { path: "/favoritos", positive: "Tus favoritos" },
+        ];
+        for (const { path, positive } of checks) {
+          const res = await fetchPublic(path);
+          assert(res.status === 200, `esperaba 200 en ${path}, llegó ${res.status}`);
+          assert(res.body.includes(positive), `${path} no contiene el marcador positivo esperado ("${positive}")`);
+          assert(!res.body.includes(fixture.name), `${path} expuso el nombre del parche fixture -- no debería leer product_patches en absoluto`);
+          assert(!hasSerializedJsonField(res.body, "category", "interno-7b5b"), `${path} serializó la categoría administrativa del parche fixture`);
+          assert(!res.body.includes(String(fixture.stock)), `${path} expuso el stock único del parche fixture`);
+        }
+
+        return "home/categoría/novedades/ofertas/buscar/favoritos: 200 + contenido positivo confirmados, sin nombre/categoría/stock del parche fixture";
+      } catch (err) {
+        originalError = err;
+        throw err;
+      } finally {
+        if (writeAttempted) {
+          try {
+            const restore = await api("PUT", "/api/admin/patches/patch-test-mundial", originalPatch);
+            assert(restore.status === 200, `no se pudo restaurar el parche fixture: ${JSON.stringify(restore.body)}`);
+            const restoredList = await api("GET", "/api/admin/patches");
+            const restoredPatch = restoredList.body.find((patch) => patch.id === originalPatch.id);
+            assert(restoredList.status === 200 && JSON.stringify(restoredPatch) === JSON.stringify(originalPatch), "el parche fixture no quedó restaurado exactamente");
+          } catch (restoreError) {
+            console.error("No se pudo restaurar el parche del escenario de listados:", restoreError);
+            if (!originalError) throw restoreError;
+          }
+        }
+      }
+    },
+  );
+
+  await scenario(
+    "Listados (home/categoría) excluyen un producto con categoría de ancestro oculto -- Fase 7B.5-B",
+    "/ , /categoria/test-futbol",
+    async () => {
+      // test-camiseta-categoria-oculta: is_visible=true pero su categoría
+      // (test-categoria-oculta) está oculta -- getPublicCatalogProducts()
+      // debe excluirlo con el mismo criterio que getAllProducts()
+      // (hiddenCategorySlugs, sin cambios en esta fase).
+      const home = await fetchPublic("/");
+      assert(home.status === 200, `esperaba 200 en /, llegó ${home.status}`);
+      assert(!home.body.includes("test-camiseta-categoria-oculta"), "home expuso un producto con categoría de ancestro oculto");
+
+      const buscar = await fetchPublic("/buscar?q=oculta");
+      assert(buscar.status === 200, `esperaba 200 en /buscar, llegó ${buscar.status}`);
+      assert(!buscar.body.includes("test-camiseta-categoria-oculta"), "/buscar expuso un producto con categoría de ancestro oculto en el payload inicial");
+
+      return "producto con categoría de ancestro oculto ausente del payload de home y /buscar";
+    },
+  );
+
   await scenario("Settings: home (showBestSellers, selectiva a '/')", "/", async () => {
     const before = await fetchPublic("/");
     assert(before.body.includes("Más vendidos"), "debería mostrar 'Más vendidos' antes del cambio");

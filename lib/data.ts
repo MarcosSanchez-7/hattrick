@@ -140,6 +140,36 @@ const PRODUCT_COLUMNS =
 const PUBLIC_PRODUCT_COLUMNS =
   "id, slug, name, category, price, compare_at, is_new, rating, reviews, color_primary, color_secondary, color_accent, pattern, description, tags, images, stock_mode, is_visible, is_customizable, created_at" as const;
 
+/** Proyección para listados públicos (home, categoría, novedades, ofertas,
+ * /buscar, favoritos -- Fase 7B.5-B): el contrato de esos componentes es
+ * SharedCatalogProduct (ver lib/shared-catalog-product.ts), que nunca lee
+ * description/rating/isCustomizable/isVisible -- ninguno de esos cuatro se
+ * pide. `stock_mode` sí se pide (no sale al contrato final) porque hace
+ * falta para decidir si corresponde pedir product_variants y para
+ * publicProductAvailability(), igual que en la hidratación de ficha. */
+const LISTING_PRODUCT_COLUMNS =
+  "id, slug, name, category, price, compare_at, is_new, reviews, color_primary, color_secondary, color_accent, pattern, tags, images, stock_mode, created_at" as const;
+
+type ListingProductRow = Pick<
+  ProductRow,
+  | "id"
+  | "slug"
+  | "name"
+  | "category"
+  | "price"
+  | "compare_at"
+  | "is_new"
+  | "reviews"
+  | "color_primary"
+  | "color_secondary"
+  | "color_accent"
+  | "pattern"
+  | "tags"
+  | "images"
+  | "stock_mode"
+  | "created_at"
+>;
+
 type VariantRow = {
   id: string;
   product_id: string;
@@ -639,6 +669,56 @@ async function hydratePublicProductRows(rows: PublicProductRow[]): Promise<Publi
 }
 
 /**
+ * Hidrata filas de LISTING_PRODUCT_COLUMNS a SharedCatalogProduct (Fase
+ * 7B.5-B) -- a diferencia de hydratePublicProductRows (ficha/relacionados),
+ * nunca pide product_patches, product_suppliers ni product_supplier_sizes:
+ * ningún consumidor de listados (ProductCard/ProductGrid/ProductBrowser/
+ * CategoryGrid/OffersSection/DtfSection/SearchPageClient/FavoritosView) lee
+ * parches, y esas dos relaciones de proveedores no forman parte del
+ * contrato SharedCatalogProduct en absoluto. Reutiliza
+ * publicProductAvailability() (lib/public-product.ts) -- misma regla de
+ * disponibilidad que la ficha, sin reimplementarla: su campo `.variants`
+ * (PublicProductVariant, {id,size,inStock}) coincide exactamente con
+ * SharedCatalogProductVariant, así que no hace falta ninguna conversión
+ * adicional ni cast.
+ */
+async function hydrateListingProductRows(
+  rows: ListingProductRow[],
+): Promise<SharedCatalogProduct[]> {
+  const ownStockIds = rows
+    .filter((row) => row.stock_mode === "propio")
+    .map((row) => row.id);
+  const variantMap = await fetchVariantsByProduct(ownStockIds);
+
+  return rows.map((row) => {
+    const variants = rowsToProductVariants(variantMap.get(row.id) ?? []);
+    const availability = publicProductAvailability(row.stock_mode, variants);
+    return {
+      id: row.id,
+      slug: row.slug,
+      name: row.name,
+      category: row.category,
+      price: Number(row.price),
+      compareAt: row.compare_at != null ? Number(row.compare_at) : null,
+      isNew: row.is_new,
+      reviews: row.reviews,
+      variants: availability.variants,
+      sizes: availability.sizes,
+      soldOut: availability.soldOut,
+      colors: {
+        primary: row.color_primary,
+        secondary: row.color_secondary,
+        accent: row.color_accent,
+      },
+      pattern: row.pattern,
+      tags: row.tags ?? [],
+      images: row.images ?? [],
+      createdAt: row.created_at,
+    };
+  });
+}
+
+/**
  * Ficha pública de UN producto por slug (Fase 7B.3-B) -- a diferencia de
  * getAllProducts(), nunca trae el catálogo completo ni las relaciones de
  * productos que no son este. Mismo criterio de visibilidad que
@@ -778,39 +858,57 @@ export async function getProductsByIds(ids: string[]): Promise<PublicProduct[]> 
   return ids.map((id) => byId.get(id)).filter((p): p is PublicProduct => p !== undefined);
 }
 
-// Mismo motivo que fetchAllProducts/fetchAllCategories: memoizado por
-// request para que layout.tsx y la página que sea (home, categoría,
-// producto...) reciban el MISMO array de PublicProduct -- no uno cada
-// una. Encontrado durante la verificación de la Fase 3B: al sacarle a
-// CartProvider su copia de `products` (que antes compartía referencia con
-// la de Navbar), la página de inicio -- que arma su PROPIA lista pública
-// llamando a toPublicProduct() por separado -- dejó de beneficiarse de la
-// deduplicación por referencia que React Flight aplica a campos anidados
-// repetidos (colors/images/sizes/soldOut/tags, que toPublicProduct pasa
-// por referencia, no copia), agregando ~20KB al HTML/RSC de esa página.
-// Memoizar acá, en vez de que cada archivo llame a toPublicProduct por su
-// cuenta, hace que esa deduplicación sea garantizada (misma referencia),
-// no un efecto colateral fragil del orden de serialización.
-const fetchAllPublicProducts = cache(
-  async (includeHidden: boolean): Promise<PublicProduct[]> => {
-    const products = await fetchAllProducts(includeHidden);
-    return products.map(projectPublicProduct);
-  },
-);
+/**
+ * Catálogo visible completo para listados públicos (Fase 7B.5-B: home,
+ * categoría, novedades, ofertas, /buscar, favoritos) -- reemplaza al
+ * patrón anterior de cada página pidiendo getAllProducts() (catálogo
+ * administrativo completo, con product_patches/product_suppliers/
+ * product_supplier_sizes de TODO lo visible, descartados después por
+ * toPublicProduct) seguido de su propio filtro en memoria
+ * (byCategoryTree/newArrivals/onSaleProducts/searchProducts, todas ya
+ * genéricas sobre ProductLike -- SharedCatalogProduct las satisface sin
+ * cambiarlas, ver lib/catalog.ts). Devuelve SharedCatalogProduct
+ * directamente (no PublicProduct): es el contrato que ya usaban Navbar/
+ * CartProvider desde la Fase 3, y resulta ser exactamente lo que
+ * ProductCard/ProductGrid/ProductBrowser necesitan también -- confirmado
+ * en la auditoría 7B.5-A, campo por campo, no asumido.
+ *
+ * Zero-arg y memoizada por request (cache(), igual que
+ * fetchAllCategories/getSitemapProducts): si más de una sección de la
+ * misma página la pide (ej. home: novedades/más vendidos/combos/ofertas
+ * comparten un solo `products` ya resuelto antes de llamar a esta
+ * función, así que hoy solo se invoca una vez por render), no repite la
+ * consulta. No sustituye a getAllProducts() (comportamiento administrativo
+ * sin cambios) ni a getProductBySlug()/getProductsByIds() (ficha y
+ * relacionados, que sí necesitan patches -- no se tocan).
+ */
+const fetchPublicCatalogProducts = cache(async (): Promise<SharedCatalogProduct[]> => {
+  const { data, error } = await supabaseAdmin
+    .from("products")
+    .select(LISTING_PRODUCT_COLUMNS)
+    .eq("is_visible", true)
+    .order("created_at", { ascending: true });
+  if (error) fail(`No se pudieron cargar los productos para los listados: ${error.message}`);
 
-export async function getAllPublicProducts(
-  opts: { includeHidden?: boolean } = {},
-): Promise<PublicProduct[]> {
-  return fetchAllPublicProducts(opts.includeHidden ?? false);
+  let rows = data as ListingProductRow[];
+  const categories = await getAllCategories({ includeHidden: true });
+  const hiddenSlugs = hiddenCategorySlugs(categories);
+  rows = rows.filter((r) => !hiddenSlugs.has(r.category));
+
+  return hydrateListingProductRows(rows);
+});
+
+export async function getPublicCatalogProducts(): Promise<SharedCatalogProduct[]> {
+  return fetchPublicCatalogProducts();
 }
 
 /** Columnas para el buscador (Fase 3C) -- deliberadamente MÁS angosto que
- * PRODUCT_COLUMNS: ni searchProducts() ni newArrivals() (lib/catalog.ts) ni
- * la fila que pinta SearchOverlay.tsx leen variants/patches/suppliers, así
- * que esta consulta no los pide. Medido en la propia Fase 3C: reusar
- * getAllPublicProducts() (que SÍ trae todo eso, para la página de inicio)
- * tardaba varios segundos por búsqueda -- sin sentido para una barra que
- * se tipea en vivo con debounce de 300ms. */
+ * incluso LISTING_PRODUCT_COLUMNS: ni searchProducts() ni newArrivals()
+ * (lib/catalog.ts) ni la fila que pinta SearchOverlay.tsx leen stock real
+ * (sizes queda siempre vacío acá a propósito, ver abajo), así que esta
+ * consulta ni siquiera pide product_variants -- getPublicCatalogProducts()
+ * (listados completos, Fase 7B.5-B) sí lo hace para stock propio, de más
+ * para una barra que se tipea en vivo con debounce de 300ms. */
 const SEARCH_COLUMNS =
   "id, slug, name, category, price, compare_at, is_new, reviews, color_primary, color_secondary, color_accent, pattern, tags, images, created_at" as const;
 
@@ -875,8 +973,9 @@ const fetchSearchableCatalog = cache(async (): Promise<SharedCatalogProduct[]> =
 /**
  * Catálogo acotado (solo visibles, columnas mínimas) para el endpoint de
  * búsqueda (app/api/catalog/search/route.ts, Fase 3C) -- consulta propia y
- * liviana, no reusa getAllPublicProducts() (esa trae variantes/parches/
- * proveedores que la búsqueda no lee, ver SEARCH_COLUMNS más arriba).
+ * aún más liviana que getPublicCatalogProducts() (esa pide product_variants
+ * para stock propio; la búsqueda no lee stock real en absoluto, ver
+ * SEARCH_COLUMNS más arriba).
  */
 export async function getSearchableCatalog(): Promise<SharedCatalogProduct[]> {
   return fetchSearchableCatalog();
