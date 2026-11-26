@@ -6,13 +6,11 @@ import {
   discountPercent,
   isComboProduct,
   isOnSale,
-  isPatchAvailable,
   needsSizeSelection,
   type NoticeIcon,
-  type Patch,
   type ProductNotice,
 } from "@/lib/catalog";
-import type { PublicProduct } from "@/lib/data";
+import type { PublicPatch, PublicProduct } from "@/lib/data";
 import { formatPrice } from "@/lib/format";
 import { imageVariant } from "@/lib/image";
 import type { ProductInfoSettings } from "@/lib/settings";
@@ -70,7 +68,7 @@ export function ProductDetail({
   const [customName, setCustomName] = useState("");
   const [customNumber, setCustomNumber] = useState("");
   const [selectedPatchIds, setSelectedPatchIds] = useState<string[]>([]);
-  const [previewPatch, setPreviewPatch] = useState<Patch | null>(null);
+  const [previewPatch, setPreviewPatch] = useState<PublicPatch | null>(null);
   const [previewIndex, setPreviewIndex] = useState(0);
 
   const sale = isOnSale(product);
@@ -104,14 +102,14 @@ export function ProductDetail({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.id]);
 
-  const availablePatches = product.patches?.filter(isPatchAvailable) ?? [];
+  const availablePatches = product.patches?.filter((patch) => patch.isAvailable) ?? [];
   const togglePatch = (id: string) => {
     setSelectedPatchIds((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
     );
   };
   const selectedPatches = availablePatches.filter((p) => selectedPatchIds.includes(p.id));
-  const openPatchPreview = (patch: Patch) => {
+  const openPatchPreview = (patch: PublicPatch) => {
     setPreviewIndex(0);
     setPreviewPatch(patch);
   };

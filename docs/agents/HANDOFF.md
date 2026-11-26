@@ -1,8 +1,10 @@
 # Estado y transferencia
 
-Fecha: 2026-11-25. Estado verificado contra Git al momento de escribir esto.
+Fecha: 2026-11-26. Estado de cierre de 7B.4 verificado contra Git antes del checkpoint 18.
 
-- **Último checkpoint técnico confirmado: 16** (`426f5f9e75fb4a569a5f205262456617e868aa92`, `perf(data): deduplicate category queries per render`).
+- **Último checkpoint técnico confirmado: 17** (`2665f41eddf4dc2b210eabcccc8a2c626717e221`, `perf(data): scope public product queries to requested IDs`).
+- **Fase 7B.4-B: implementada; auditoría independiente 7B.4-C: aprobada** sin hallazgos críticos, altos ni medios.
+- **Fase 7B.4: cerrada.** 7B.5 permanece pendiente de autorización explícita.
 - **Fase 7B.1: completada.**
 - **Integración documental multiagente: completada** (este commit). `AGENTS.md`, `CLAUDE.md`, `README.md`, `docs/agents/*.md` y la skill `run-hattrick-store` quedan integrados; `hattrick-agentes/` se conserva intacta hasta que el propietario la retire.
 - **Fase 7B.2: completada.** Auditoría independiente de Claude Code aprobada, sin hallazgos bloqueantes. El fallo histórico de `run-ttl-verification.mjs` queda cerrado como intermitencia de causa indeterminada, aceptada por el propietario — no atribuible con evidencia a la deduplicación de categorías.
@@ -96,3 +98,15 @@ Fecha: 2026-11-25. Estado verificado contra Git al momento de escribir esto.
 - **Siguiente fase:** 7B.4 permanece pendiente de autorización explícita. Sin push ni deploy.
 
 Este registro es coordinación humana, no un bloqueo técnico ni una fuente autónoma de autorización. El propietario concede y revoca el turno explícitamente; un agente nunca se asigna un turno a sí mismo, y el auditor nunca edita este archivo — solo el escritor autorizado del turno vigente.
+
+## Fase 7B.4 — cerrada, checkpoint 18 autorizado
+
+- **Estado:** 7B.4-B implementada y auditoría independiente 7B.4-C aprobada por Claude Code, sin hallazgos bloqueantes (cero críticos, altos o medios). El propietario autoriza el cierre de 7B.4 y el checkpoint 18; Claude Code permanece inactivo.
+- **Base verificada:** `main` en HEAD `2665f41eddf4dc2b210eabcccc8a2c626717e221` (checkpoint 17), sin modificaciones rastreadas, sin worktrees adicionales y con exactamente los siete no rastreados baseline autorizados.
+- **Alcance:** hidratación pública diferenciada para ficha y relacionados, proyecciones explícitas, omisión de relaciones de proveedores en esos flujos y contrato público de parches sin cantidad exacta ni categoría administrativa. Sin cambios de TTL, invalidaciones, SQL, RLS, autenticación, APIs administrativas ni 7B.5.
+- **Implementación:** `PUBLIC_PRODUCT_COLUMNS` y `hydratePublicProductRows()` leen solo el contrato storefront para `getProductBySlug()` y `getProductsByIds()`. Conservan lotes de 20, orden de talles, visibilidad propia/ancestros, omisión de IDs ausentes, `cache(slug)`, metadata/JSON-LD/404 y `relatedTo`; no consultan proveedores. `fetchProductWithVariants()` y `Product` administrativos quedan intactos. `lib/public-product.ts` centraliza disponibilidad pública y `PublicPatch` deriva `isAvailable` de `isVisible && stock > 0`, sin serializar stock ni categoría.
+- **Pruebas y validación (Codex):** `npx tsc --noEmit` correcto; `npm test` **165/165**; `build:test` Turbopack correcto; `run-scenarios.mjs` **30/30** (incluye contrato RSC/HTML de parche con fixture temporal y restauración); carrito/búsqueda **6/6**; sitemap **7/7**; prefetch **18/18**; TTL desde reset+build limpios **5/5**. `git diff --check` correcto antes de esta actualización documental.
+- **Medición:** A/B serial checkpoint 17/candidato con builds Turbopack separados y HTTP directo real a PostgREST. Ficha propia + relacionado: 10/2 508 bytes/13 filas → 6/1 517/7; fixture importado con control interno: 5/1 490/8 → 2/679/2. Detalle y límites en `BENCHMARKS.md`; no se afirma ahorro monetario ni mejora universal de HTML.
+- **Dataset y recursos:** reset local final confirmado; sin listener en `:3100`. No se ejecutó `driver.mjs`, no se accedió a producción ni a backups. `git worktree` ya no registra el worktree temporal del baseline, pero Windows no pudo borrar su directorio físico ni dos enlaces temporales por `Filename too long`/política del entorno; no forman parte del repositorio y requieren limpieza local manual antes de otro experimento. Esto no altera `main` ni el dataset.
+- **Estado de Git:** sin commit, push ni deploy. Cambios previstos: `lib/data.ts`, `lib/catalog.ts`, `lib/public-product.ts`, `app/(store)/producto/[slug]/page.tsx`, `components/product/ProductDetail.tsx`, pruebas directas y esta documentación. Permanecen los siete no rastreados baseline autorizados; los dos nuevos archivos `lib/public-product*` pertenecen a esta fase.
+- **Siguiente fase:** 7B.5 permanece pendiente de autorización explícita. No iniciar trabajo de esa fase con este cierre.

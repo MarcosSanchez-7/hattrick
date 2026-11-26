@@ -5,7 +5,6 @@ import type {
   Category,
   Page,
   PagePlacement,
-  Pattern,
   Patch,
   Product,
   ProductNotice,
@@ -40,6 +39,15 @@ import {
   type SharedCatalogProduct,
   type SharedCatalogProductVariant,
 } from "@/lib/shared-catalog-product";
+import {
+  publicProductAvailability,
+  toPublicProduct as projectPublicProduct,
+  toPublicProductFromSource,
+  type PublicPatch,
+  type PublicPatchSource,
+  type PublicProduct,
+  type PublicProductVariant,
+} from "@/lib/public-product";
 import { mergeSettingValue, type SettingFetchResult } from "@/lib/settings-merge";
 import { MAX_CART_RESOLVE_SLUGS } from "@/lib/cart-resolve";
 import { deleteImagesWithVariants } from "@/lib/blob";
@@ -113,12 +121,24 @@ type ProductRow = {
   created_at: string;
 };
 
+/** Misma fila que ProductRow sin los tres campos que solo usa administración. */
+type PublicProductRow = Omit<
+  ProductRow,
+  "cost_price" | "wholesale_price" | "internal_control"
+>;
+
 /** Columnas realmente usadas de "products" — deja afuera "sizes"/"sold_out"
  * (legacy, reemplazadas por product_variants, siempre null hoy) y
  * "updated_at" (no se lee). Evita traer de más en getAllProducts(), que
  * puede devolver el catálogo entero (70+ filas). */
 const PRODUCT_COLUMNS =
   "id, slug, name, category, price, compare_at, cost_price, wholesale_price, is_new, rating, reviews, color_primary, color_secondary, color_accent, pattern, description, tags, images, stock_mode, internal_control, is_visible, is_customizable, created_at" as const;
+
+/** Proyección exclusiva de ficha/relacionados públicos. Conserva todo lo
+ * que renderizado, metadata, JSON-LD y reglas públicas usan, pero no costos,
+ * precio mayorista ni control interno. */
+const PUBLIC_PRODUCT_COLUMNS =
+  "id, slug, name, category, price, compare_at, is_new, rating, reviews, color_primary, color_secondary, color_accent, pattern, description, tags, images, stock_mode, is_visible, is_customizable, created_at" as const;
 
 type VariantRow = {
   id: string;
@@ -151,6 +171,16 @@ function sizeRank(size: string): number {
   return i === -1 ? SIZES_ADULT.length : i;
 }
 
+function rowsToProductVariants(variantRows: VariantRow[]): ProductVariant[] {
+  return [...variantRows]
+    .sort((a, b) => sizeRank(a.size) - sizeRank(b.size))
+    .map((variant) => ({
+      id: variant.id,
+      size: variant.size,
+      stock: variant.stock_on_hand,
+    }));
+}
+
 function rowToProduct(
   row: ProductRow,
   variantRows: VariantRow[],
@@ -168,14 +198,7 @@ function rowToProduct(
   // Con control interno activado se cargan variantes aunque no sea "propio"
   // — pero solo para uso del panel admin, nunca para lo que ve el cliente.
   const tracksVariants = isPropio || row.internal_control;
-  const orderedVariantRows = [...variantRows].sort(
-    (a, b) => sizeRank(a.size) - sizeRank(b.size),
-  );
-  const variants: ProductVariant[] = orderedVariantRows.map((v) => ({
-    id: v.id,
-    size: v.size,
-    stock: v.stock_on_hand,
-  }));
+  const variants = rowsToProductVariants(variantRows);
 
   return {
     id: row.id,
@@ -216,98 +239,15 @@ function rowToProduct(
   };
 }
 
-/**
- * Versión de Product segura para mandar al navegador del storefront
- * público (home, categoría, búsqueda, ficha de producto, carrito,
- * favoritos) -- sin costPrice, wholesalePrice, internalControl, stockMode,
- * suppliers ni supplierSizeStock. Esos campos viajaban igual que el resto
- * porque Product (el objeto completo, pensado para el panel admin) se le
- * pasaba directo a Client Components (CartProvider, Navbar, ProductDetail,
- * ProductBrowser, ProductCard y lo que cuelga de ellos) -- en Next.js App
- * Router, cualquier prop que cruza a un Client Component se serializa
- * entera en el payload de React Server Components que llega al navegador,
- * sin importar qué campos ese componente realmente pinte en pantalla. Se
- * confirmó en vivo contra producción (curl a la home y a una ficha de
- * producto): costPrice, wholesalePrice, internalControl, supplierName y
- * unitCost aparecían en el HTML de cualquier página, no solo en el panel.
- *
- * rowToProduct/getAllProducts NO cambian -- el panel admin (ProductForm,
- * InventoryTable, SaleForm) sigue pidiendo el objeto completo, como
- * corresponde atrás del login.
- */
-/** Variante de talle sin el stock exacto -- ver PublicProduct.variants. */
-export type PublicProductVariant = {
-  id: string;
-  size: string;
-  inStock: boolean;
+// La proyección pública es pura y vive fuera de este módulo server-only
+// para que su contrato se pruebe con Node. Se reexporta para no romper los
+// consumidores existentes de @/lib/data.
+export {
+  projectPublicProduct as toPublicProduct,
+  type PublicPatch,
+  type PublicProduct,
+  type PublicProductVariant,
 };
-
-export type PublicProduct = {
-  id: string;
-  slug: string;
-  name: string;
-  category: string;
-  price: number;
-  compareAt?: number | null;
-  isVisible: boolean;
-  isNew?: boolean;
-  rating: number;
-  reviews: number;
-  /** Solo poblado para stock propio -- mismo criterio que sizes/soldOut.
-   * Un producto ajeno/importado con "control interno" SÍ tiene variants en
-   * el Product completo (ver rowToProduct), pero esas cantidades son para
-   * uso exclusivo del panel admin -- nunca deben llegar al cliente, así
-   * que acá se vuelven a filtrar aunque ya vengan filtradas en sizes/
-   * soldOut. Sin la cantidad exacta (ver PublicProductVariant): el
-   * storefront solo necesita saber si hay o no, nunca cuánto -- mostrar el
-   * número real dejaba ver el inventario preciso por talle a cualquier
-   * visitante abriendo el código fuente. */
-  variants?: PublicProductVariant[];
-  sizes: string[];
-  soldOut?: string[];
-  colors: { primary: string; secondary: string; accent: string };
-  pattern: Pattern;
-  description: string;
-  tags: string[];
-  images?: string[];
-  isCustomizable?: boolean;
-  /** Ya es información pública -- la ficha de producto arma con esto el
-   * selector de personalización (nombre, imagen y precio de cada parche;
-   * ver ProductDetail.tsx). */
-  patches?: Patch[];
-  /** Usado por ProductBrowser.tsx para la opción de orden "Novedades
-   * primero" -- es solo la fecha de alta, no revela nada sensible. */
-  createdAt: string;
-};
-
-export function toPublicProduct(product: Product): PublicProduct {
-  return {
-    id: product.id,
-    slug: product.slug,
-    name: product.name,
-    category: product.category,
-    price: product.price,
-    compareAt: product.compareAt,
-    isVisible: product.isVisible,
-    isNew: product.isNew,
-    rating: product.rating,
-    reviews: product.reviews,
-    variants:
-      product.stockMode === "propio"
-        ? product.variants?.map((v) => ({ id: v.id, size: v.size, inStock: v.stock > 0 }))
-        : undefined,
-    sizes: product.sizes,
-    soldOut: product.soldOut,
-    colors: product.colors,
-    pattern: product.pattern,
-    description: product.description,
-    tags: product.tags,
-    images: product.images,
-    isCustomizable: product.isCustomizable,
-    patches: product.patches,
-    createdAt: product.createdAt,
-  };
-}
 
 // SharedCatalogProduct/toSharedCatalogProduct viven en un módulo aparte,
 // sin dependencias de Supabase (lib/shared-catalog-product.ts), para poder
@@ -378,6 +318,8 @@ type PatchRow = {
   stock_on_hand: number;
 };
 
+type PublicPatchRow = Omit<PatchRow, "category">;
+
 function rowToPatch(row: PatchRow): Patch {
   return {
     id: row.id,
@@ -386,6 +328,17 @@ function rowToPatch(row: PatchRow): Patch {
     price: Number(row.price),
     isVisible: row.is_visible,
     category: row.category,
+    stock: row.stock_on_hand,
+  };
+}
+
+function rowToPublicPatchSource(row: PublicPatchRow): PublicPatchSource {
+  return {
+    id: row.id,
+    name: row.name,
+    images: row.images ?? [],
+    price: Number(row.price),
+    isVisible: row.is_visible,
     stock: row.stock_on_hand,
   };
 }
@@ -415,6 +368,38 @@ async function fetchPatchesByProduct(
     const patchRows = Array.isArray(row.patches) ? row.patches : [row.patches];
     const list = map.get(row.product_id) ?? [];
     for (const patchRow of patchRows) list.push(rowToPatch(patchRow));
+    map.set(row.product_id, list);
+  }
+  return map;
+}
+
+/** Relación de parches para storefront: se lee el stock solo en servidor
+ * para derivar isAvailable; la proyección anidada no trae categoría. */
+async function fetchPublicPatchesByProduct(
+  productIds: string[],
+): Promise<Map<string, PublicPatchSource[]>> {
+  const map = new Map<string, PublicPatchSource[]>();
+  if (productIds.length === 0) return map;
+
+  const batches = await Promise.all(
+    chunk(productIds, SUPABASE_IN_CHUNK_SIZE).map(async (ids) => {
+      const { data, error } = await supabaseAdmin
+        .from("product_patches")
+        .select("product_id, patches(id, name, images, price, is_visible, stock_on_hand)")
+        .in("product_id", ids);
+      if (error) fail(`No se pudieron cargar los parches públicos del producto: ${error.message}`);
+      return data as unknown as {
+        product_id: string;
+        patches: PublicPatchRow | PublicPatchRow[] | null;
+      }[];
+    }),
+  );
+
+  for (const row of batches.flat()) {
+    if (!row.patches) continue;
+    const patchRows = Array.isArray(row.patches) ? row.patches : [row.patches];
+    const list = map.get(row.product_id) ?? [];
+    for (const patchRow of patchRows) list.push(rowToPublicPatchSource(patchRow));
     map.set(row.product_id, list);
   }
   return map;
@@ -603,6 +588,57 @@ async function hydrateProductRows(rows: ProductRow[]): Promise<Product[]> {
 }
 
 /**
+ * Hidrata solamente lo que la ficha y las tarjetas de relacionados mandan al
+ * storefront. Mantiene el mismo batching de 20 ids y el mismo orden de
+ * talles que la ruta administrativa, pero nunca consulta proveedores ni sus
+ * cantidades por talle. Las cantidades de variantes y parches viven solo
+ * durante este cálculo para derivar disponibilidad.
+ */
+async function hydratePublicProductRows(rows: PublicProductRow[]): Promise<PublicProduct[]> {
+  const ownStockIds = rows
+    .filter((row) => row.stock_mode === "propio")
+    .map((row) => row.id);
+  const allIds = rows.map((row) => row.id);
+  const [variantMap, patchMap] = await Promise.all([
+    fetchVariantsByProduct(ownStockIds),
+    fetchPublicPatchesByProduct(allIds),
+  ]);
+
+  return rows.map((row) => {
+    const variants = rowsToProductVariants(variantMap.get(row.id) ?? []);
+    const availability = publicProductAvailability(row.stock_mode, variants);
+    return toPublicProductFromSource({
+      id: row.id,
+      slug: row.slug,
+      name: row.name,
+      category: row.category,
+      price: Number(row.price),
+      compareAt: row.compare_at != null ? Number(row.compare_at) : null,
+      isVisible: row.is_visible,
+      isNew: row.is_new,
+      rating: Number(row.rating),
+      reviews: row.reviews,
+      stockMode: row.stock_mode,
+      variants,
+      sizes: availability.sizes,
+      soldOut: availability.soldOut,
+      colors: {
+        primary: row.color_primary,
+        secondary: row.color_secondary,
+        accent: row.color_accent,
+      },
+      pattern: row.pattern,
+      description: row.description,
+      tags: row.tags ?? [],
+      images: row.images ?? [],
+      isCustomizable: row.is_customizable,
+      patches: patchMap.get(row.id) ?? [],
+      createdAt: row.created_at,
+    });
+  });
+}
+
+/**
  * Ficha pública de UN producto por slug (Fase 7B.3-B) -- a diferencia de
  * getAllProducts(), nunca trae el catálogo completo ni las relaciones de
  * productos que no son este. Mismo criterio de visibilidad que
@@ -616,25 +652,25 @@ async function hydrateProductRows(rows: ProductRow[]): Promise<Product[]> {
  * por medición (ver informe de la fase, no solo por la documentación de
  * Next.js).
  */
-const fetchProductBySlug = cache(async (slug: string): Promise<Product | undefined> => {
+const fetchProductBySlug = cache(async (slug: string): Promise<PublicProduct | undefined> => {
   const { data, error } = await supabaseAdmin
     .from("products")
-    .select(PRODUCT_COLUMNS)
+    .select(PUBLIC_PRODUCT_COLUMNS)
     .eq("slug", slug)
     .eq("is_visible", true)
     .maybeSingle();
   if (error) fail(`No se pudo cargar el producto: ${error.message}`);
   if (!data) return undefined;
 
-  const row = data as ProductRow;
+  const row = data as PublicProductRow;
   const allCategories = await getAllCategories({ includeHidden: true });
   if (hiddenCategorySlugs(allCategories).has(row.category)) return undefined;
 
-  const [hydrated] = await hydrateProductRows([row]);
+  const [hydrated] = await hydratePublicProductRows([row]);
   return hydrated;
 });
 
-export async function getProductBySlug(slug: string): Promise<Product | undefined> {
+export async function getProductBySlug(slug: string): Promise<PublicProduct | undefined> {
   return fetchProductBySlug(slug);
 }
 
@@ -722,24 +758,24 @@ export async function getRelatedCandidates(): Promise<RelatedCandidate[]> {
  * (dos lecturas separadas siguen pudiendo ver estados distintos); cierra
  * específicamente la dirección insegura (que algo oculto se filtre hacia
  * el cliente), no toda condición de carrera posible. */
-export async function getProductsByIds(ids: string[]): Promise<Product[]> {
+export async function getProductsByIds(ids: string[]): Promise<PublicProduct[]> {
   if (ids.length === 0) return [];
 
   const { data, error } = await supabaseAdmin
     .from("products")
-    .select(PRODUCT_COLUMNS)
+    .select(PUBLIC_PRODUCT_COLUMNS)
     .in("id", ids)
     .eq("is_visible", true);
   if (error) fail(`No se pudieron cargar los productos relacionados: ${error.message}`);
 
-  let rows = data as ProductRow[];
+  let rows = data as PublicProductRow[];
   const allCategories = await getAllCategories({ includeHidden: true });
   const hiddenSlugs = hiddenCategorySlugs(allCategories);
   rows = rows.filter((r) => !hiddenSlugs.has(r.category));
 
-  const hydrated = await hydrateProductRows(rows);
+  const hydrated = await hydratePublicProductRows(rows);
   const byId = new Map(hydrated.map((p) => [p.id, p]));
-  return ids.map((id) => byId.get(id)).filter((p): p is Product => p !== undefined);
+  return ids.map((id) => byId.get(id)).filter((p): p is PublicProduct => p !== undefined);
 }
 
 // Mismo motivo que fetchAllProducts/fetchAllCategories: memoizado por
@@ -758,7 +794,7 @@ export async function getProductsByIds(ids: string[]): Promise<Product[]> {
 const fetchAllPublicProducts = cache(
   async (includeHidden: boolean): Promise<PublicProduct[]> => {
     const products = await fetchAllProducts(includeHidden);
-    return products.map(toPublicProduct);
+    return products.map(projectPublicProduct);
   },
 );
 
@@ -890,7 +926,7 @@ export async function getPublicProductsBySlugs(
   const variantMap = await fetchVariantsByProduct(tracksVariantsIds);
 
   return rows.map((row) =>
-    toSharedCatalogProduct(toPublicProduct(rowToProduct(row, variantMap.get(row.id) ?? []))),
+    toSharedCatalogProduct(projectPublicProduct(rowToProduct(row, variantMap.get(row.id) ?? []))),
   );
 }
 

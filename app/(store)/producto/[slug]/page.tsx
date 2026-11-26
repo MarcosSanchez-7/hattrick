@@ -18,7 +18,6 @@ import {
   getRelatedCandidates,
   getSetting,
   getSitemapProducts,
-  toPublicProduct,
 } from "@/lib/data";
 import {
   DEFAULT_CUSTOM_BANNER,
@@ -92,7 +91,7 @@ export default async function ProductPage({
   params: Promise<Params>;
 }) {
   const { slug } = await params;
-  const [fullProduct, categories, tags, productNotices, productInfo, customBanner] =
+  const [product, categories, tags, productNotices, productInfo, customBanner] =
     await Promise.all([
       getProductBySlug(slug),
       getAllCategories(),
@@ -101,11 +100,11 @@ export default async function ProductPage({
       getSetting("productInfo", DEFAULT_PRODUCT_INFO),
       getSetting("customBanner", DEFAULT_CUSTOM_BANNER),
     ]);
-  if (!fullProduct) notFound();
+  if (!product) notFound();
 
-  const path = categoryPath(categories, fullProduct.category);
+  const path = categoryPath(categories, product.category);
   const category = path[path.length - 1];
-  const categoryHref = `/categoria/${categorySlugPath(categories, fullProduct.category).join("/")}`;
+  const categoryHref = `/categoria/${categorySlugPath(categories, product.category).join("/")}`;
   // Fase 7B.3-B: ya no se trae el catálogo completo con todas sus
   // relaciones para elegir hasta 4 relacionados -- se selecciona con una
   // proyección liviana (RelatedCandidate: id/slug/category/tags/createdAt,
@@ -115,13 +114,11 @@ export default async function ProductPage({
   // (ver lib/catalog.ts) -- la selección y el orden final son idénticos a
   // los que daba sobre el catálogo completo.
   const candidates = await getRelatedCandidates();
-  const selectedCandidates = relatedTo(candidates, fullProduct);
+  const selectedCandidates = relatedTo(candidates, product);
   const relatedProducts = await getProductsByIds(selectedCandidates.map((c) => c.id));
-  // ProductDetail y ProductGrid son Client Components -- se mapea a la
-  // versión pública antes de pasarla en vez del Product completo (ver
-  // toPublicProduct en lib/data.ts).
-  const related = relatedProducts.map(toPublicProduct);
-  const product = toPublicProduct(fullProduct);
+  // getProductBySlug/getProductsByIds ya hidratan contratos públicos:
+  // ProductDetail y ProductGrid no reciben nunca el Product administrativo.
+  const related = relatedProducts;
   const notices = resolveCategoryNotices(
     categories,
     product.category,

@@ -96,6 +96,15 @@ function assertVisibleProductSecurityResponse(res) {
   assert(!res.body.toLowerCase().includes("proveedor"), "la palabra 'proveedor' apareció en el HTML público");
 }
 
+/** React Flight puede dejar el JSON como texto directo o escapado dentro de
+ * un chunk. Busca el par exacto clave/valor de un fixture único, no palabras
+ * genéricas que también puedan formar parte de contenido legítimo. */
+function hasSerializedJsonField(body, key, value) {
+  const raw = `${JSON.stringify(key)}:${JSON.stringify(value)}`;
+  const escaped = raw.replaceAll('"', '\\"');
+  return body.includes(raw) || body.includes(escaped);
+}
+
 /** Prueba controlada de LA MISMA aserción usada contra el servidor, sin
  * cambiar fetchPublic ni simular una ruta: verifica que las cuatro clases de
  * falso positivo conocidas son rechazadas por el contrato del escenario. */
@@ -877,6 +886,63 @@ async function main() {
     const unrelatedAfter = await fetchPublic("/");
     await api("PUT", "/api/admin/patches/patch-test-mundial", patch);
     return `selectivo: cache home antes=${unrelatedBefore.cache} después=${unrelatedAfter.cache} (no debería pasar a MISS)`;
+  });
+
+  await scenario("Parche: contrato público sin stock ni categoría administrativa", "/producto/test-camiseta-visible", async () => {
+    const patchList = await api("GET", "/api/admin/patches");
+    assert(patchList.status === 200, `GET administrativo de parches falló: ${JSON.stringify(patchList.body)}`);
+    const originalPatch = patchList.body.find((patch) => patch.id === "patch-test-mundial");
+    assert(originalPatch, "no se encontró patch-test-mundial para el fixture de contrato público");
+
+    const productBefore = await api("GET", "/api/admin/products/p-test-visible");
+    assert(productBefore.status === 200, `GET administrativo del producto falló: ${JSON.stringify(productBefore.body)}`);
+    assert(productBefore.body.patches?.some((patch) => patch.id === originalPatch.id), "el fixture no tiene asignado el parche de prueba");
+
+    const fixture = {
+      ...originalPatch,
+      name: "Parche Contrato Público 7B4B",
+      category: "interno-7b4b",
+      stock: 731,
+      isVisible: true,
+    };
+    let writeAttempted = false;
+    let originalError;
+    try {
+      writeAttempted = true;
+      const put = await api("PUT", "/api/admin/patches/patch-test-mundial", fixture);
+      assert(put.status === 200, `PUT del parche fixture falló: ${JSON.stringify(put.body)}`);
+
+      // El límite administrativo sigue completo: la corrección es solo del
+      // contrato storefront, no una pérdida de datos para el panel.
+      const adminPatch = await api("GET", "/api/admin/patches");
+      const persistedPatch = adminPatch.body.find((patch) => patch.id === fixture.id);
+      assert(adminPatch.status === 200 && persistedPatch?.stock === 731 && persistedPatch?.category === "interno-7b4b", "el contrato administrativo del parche dejó de conservar stock o categoría");
+
+      const publicPage = await fetchPublic("/producto/test-camiseta-visible");
+      assert(publicPage.status === 200, `la ficha pública del fixture debe responder 200, llegó ${publicPage.status}`);
+      assertProductDetailIdentity(publicPage.body, "Camiseta de Prueba Visible", "la ficha pública del fixture");
+      assert(publicPage.body.includes(fixture.name), "la ficha no conserva el contenido público positivo del parche fixture");
+      assert(!hasSerializedJsonField(publicPage.body, "stock", 731), "la respuesta pública serializó el stock exacto del parche fixture");
+      assert(!hasSerializedJsonField(publicPage.body, "category", "interno-7b4b"), "la respuesta pública serializó la categoría administrativa del parche fixture");
+
+      return "administración conserva stock/categoría; la ficha RSC/HTML conserva nombre y omite los dos valores internos únicos";
+    } catch (err) {
+      originalError = err;
+      throw err;
+    } finally {
+      if (writeAttempted) {
+        try {
+          const restore = await api("PUT", "/api/admin/patches/patch-test-mundial", originalPatch);
+          assert(restore.status === 200, `no se pudo restaurar el parche fixture: ${JSON.stringify(restore.body)}`);
+          const restoredList = await api("GET", "/api/admin/patches");
+          const restoredPatch = restoredList.body.find((patch) => patch.id === originalPatch.id);
+          assert(restoredList.status === 200 && JSON.stringify(restoredPatch) === JSON.stringify(originalPatch), "el parche fixture no quedó restaurado exactamente");
+        } catch (restoreError) {
+          console.error("No se pudo restaurar el parche del escenario de contrato público:", restoreError);
+          if (!originalError) throw restoreError;
+        }
+      }
+    }
   });
 
   await scenario("Settings: home (showBestSellers, selectiva a '/')", "/", async () => {

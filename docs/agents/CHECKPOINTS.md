@@ -18,9 +18,10 @@
 | 14 | `b889146` | docs(agents): establish shared Claude and Codex workflow |
 | 15 | `a1f919a` | test(integration): harden wholesale restoration and cache assertions |
 | 16 | `426f5f9` | perf(data): deduplicate category queries per render |
+| 17 | `2665f41` | perf(data): scope product detail queries and related hydration |
 
-Hash completo del checkpoint 16 (el más reciente confirmado con `git log -1` al momento de escribir esto, Fase 7B.3-R): `426f5f9e75fb4a569a5f205262456617e868aa92`.
+Hash completo del checkpoint 17 (el más reciente confirmado con `git log -1` antes de 7B.4-B): `2665f41eddf4dc2b210eabcccc8a2c626717e221`.
 
-Todos los hashes de esta tabla fueron verificados contra `git log --oneline` (reverificado en la Fase 7B.3-R, no solo heredado de la integración documental original). Ninguno fue inventado ni asumido. **No existe checkpoint 17** al momento de escribir esto -- la Fase 7B.3-B (implementación de consultas específicas de producto) está completada y auditada (7B.3-C) con observaciones, corregida en 7B.3-R, pero sin commit todavía: el propietario decide cuándo y con qué mensaje se cierra ese checkpoint. No se inventa su hash de antemano.
+Todos los hashes de esta tabla fueron verificados contra `git log --oneline` (reverificado para 7B.4-B, no solo heredado de la integración documental original). Ninguno fue inventado ni asumido. El checkpoint 17 ya existe y es la base de esta fase; 7B.4-B queda sin commit hasta una autorización posterior del propietario.
 
 Al cerrar un commit nuevo autorizado, el escritor del turno agrega su fila aquí con hash real (nunca inventado), mensaje exacto, alcance, pruebas ejecutadas y limitaciones — antes de ceder el turno en `HANDOFF.md`.
