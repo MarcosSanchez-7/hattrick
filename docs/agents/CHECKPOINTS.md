@@ -21,9 +21,10 @@
 | 17 | `2665f41` | perf(data): scope product detail queries and related hydration |
 | 18 | `10fd04c` | perf(data): separate public product hydration from admin data |
 | 19 | `5a5b346` | perf(data): optimize public catalog listings and hydration |
+| 20 | `804a11c` | docs(perf): consolidate cumulative benchmark findings |
 
-Hash completo del checkpoint 19 (base real de 7C): `5a5b346b52a8c900581a6c76949573be9628f295`.
+Hash completo del checkpoint 19 (base real de 7C): `5a5b346b52a8c900581a6c76949573be9628f295`. Hash completo del checkpoint 20: `804a11c018ed57dfca806afade75bd29aaf29fc9`.
 
-Todos los hashes de esta tabla fueron verificados contra `git log --oneline`. Ninguno fue inventado ni asumido. El checkpoint 19 es la base real de 7C; 7C queda cerrada documentalmente tras su auditoría independiente y correcciones de límites metodológicos. 7B.6 sigue diferida y la Fase 8 requiere autorización explícita.
+Todos los hashes de esta tabla fueron verificados contra `git log --oneline`. Ninguno fue inventado ni asumido. El checkpoint 19 es la base real de 7C; el checkpoint 20 cerró sus correcciones documentales. 7B.6 sigue diferida. La Fase 8C-R4 (revisión final de solo lectura) resultó favorable y el propietario autorizó la consolidación del checkpoint 21 sobre esta base; su fila con hash real se agrega a esta tabla en la actualización posterior al commit, conforme a la convención de abajo — no se inventa aquí.
 
 Al cerrar un commit nuevo autorizado, el escritor del turno agrega su fila aquí con hash real (nunca inventado), mensaje exacto, alcance, pruebas ejecutadas y limitaciones — antes de ceder el turno en `HANDOFF.md`.

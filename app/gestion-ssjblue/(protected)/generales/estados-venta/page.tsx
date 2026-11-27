@@ -1,4 +1,5 @@
 import { getSetting } from "@/lib/data";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 import { DEFAULT_SALE_STATUS_COLORS } from "@/lib/settings";
 import { SaleStatusColorsForm } from "@/components/admin/SaleStatusColorsForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Colores de estados de venta" };
 
 export default async function SaleStatusColorsPage() {
+  await requireAdminPageAccess("settings.write");
+
   const colors = await getSetting("saleStatusColors", DEFAULT_SALE_STATUS_COLORS);
 
   return (

@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getFinanceEntries } from "@/lib/data";
-import { getCurrentAdmin } from "@/lib/admin-session";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 import { ExpensesTable } from "@/components/admin/ExpensesTable";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter";
@@ -15,9 +14,7 @@ export default async function ExpensesPage({
 }: {
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
-  const admin = await getCurrentAdmin();
-  if (!admin) redirect("/gestion-ssjblue/login");
-  if (admin.role !== "superadmin") redirect("/gestion-ssjblue");
+  await requireAdminPageAccess("finance.access");
 
   const { from, to } = await searchParams;
   const fromDate = from || daysAgoInParaguay(30);

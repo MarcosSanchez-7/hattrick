@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DataError, deleteQrCampaign } from "@/lib/data";
+import { requireAdminPermission } from "@/lib/admin-authorize";
 
 type Params = { params: Promise<{ slug: string }> };
 
 export async function DELETE(_request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("qr.write");
+  if ("error" in check) return check.error;
+
   const { slug } = await params;
 
   try {

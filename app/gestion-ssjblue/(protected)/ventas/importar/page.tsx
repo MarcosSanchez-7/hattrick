@@ -1,10 +1,13 @@
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 import { SalesImportForm } from "@/components/admin/SalesImportForm";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Importar ventas" };
 
-export default function ImportSalesPage() {
+export default async function ImportSalesPage() {
+  await requireAdminPageAccess("sales.import");
+
   return (
     <>
       <nav className="breadcrumbs" aria-label="Migas de pan" style={{ marginBottom: 16 }}>

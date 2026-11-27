@@ -75,25 +75,159 @@ export async function verifyAdminSessionToken(
 }
 
 // ── Roles y permisos ────────────────────────────────────────────────────
-// Hoy solo hay superadmins reales en uso; este mapa queda listo para que,
-// cuando se necesite un segundo rol de verdad, alcance con sumar permisos
-// acá — sin tocar el esquema ni el resto de las rutas ya existentes.
+// Fase 8B.2 -- matriz comercial confirmada por el propietario (ver
+// docs/agents/HANDOFF.md). Un permiso por recurso+operación, nunca por
+// método HTTP (un GET puede ser tan sensible como un POST -- ver
+// "*.export"/"*.import", que son operaciones GET/POST distintas de
+// "sales.read"/"sales.write" a propósito, no sinónimos).
 
 export type AdminPermission =
+  | "products.read"
   | "products.write"
+  | "categories.read"
   | "categories.write"
+  | "patches.read"
+  | "patches.write"
+  | "tags.read"
+  | "tags.write"
+  | "inventory.read"
+  | "inventory.movements.read"
+  | "inventory.write"
+  | "pages.read"
+  | "pages.write"
+  | "qr.read"
+  | "qr.write"
+  | "sales.read"
   | "sales.write"
+  | "sales.export"
+  | "sales.import"
+  | "customers.read"
+  | "customers.write"
+  | "suppliers.read"
+  | "suppliers.write"
+  | "uploads.write"
   | "settings.write"
+  | "finance.access"
   | "users.manage";
 
+/** Todos los permisos reales conocidos -- usado para rechazar un permiso
+ * desconocido/mal tipeado en vez de dejarlo pasar por accidente (ver
+ * hasPermission: un typo en el string literal de un endpoint nunca debe
+ * resolver en "true"). */
+export const ALL_ADMIN_PERMISSIONS: readonly AdminPermission[] = [
+  "products.read",
+  "products.write",
+  "categories.read",
+  "categories.write",
+  "patches.read",
+  "patches.write",
+  "tags.read",
+  "tags.write",
+  "inventory.read",
+  "inventory.movements.read",
+  "inventory.write",
+  "pages.read",
+  "pages.write",
+  "qr.read",
+  "qr.write",
+  "sales.read",
+  "sales.write",
+  "sales.export",
+  "sales.import",
+  "customers.read",
+  "customers.write",
+  "suppliers.read",
+  "suppliers.write",
+  "uploads.write",
+  "settings.write",
+  "finance.access",
+  "users.manage",
+];
+
+const ALL_ADMIN_PERMISSIONS_SET = new Set<string>(ALL_ADMIN_PERMISSIONS);
+
+/** Editor: lectura+escritura de catálogo/ventas/clientes/inventario/
+ * páginas/QR/imágenes; solo LECTURA de proveedores (puede consultarlos
+ * para asignar costos a un producto, nunca crearlos/editarlos/borrarlos);
+ * sin acceso a configuración general, import/export de ventas, finanzas
+ * ni gestión de usuarios -- decisión comercial explícita del propietario,
+ * no una inferencia de este código. */
+const EDITOR_PERMISSIONS = new Set<AdminPermission>([
+  "products.read",
+  "products.write",
+  "categories.read",
+  "categories.write",
+  "patches.read",
+  "patches.write",
+  "tags.read",
+  "tags.write",
+  "inventory.read",
+  "inventory.movements.read",
+  "inventory.write",
+  "pages.read",
+  "pages.write",
+  "qr.read",
+  "qr.write",
+  "sales.read",
+  "sales.write",
+  "customers.read",
+  "customers.write",
+  "suppliers.read",
+  "uploads.write",
+]);
+
+/** Viewer: SOLO lectura de catálogo/inventario/páginas/QR -- nunca
+ * ventas, clientes, proveedores, configuración, imágenes, import/export
+ * ni usuarios (decisión comercial explícita; "solo lectura" no es "todo
+ * en modo GET", es un subconjunto acotado de recursos). */
+const VIEWER_PERMISSIONS = new Set<AdminPermission>([
+  "products.read",
+  "categories.read",
+  "patches.read",
+  "tags.read",
+  "inventory.read",
+  "pages.read",
+  "qr.read",
+]);
+
+/** Vendedor: cero permisos de este mapa -- su único acceso real es la
+ * página de Inventario (server-side, sin pasar por la API) y POST
+ * /api/admin/heartbeat, ambos resueltos en proxy.ts/por fuera de este
+ * sistema de permisos. Mantenerlo vacío es intencional, no un olvido. */
 const ROLE_PERMISSIONS: Record<AdminRole, Set<AdminPermission> | "*"> = {
   superadmin: "*",
-  editor: new Set(["products.write", "categories.write", "sales.write", "settings.write"]),
-  viewer: new Set([]),
+  editor: EDITOR_PERMISSIONS,
+  viewer: VIEWER_PERMISSIONS,
   vendedor: new Set([]),
 };
 
-export function hasPermission(role: AdminRole, permission: AdminPermission): boolean {
-  const perms = ROLE_PERMISSIONS[role];
-  return perms === "*" || perms.has(permission);
+/** Deniega por defecto ante cualquier entrada que no sea exactamente un
+ * rol y un permiso conocidos -- un typo, un valor legado de un JWT viejo,
+ * o un permiso que todavía no existe en ALL_ADMIN_PERMISSIONS nunca debe
+ * resolver en acceso concedido. */
+export function hasPermission(role: string, permission: string): boolean {
+  if (!ALL_ADMIN_PERMISSIONS_SET.has(permission)) return false;
+  const perms = ROLE_PERMISSIONS[role as AdminRole];
+  if (!perms) return false;
+  return perms === "*" || perms.has(permission as AdminPermission);
+}
+
+/** Decisión pura para cubrir identidades anómalas sin tocar la base. La
+ * resolución fresca de la identidad sigue viviendo en admin-authorize.ts. */
+export function decideAdminPermission(
+  role: string | null | "infra-error",
+  permission: AdminPermission,
+): { ok: true } | { ok: false; status: 401 | 403 | 500; message: string } {
+  if (role === "infra-error") {
+    return {
+      ok: false,
+      status: 500,
+      message: "No se pudo verificar tu sesión. Probá de nuevo en un momento.",
+    };
+  }
+  if (!role) return { ok: false, status: 401, message: "No autorizado." };
+  if (!hasPermission(role, permission)) {
+    return { ok: false, status: 403, message: "No tenés permiso para esta acción." };
+  }
+  return { ok: true };
 }

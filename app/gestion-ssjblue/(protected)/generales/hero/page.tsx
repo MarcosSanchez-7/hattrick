@@ -1,4 +1,5 @@
 import { getSetting } from "@/lib/data";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 import { DEFAULT_HERO } from "@/lib/settings";
 import { HeroSettingsForm } from "@/components/admin/HeroSettingsForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Portada (Hero)" };
 
 export default async function HeroSettingsPage() {
+  await requireAdminPageAccess("settings.write");
+
   const settings = await getSetting("hero", DEFAULT_HERO);
 
   return (

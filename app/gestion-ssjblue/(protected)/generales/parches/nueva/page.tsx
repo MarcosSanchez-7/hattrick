@@ -1,11 +1,14 @@
 import { getAllPatches } from "@/lib/data";
 import { PatchForm } from "@/components/admin/PatchForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Nuevo parche" };
 
 export default async function NewPatchPage() {
+  await requireAdminPageAccess("patches.write");
+
   const patches = await getAllPatches();
   const existingCategories = Array.from(
     new Set(patches.map((p) => p.category).filter((c): c is string => Boolean(c))),

@@ -4,6 +4,9 @@ import { getAllCategories, getAllProducts, getSales } from "@/lib/data";
 import { formatPrice } from "@/lib/format";
 import { BarChart } from "@/components/admin/charts/BarChart";
 import { DonutChart } from "@/components/admin/charts/DonutChart";
+import { getCurrentAdmin } from "@/lib/admin-session";
+import { hasPermission } from "@/lib/admin-auth";
+import { redirect } from "next/navigation";
 import {
   currentMonthInParaguay,
   monthsAgoInParaguay,
@@ -33,10 +36,27 @@ function monthLabel(ym: string) {
 }
 
 export default async function AdminDashboard() {
+  const admin = await getCurrentAdmin();
+  if (!admin) redirect("/gestion-ssjblue/login");
+  // Vendedor no tiene un panel general -- su único destino real es
+  // Inventario (proxy.ts ya lo redirige ahí en cualquier otra página; esto
+  // solo evita pedir datos de ventas/categorías que nunca va a ver).
+  if (admin.role === "vendedor") redirect("/gestion-ssjblue/inventario");
+
+  const canWriteProducts = hasPermission(admin.role, "products.write");
+  const canWriteCategories = hasPermission(admin.role, "categories.write");
+  // Ingresos y ganancia son información comercial sensible que viewer no
+  // debe recibir -- ni como fila cruda ni como agregado ya calculado. Se
+  // evita pedir getSales() directamente en vez de pedirla y ocultar el
+  // resultado en el render.
+  const canSeeSales = hasPermission(admin.role, "sales.read");
+
   const [products, categories, recentSales] = await Promise.all([
     getAllProducts({ includeHidden: true }),
     getAllCategories({ includeHidden: true }),
-    getSales({ from: paraguayDayRangeToUtc(monthsAgoInParaguay(5), todayInParaguay()).from }),
+    canSeeSales
+      ? getSales({ from: paraguayDayRangeToUtc(monthsAgoInParaguay(5), todayInParaguay()).from })
+      : Promise.resolve([]),
   ]);
 
   const onSale = products.filter(isOnSale).length;
@@ -93,12 +113,16 @@ export default async function AdminDashboard() {
           </p>
         </div>
         <div className="row gap-3">
-          <Link href="/gestion-ssjblue/categorias/nueva" className="btn btn--ghost btn--sm">
-            Nueva categoría
-          </Link>
-          <Link href="/gestion-ssjblue/productos/nuevo" className="btn btn--sm">
-            Nuevo producto
-          </Link>
+          {canWriteCategories ? (
+            <Link href="/gestion-ssjblue/categorias/nueva" className="btn btn--ghost btn--sm">
+              Nueva categoría
+            </Link>
+          ) : null}
+          {canWriteProducts ? (
+            <Link href="/gestion-ssjblue/productos/nuevo" className="btn btn--sm">
+              Nuevo producto
+            </Link>
+          ) : null}
         </div>
       </div>
 
@@ -121,53 +145,66 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
-      <p className="h3" style={{ fontSize: "0.9375rem", margin: "32px 0 12px" }}>
-        Este mes
-      </p>
-      <div className="admin-stats">
-        <div className="admin-stat">
-          <div className="admin-stat__value">{formatPrice(vendidoEsteMes)}</div>
-          <div className="admin-stat__label">Vendido este mes</div>
-        </div>
-        <div className="admin-stat">
-          <div className="admin-stat__value">{formatPrice(gananciaEsteMes)}</div>
-          <div className="admin-stat__label">Ganancia este mes</div>
-        </div>
-        <div className="admin-stat">
-          <div className="admin-stat__value">{currentMonthSales.length}</div>
-          <div className="admin-stat__label">Ventas este mes</div>
-        </div>
-        <div className="admin-stat">
-          <div className="admin-stat__value">{stockBajo}</div>
-          <div className="admin-stat__label">Tallas con stock bajo</div>
-        </div>
-      </div>
-
-      <div className="admin-form__grid" style={{ marginTop: 32 }}>
-        <div className="admin-card" style={{ padding: "var(--sp-5)" }}>
-          <p className="h3" style={{ fontSize: "0.9375rem", marginBottom: 16 }}>
-            Ventas de los últimos 6 meses
+      {canSeeSales ? (
+        <>
+          <p className="h3" style={{ fontSize: "0.9375rem", margin: "32px 0 12px" }}>
+            Este mes
           </p>
-          <BarChart
-            categories={months.map(monthLabel)}
-            series={[
-              {
-                label: "Vendido",
-                color: "#2f2f2f",
-                values: months.map((m) => ventasPorMes.get(m) ?? 0),
-              },
-            ]}
-            formatValue={formatPrice}
-          />
-        </div>
+          <div className="admin-stats">
+            <div className="admin-stat">
+              <div className="admin-stat__value">{formatPrice(vendidoEsteMes)}</div>
+              <div className="admin-stat__label">Vendido este mes</div>
+            </div>
+            <div className="admin-stat">
+              <div className="admin-stat__value">{formatPrice(gananciaEsteMes)}</div>
+              <div className="admin-stat__label">Ganancia este mes</div>
+            </div>
+            <div className="admin-stat">
+              <div className="admin-stat__value">{currentMonthSales.length}</div>
+              <div className="admin-stat__label">Ventas este mes</div>
+            </div>
+            <div className="admin-stat">
+              <div className="admin-stat__value">{stockBajo}</div>
+              <div className="admin-stat__label">Tallas con stock bajo</div>
+            </div>
+          </div>
 
-        <div className="admin-card" style={{ padding: "var(--sp-5)" }}>
-          <p className="h3" style={{ fontSize: "0.9375rem", marginBottom: 16 }}>
-            Productos por categoría
-          </p>
-          <DonutChart data={productosPorCategoria} />
+          <div className="admin-form__grid" style={{ marginTop: 32 }}>
+            <div className="admin-card" style={{ padding: "var(--sp-5)" }}>
+              <p className="h3" style={{ fontSize: "0.9375rem", marginBottom: 16 }}>
+                Ventas de los últimos 6 meses
+              </p>
+              <BarChart
+                categories={months.map(monthLabel)}
+                series={[
+                  {
+                    label: "Vendido",
+                    color: "#2f2f2f",
+                    values: months.map((m) => ventasPorMes.get(m) ?? 0),
+                  },
+                ]}
+                formatValue={formatPrice}
+              />
+            </div>
+
+            <div className="admin-card" style={{ padding: "var(--sp-5)" }}>
+              <p className="h3" style={{ fontSize: "0.9375rem", marginBottom: 16 }}>
+                Productos por categoría
+              </p>
+              <DonutChart data={productosPorCategoria} />
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="admin-form__grid" style={{ marginTop: 32 }}>
+          <div className="admin-card" style={{ padding: "var(--sp-5)" }}>
+            <p className="h3" style={{ fontSize: "0.9375rem", marginBottom: 16 }}>
+              Productos por categoría
+            </p>
+            <DonutChart data={productosPorCategoria} />
+          </div>
         </div>
-      </div>
+      )}
 
       {categories.length === 0 ? (
         <p className="admin-help" style={{ marginTop: 20 }}>

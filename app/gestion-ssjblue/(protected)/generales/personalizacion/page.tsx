@@ -1,4 +1,5 @@
 import { getSetting } from "@/lib/data";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 import { DEFAULT_CUSTOM_BANNER, DEFAULT_PERSONALIZATION_GALLERY } from "@/lib/settings";
 import { CustomBannerSettingsForm } from "@/components/admin/CustomBannerSettingsForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Banner de personalización" };
 
 export default async function CustomBannerSettingsPage() {
+  await requireAdminPageAccess("settings.write");
+
   const [settings, gallery] = await Promise.all([
     getSetting("customBanner", DEFAULT_CUSTOM_BANNER),
     getSetting("personalizationGallery", DEFAULT_PERSONALIZATION_GALLERY),

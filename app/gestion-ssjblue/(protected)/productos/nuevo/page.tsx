@@ -1,11 +1,16 @@
 import { getAllCategories, getAllPatches, getAllSuppliers, getAllTags } from "@/lib/data";
 import { ProductForm } from "@/components/admin/ProductForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
+import { hasPermission } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Nuevo producto" };
 
 export default async function NewProductPage() {
+  const admin = await requireAdminPageAccess("products.write");
+  const canManageSupplierCatalog = hasPermission(admin.role, "suppliers.write");
+
   const [categories, tags, patches, suppliers] = await Promise.all([
     getAllCategories({ includeHidden: true }),
     getAllTags(),
@@ -23,7 +28,13 @@ export default async function NewProductPage() {
       <h1 className="h1" style={{ marginBottom: 24 }}>
         Nuevo producto
       </h1>
-      <ProductForm categories={categories} tags={tags} patches={patches} suppliers={suppliers} />
+      <ProductForm
+        categories={categories}
+        tags={tags}
+        patches={patches}
+        suppliers={suppliers}
+        canManageSupplierCatalog={canManageSupplierCatalog}
+      />
     </>
   );
 }

@@ -1,31 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminUser, DataError, getAllAdminUsers } from "@/lib/data";
-import { getCurrentAdmin } from "@/lib/admin-session";
-
-async function requireSuperadmin() {
-  const admin = await getCurrentAdmin();
-  if (!admin) return { error: NextResponse.json({ error: "No autorizado." }, { status: 401 }) };
-  if (admin.role !== "superadmin") {
-    return {
-      error: NextResponse.json(
-        { error: "Solo un superadmin puede gestionar usuarios." },
-        { status: 403 },
-      ),
-    };
-  }
-  return { admin };
-}
+import { requireAdminPermission } from "@/lib/admin-authorize";
 
 export async function GET() {
-  const check = await requireSuperadmin();
-  if (check.error) return check.error;
+  const check = await requireAdminPermission("users.manage");
+  if ("error" in check) return check.error;
   const users = await getAllAdminUsers();
   return NextResponse.json(users);
 }
 
 export async function POST(request: NextRequest) {
-  const check = await requireSuperadmin();
-  if (check.error) return check.error;
+  const check = await requireAdminPermission("users.manage");
+  if ("error" in check) return check.error;
 
   try {
     const body = await request.json();

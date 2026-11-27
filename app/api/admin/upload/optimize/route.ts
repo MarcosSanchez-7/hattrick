@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import sharp from "sharp";
 import convertHeic from "heic-convert";
 import { OWN_BLOB_HOST } from "@/lib/image";
+import { requireAdminPermission } from "@/lib/admin-authorize";
 
 const MAX_BYTES = 25 * 1024 * 1024;
 const CONVERTIBLE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -37,6 +38,9 @@ function sanitizeFolder(value: unknown): string | null {
 }
 
 export async function POST(request: NextRequest) {
+  const check = await requireAdminPermission("uploads.write");
+  if ("error" in check) return check.error;
+
   let rawUrl: string | undefined;
   let folder: string | null = null;
 

@@ -1,4 +1,5 @@
 import { getSetting } from "@/lib/data";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 import { DEFAULT_WHOLESALE } from "@/lib/settings";
 import { WholesaleSettingsForm } from "@/components/admin/WholesaleSettingsForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Mayorista" };
 
 export default async function WholesaleSettingsPage() {
+  await requireAdminPageAccess("settings.write");
+
   const settings = await getSetting("wholesale", DEFAULT_WHOLESALE);
 
   return (

@@ -1,4 +1,5 @@
 import { getSetting } from "@/lib/data";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 import { DEFAULT_REVIEWS } from "@/lib/settings";
 import { ReviewsSettingsForm } from "@/components/admin/ReviewsSettingsForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Reseñas" };
 
 export default async function ReviewsSettingsPage() {
+  await requireAdminPageAccess("settings.write");
+
   const settings = await getSetting("reviews", DEFAULT_REVIEWS);
 
   return (

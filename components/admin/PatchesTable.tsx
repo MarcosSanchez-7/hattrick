@@ -8,7 +8,13 @@ import { formatPrice } from "@/lib/format";
 import { imageVariant } from "@/lib/image";
 import { IconTrash } from "@/components/ui/Icons";
 
-export function PatchesTable({ patches }: { patches: Patch[] }) {
+export function PatchesTable({
+  patches,
+  readOnly = false,
+}: {
+  patches: Patch[];
+  readOnly?: boolean;
+}) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
 
@@ -111,6 +117,8 @@ export function PatchesTable({ patches }: { patches: Patch[] }) {
                   </td>
                   <td>
                     <div className="admin-row-actions">
+                      {readOnly ? null : (
+                        <>
                       <Link
                         href={`/gestion-ssjblue/generales/parches/${p.id}`}
                         className="btn btn--ghost btn--sm"
@@ -128,6 +136,8 @@ export function PatchesTable({ patches }: { patches: Patch[] }) {
                       >
                         <IconTrash className="icon--sm" />
                       </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

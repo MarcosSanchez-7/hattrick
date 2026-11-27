@@ -1,4 +1,5 @@
 import { getAllCategories, getSetting } from "@/lib/data";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 import { DEFAULT_HOME } from "@/lib/settings";
 import { HomeSettingsForm } from "@/components/admin/HomeSettingsForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Secciones de la home" };
 
 export default async function HomeSettingsPage() {
+  await requireAdminPageAccess("settings.write");
+
   const [settings, categories] = await Promise.all([
     getSetting("home", DEFAULT_HOME),
     getAllCategories({ includeHidden: true }),

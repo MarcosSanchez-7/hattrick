@@ -1,4 +1,5 @@
 import { getSetting } from "@/lib/data";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 import { DEFAULT_PRODUCT_NOTICES } from "@/lib/settings";
 import { ProductNoticesSettingsForm } from "@/components/admin/ProductNoticesSettingsForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Avisos del producto" };
 
 export default async function ProductNoticesPage() {
+  await requireAdminPageAccess("settings.write");
+
   const settings = await getSetting("productNotices", DEFAULT_PRODUCT_NOTICES);
 
   return (

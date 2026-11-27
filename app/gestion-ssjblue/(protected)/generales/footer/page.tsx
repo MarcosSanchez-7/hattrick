@@ -1,4 +1,5 @@
 import { getSetting } from "@/lib/data";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 import { DEFAULT_FOOTER } from "@/lib/settings";
 import { FooterSettingsForm } from "@/components/admin/FooterSettingsForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Footer" };
 
 export default async function FooterSettingsPage() {
+  await requireAdminPageAccess("settings.write");
+
   const settings = await getSetting("footer", DEFAULT_FOOTER);
 
   return (

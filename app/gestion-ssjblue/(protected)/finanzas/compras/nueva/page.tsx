@@ -1,5 +1,4 @@
-import { redirect } from "next/navigation";
-import { getCurrentAdmin } from "@/lib/admin-session";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 import { PurchaseForm } from "@/components/admin/PurchaseForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
@@ -7,9 +6,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Nueva compra" };
 
 export default async function NewPurchasePage() {
-  const admin = await getCurrentAdmin();
-  if (!admin) redirect("/gestion-ssjblue/login");
-  if (admin.role !== "superadmin") redirect("/gestion-ssjblue");
+  await requireAdminPageAccess("finance.access");
 
   return (
     <>

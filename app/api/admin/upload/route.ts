@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { requireAdminPermission } from "@/lib/admin-authorize";
 
 /**
  * Genera el token que permite al navegador subir el archivo ORIGINAL
@@ -10,6 +11,9 @@ import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
  * a partir de la URL ya subida — eso sí puede manejar archivos grandes.
  */
 export async function POST(request: Request) {
+  const check = await requireAdminPermission("uploads.write");
+  if ("error" in check) return check.error;
+
   const body = (await request.json()) as HandleUploadBody;
 
   try {

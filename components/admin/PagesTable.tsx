@@ -12,7 +12,13 @@ const PLACEMENT_LABEL: Record<PagePlacement, string> = {
   empresa: "Empresa",
 };
 
-export function PagesTable({ pages }: { pages: Page[] }) {
+export function PagesTable({
+  pages,
+  readOnly = false,
+}: {
+  pages: Page[];
+  readOnly?: boolean;
+}) {
   const router = useRouter();
   const [pendingSlug, setPendingSlug] = useState<string | null>(null);
 
@@ -73,6 +79,8 @@ export function PagesTable({ pages }: { pages: Page[] }) {
                       >
                         <IconExternal className="icon--sm" />
                       </Link>
+                      {readOnly ? null : (
+                        <>
                       <Link
                         href={`/gestion-ssjblue/paginas/${p.slug}`}
                         className="btn btn--ghost btn--sm"
@@ -90,6 +98,8 @@ export function PagesTable({ pages }: { pages: Page[] }) {
                       >
                         <IconTrash className="icon--sm" />
                       </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

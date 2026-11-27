@@ -1,11 +1,16 @@
 import { getAllTags } from "@/lib/data";
 import { TagsManager } from "@/components/admin/TagsManager";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
+import { hasPermission } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Etiquetas" };
 
 export default async function TagsPage() {
+  const admin = await requireAdminPageAccess("tags.read");
+  const readOnly = !hasPermission(admin.role, "tags.write");
+
   const tags = await getAllTags();
 
   return (
@@ -22,7 +27,7 @@ export default async function TagsPage() {
         Etiquetas estandarizadas (ej. "Versión Fan", "Bajo pedido") con su
         color, para elegirlas rápido al cargar un producto.
       </p>
-      <TagsManager initial={tags} />
+      <TagsManager initial={tags} readOnly={readOnly} />
     </>
   );
 }

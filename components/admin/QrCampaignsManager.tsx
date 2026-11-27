@@ -8,7 +8,13 @@ import { slugify } from "@/lib/slug";
 import { formatRelativeTime } from "@/lib/format";
 import { IconTrash } from "@/components/ui/Icons";
 
-export function QrCampaignsManager({ initial }: { initial: QrCampaign[] }) {
+export function QrCampaignsManager({
+  initial,
+  readOnly = false,
+}: {
+  initial: QrCampaign[];
+  readOnly?: boolean;
+}) {
   const router = useRouter();
   const [campaigns, setCampaigns] = useState(initial);
   const [name, setName] = useState("");
@@ -93,49 +99,51 @@ export function QrCampaignsManager({ initial }: { initial: QrCampaign[] }) {
         </p>
       ) : null}
 
-      <div style={{ padding: 16 }}>
-        <form
-          onSubmit={handleCreate}
-          className="row gap-2"
-          style={{ alignItems: "flex-end", flexWrap: "wrap" }}
-        >
-          <div className="admin-field" style={{ flex: 1, minWidth: 200, marginBottom: 0 }}>
-            <label htmlFor="qrName">Nombre</label>
-            <input
-              id="qrName"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ej: Bolsas de envío, Flyer local"
-            />
-          </div>
-          <div className="admin-field" style={{ flex: 1, minWidth: 180, marginBottom: 0 }}>
-            <label htmlFor="qrSlug">Identificador (va en el link)</label>
-            <input
-              id="qrSlug"
-              type="text"
-              value={slugTouched ? slug : suggestedSlug}
-              onChange={(e) => {
-                setSlugTouched(true);
-                setSlug(slugify(e.target.value));
-              }}
-              placeholder="se-genera-solo"
-            />
-          </div>
-          <button
-            type="submit"
-            className="btn btn--sm"
-            disabled={creating || !name.trim() || !(slugTouched ? slug : suggestedSlug)}
+      {readOnly ? null : (
+        <div style={{ padding: 16 }}>
+          <form
+            onSubmit={handleCreate}
+            className="row gap-2"
+            style={{ alignItems: "flex-end", flexWrap: "wrap" }}
           >
-            {creating ? "Creando…" : "Crear código QR"}
-          </button>
-        </form>
-        <p className="admin-help">
-          El link queda en {SITE_URL}/qr/
-          {slugTouched ? slug : suggestedSlug || "…"} — es lo que hay que
-          codificar en la imagen del QR.
-        </p>
-      </div>
+            <div className="admin-field" style={{ flex: 1, minWidth: 200, marginBottom: 0 }}>
+              <label htmlFor="qrName">Nombre</label>
+              <input
+                id="qrName"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ej: Bolsas de envío, Flyer local"
+              />
+            </div>
+            <div className="admin-field" style={{ flex: 1, minWidth: 180, marginBottom: 0 }}>
+              <label htmlFor="qrSlug">Identificador (va en el link)</label>
+              <input
+                id="qrSlug"
+                type="text"
+                value={slugTouched ? slug : suggestedSlug}
+                onChange={(e) => {
+                  setSlugTouched(true);
+                  setSlug(slugify(e.target.value));
+                }}
+                placeholder="se-genera-solo"
+              />
+            </div>
+            <button
+              type="submit"
+              className="btn btn--sm"
+              disabled={creating || !name.trim() || !(slugTouched ? slug : suggestedSlug)}
+            >
+              {creating ? "Creando…" : "Crear código QR"}
+            </button>
+          </form>
+          <p className="admin-help">
+            El link queda en {SITE_URL}/qr/
+            {slugTouched ? slug : suggestedSlug || "…"} — es lo que hay que
+            codificar en la imagen del QR.
+          </p>
+        </div>
+      )}
 
       {campaigns.length === 0 ? (
         <div className="admin-empty">Todavía no creaste ningún código QR.</div>
@@ -174,16 +182,18 @@ export function QrCampaignsManager({ initial }: { initial: QrCampaign[] }) {
                       >
                         {copiedSlug === c.slug ? "Copiado" : "Copiar link"}
                       </button>
-                      <button
-                        type="button"
-                        className="admin-icon-btn admin-icon-btn--danger"
-                        aria-label={`Eliminar ${c.name}`}
-                        title="Eliminar"
-                        disabled={pendingSlug === c.slug}
-                        onClick={() => handleDelete(c)}
-                      >
-                        <IconTrash className="icon--sm" />
-                      </button>
+                      {readOnly ? null : (
+                        <button
+                          type="button"
+                          className="admin-icon-btn admin-icon-btn--danger"
+                          aria-label={`Eliminar ${c.name}`}
+                          title="Eliminar"
+                          disabled={pendingSlug === c.slug}
+                          onClick={() => handleDelete(c)}
+                        >
+                          <IconTrash className="icon--sm" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

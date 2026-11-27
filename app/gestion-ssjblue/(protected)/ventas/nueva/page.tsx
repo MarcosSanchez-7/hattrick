@@ -1,11 +1,14 @@
 import { getAllCustomers, getAllProducts } from "@/lib/data";
 import { SaleForm } from "@/components/admin/SaleForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Registrar venta" };
 
 export default async function NuevaVentaPage() {
+  await requireAdminPageAccess("sales.write");
+
   const [products, customers] = await Promise.all([
     getAllProducts({ includeHidden: true }),
     getAllCustomers(),

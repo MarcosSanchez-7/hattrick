@@ -1,4 +1,5 @@
 import { getAllCategories, getSetting } from "@/lib/data";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 import { DEFAULT_DTF } from "@/lib/settings";
 import { DtfSettingsForm } from "@/components/admin/DtfSettingsForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Taller DTF" };
 
 export default async function DtfSettingsPage() {
+  await requireAdminPageAccess("settings.write");
+
   const [settings, categories] = await Promise.all([
     getSetting("dtf", DEFAULT_DTF),
     getAllCategories({ includeHidden: true }),

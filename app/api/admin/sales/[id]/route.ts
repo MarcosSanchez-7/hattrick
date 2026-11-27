@@ -8,6 +8,7 @@ import {
   updateSaleStatus,
 } from "@/lib/data";
 import { revalidateAfterWrite, revalidateProductListings } from "@/lib/revalidate";
+import { requireAdminPermission } from "@/lib/admin-authorize";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -23,6 +24,9 @@ async function revalidateAffectedProducts(...productIdSets: (string | null | und
 }
 
 export async function PUT(request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("sales.write");
+  if ("error" in check) return check.error;
+
   const { id } = await params;
   let oldSale: Awaited<ReturnType<typeof getSaleById>>;
   let body;
@@ -53,6 +57,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
 }
 
 export async function PATCH(request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("sales.write");
+  if ("error" in check) return check.error;
+
   const { id } = await params;
   try {
     const body = await request.json();
@@ -74,6 +81,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(_request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("sales.write");
+  if ("error" in check) return check.error;
+
   const { id } = await params;
   let oldSale: Awaited<ReturnType<typeof getSaleById>>;
   try {

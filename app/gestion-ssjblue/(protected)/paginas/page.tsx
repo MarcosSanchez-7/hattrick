@@ -2,11 +2,16 @@ import Link from "next/link";
 import { getAllPages } from "@/lib/data";
 import { PagesTable } from "@/components/admin/PagesTable";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
+import { hasPermission } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Páginas" };
 
 export default async function AdminPagesPage() {
+  const admin = await requireAdminPageAccess("pages.read");
+  const canWrite = hasPermission(admin.role, "pages.write");
+
   const pages = await getAllPages();
 
   return (
@@ -21,12 +26,14 @@ export default async function AdminPagesPage() {
             footer.
           </p>
         </div>
-        <Link href="/gestion-ssjblue/paginas/nueva" className="btn btn--sm">
-          Nueva página
-        </Link>
+        {canWrite ? (
+          <Link href="/gestion-ssjblue/paginas/nueva" className="btn btn--sm">
+            Nueva página
+          </Link>
+        ) : null}
       </div>
 
-      <PagesTable pages={pages} />
+      <PagesTable pages={pages} readOnly={!canWrite} />
     </>
   );
 }

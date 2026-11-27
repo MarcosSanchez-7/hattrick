@@ -26,6 +26,7 @@ export function SupplierPicker({
   onChange,
   onCatalogChange,
   sizes,
+  canManageCatalog = true,
 }: {
   catalog: Supplier[];
   value: SelectedSupplier[];
@@ -34,6 +35,12 @@ export function SupplierPicker({
   /** Tallas actualmente cargadas para el producto (stock propio) — define
    * qué chips de talla se ofrecen para desglosar cantidad por proveedor. */
   sizes: string[];
+  /** editor tiene suppliers.read pero no suppliers.write -- puede elegir un
+   * proveedor existente y asignarle costo/cantidad (eso es parte de editar
+   * ESTE producto, products.write), pero no crear ni eliminar proveedores
+   * del catálogo compartido. La API ya lo rechaza con 403; esto solo evita
+   * mostrar controles que fallarían. */
+  canManageCatalog?: boolean;
 }) {
   const [newSupplier, setNewSupplier] = useState("");
   const [creating, setCreating] = useState(false);
@@ -131,16 +138,18 @@ export function SupplierPicker({
                 />
                 {supplier.name}
               </label>
-              <button
-                type="button"
-                className="admin-icon-btn admin-icon-btn--danger"
-                aria-label={`Eliminar proveedor ${supplier.name}`}
-                title="Eliminar proveedor"
-                disabled={deletingId === supplier.id}
-                onClick={() => handleDelete(supplier)}
-              >
-                <IconTrash className="icon--sm" />
-              </button>
+              {canManageCatalog ? (
+                <button
+                  type="button"
+                  className="admin-icon-btn admin-icon-btn--danger"
+                  aria-label={`Eliminar proveedor ${supplier.name}`}
+                  title="Eliminar proveedor"
+                  disabled={deletingId === supplier.id}
+                  onClick={() => handleDelete(supplier)}
+                >
+                  <IconTrash className="icon--sm" />
+                </button>
+              ) : null}
               {selected ? (
                 <div
                   className="row gap-2"
@@ -192,29 +201,31 @@ export function SupplierPicker({
           </p>
         ) : null}
       </div>
-      <div className="row" style={{ gap: 8, marginTop: 10 }}>
-        <input
-          type="text"
-          value={newSupplier}
-          onChange={(e) => setNewSupplier(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              handleCreate();
-            }
-          }}
-          placeholder="Nuevo proveedor (ej. Proveedor Ciudad del Este)"
-          style={{ flex: 1 }}
-        />
-        <button
-          type="button"
-          className="btn btn--ghost btn--sm"
-          disabled={creating || !newSupplier.trim()}
-          onClick={handleCreate}
-        >
-          {creating ? "Creando…" : "Crear y añadir"}
-        </button>
-      </div>
+      {canManageCatalog ? (
+        <div className="row" style={{ gap: 8, marginTop: 10 }}>
+          <input
+            type="text"
+            value={newSupplier}
+            onChange={(e) => setNewSupplier(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleCreate();
+              }
+            }}
+            placeholder="Nuevo proveedor (ej. Proveedor Ciudad del Este)"
+            style={{ flex: 1 }}
+          />
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            disabled={creating || !newSupplier.trim()}
+            onClick={handleCreate}
+          >
+            {creating ? "Creando…" : "Crear y añadir"}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

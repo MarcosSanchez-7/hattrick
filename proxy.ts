@@ -53,8 +53,32 @@ function buildAdminCsp(nonce: string): string {
  * tres cosas para /gestion-ssjblue/** y /api/admin/**: (1) rate limiting por
  * IP (ver lib/rate-limit.ts), (2) chequeo OPTIMISTA de la sesión del panel
  * de admin (solo firma/expiración del JWT, sin tocar la base — el chequeo
- * autoritativo vive en app/gestion-ssjblue/(protected)/layout.tsx, vía
- * getCurrentAdmin()) y (3) la CSP por nonce del admin (ver buildAdminCsp).
+ * autoritativo vive en app/gestion-ssjblue/(protected)/layout.tsx y, desde
+ * la Fase 8B.2, en cada operación protegida vía lib/admin-authorize.ts,
+ * ambos con getCurrentAdmin()) y (3) la CSP por nonce del admin (ver
+ * buildAdminCsp).
+ *
+ * Consecuencia concreta de que este chequeo sea optimista (Fase 8B.2): el
+ * `session.role` de la rama de "vendedor" más abajo viene del JWT, no de
+ * una consulta fresca -- si a alguien le cambian el rol (en cualquier
+ * dirección) DESPUÉS de haber iniciado sesión, esta rama sigue decidiendo
+ * con el rol viejo hasta que ese JWT se renueve (nuevo login) o expire (30
+ * días). Dos casos posibles, con impacto muy distinto:
+ *   - Promovido DESDE vendedor (ahora editor/viewer/superadmin): esta rama
+ *     sigue tratándolo como vendedor -- queda temporalmente MÁS
+ *     restringido de lo que le corresponde (solo Inventario). Molesto, no
+ *     riesgoso: solo tiene que volver a loguearse.
+ *   - Degradado A vendedor (o a cualquier rol con menos permisos) desde
+ *     otro rol: esta rama NO lo detecta (su JWT viejo no dice "vendedor"),
+ *     así que seguiría pasando esta rama como si nada. Esto NO es una
+ *     brecha real porque la autorización real de cada endpoint/página ya
+ *     no depende de esta rama -- depende de requireAdminPermission()/
+ *     requireAdminPageAccess() (lib/admin-authorize.ts), que vuelven a
+ *     consultar getCurrentAdmin() (fresco, sin caché entre requests) en
+ *     cada operación protegida y usan el rol ACTUAL de la base, no el del
+ *     JWT. Esta rama queda como un filtro de borde barato y específico de
+ *     UX para vendedor (evita el viaje de ida y vuelta de un 403 en la
+ *     página, no en la API) -- nunca la única defensa.
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getAllPages } from "@/lib/data";
 import { PageForm } from "@/components/admin/PageForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 
 type Params = { slug: string };
 
@@ -13,6 +14,8 @@ export default async function EditPagePage({
 }: {
   params: Promise<Params>;
 }) {
+  await requireAdminPageAccess("pages.write");
+
   const { slug } = await params;
   const pages = await getAllPages();
   const page = pages.find((p) => p.slug === slug);

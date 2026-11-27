@@ -3,6 +3,7 @@ import { getAllCustomers, getCustomerSales } from "@/lib/data";
 import { CustomerDetailCard } from "@/components/admin/CustomerDetailCard";
 import { CustomerPurchaseHistory } from "@/components/admin/CustomerPurchaseHistory";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 
 type Params = { id: string };
 
@@ -14,6 +15,8 @@ export default async function EditCustomerPage({
 }: {
   params: Promise<Params>;
 }) {
+  await requireAdminPageAccess("customers.write");
+
   const { id } = await params;
   const customers = await getAllCustomers();
   const customer = customers.find((c) => c.id === id);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { DataError, getSales } from "@/lib/data";
 import { lineProfit, SALE_CHANNELS } from "@/lib/catalog";
 import { PARAGUAY_TZ, paraguayDayRangeToUtc } from "@/lib/timezone";
+import { requireAdminPermission } from "@/lib/admin-authorize";
 
 const channelLabel = (value: string) =>
   SALE_CHANNELS.find((c) => c.value === value)?.label ?? value;
@@ -39,6 +40,9 @@ const HEADERS = [
 const UTF8_BOM = String.fromCharCode(0xfeff);
 
 export async function GET(request: NextRequest) {
+  const check = await requireAdminPermission("sales.export");
+  if ("error" in check) return check.error;
+
   try {
     const { searchParams } = new URL(request.url);
     const fromParam = searchParams.get("from") ?? undefined;

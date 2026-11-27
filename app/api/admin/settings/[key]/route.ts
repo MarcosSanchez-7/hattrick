@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DataError, getSetting, updateSetting } from "@/lib/data";
+import { requireAdminPermission } from "@/lib/admin-authorize";
 import {
   revalidateAfterWrite,
   safeRevalidatePaths,
@@ -102,6 +103,9 @@ function matchesShape(value: unknown, template: unknown): boolean {
 type Params = { params: Promise<{ key: string }> };
 
 export async function GET(_request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("settings.write");
+  if ("error" in check) return check.error;
+
   const { key } = await params;
   if (!isValidKey(key)) {
     return NextResponse.json({ error: "Configuración desconocida." }, { status: 404 });
@@ -111,6 +115,9 @@ export async function GET(_request: NextRequest, { params }: Params) {
 }
 
 export async function PUT(request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("settings.write");
+  if ("error" in check) return check.error;
+
   const { key } = await params;
   if (!isValidKey(key)) {
     return NextResponse.json({ error: "Configuración desconocida." }, { status: 404 });

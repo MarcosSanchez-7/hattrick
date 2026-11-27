@@ -22,9 +22,11 @@ import {
 export function CategoriesTable({
   categories,
   productCounts,
+  readOnly = false,
 }: {
   categories: Category[];
   productCounts: Record<string, number>;
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const [pendingSlug, setPendingSlug] = useState<string | null>(null);
@@ -166,6 +168,8 @@ export function CategoriesTable({
                         >
                           <IconExternal className="icon--sm" />
                         </Link>
+                        {!readOnly ? (
+                          <>
                         <Link
                           href={`/gestion-ssjblue/categorias/nueva?parent=${c.slug}`}
                           className="admin-icon-btn"
@@ -205,6 +209,8 @@ export function CategoriesTable({
                         >
                           <IconTrash className="icon--sm" />
                         </button>
+                          </>
+                        ) : null}
                       </div>
                     </td>
                   </tr>

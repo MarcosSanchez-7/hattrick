@@ -8,6 +8,7 @@ import {
   updatePatch,
 } from "@/lib/data";
 import { revalidateAfterWrite, revalidateProductPagesOnly } from "@/lib/revalidate";
+import { requireAdminPermission } from "@/lib/admin-authorize";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -25,6 +26,9 @@ async function revalidatePatchProducts(patchId: string): Promise<void> {
 }
 
 export async function PUT(request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("patches.write");
+  if ("error" in check) return check.error;
+
   const { id } = await params;
   let patch: Patch;
   try {
@@ -46,6 +50,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(_request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("patches.write");
+  if ("error" in check) return check.error;
+
   const { id } = await params;
   // Resolver ANTES de borrar: una vez eliminado el parche, product_patches
   // ya no tiene de dónde sacar qué productos lo tenían asignado.

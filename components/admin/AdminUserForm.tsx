@@ -7,14 +7,22 @@ import type { AdminUser } from "@/lib/data";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 
 const ROLES: { value: AdminRole; label: string; help: string }[] = [
-  { value: "superadmin", label: "Superadmin", help: "Acceso total, incluida la gestión de usuarios." },
-  { value: "editor", label: "Editor", help: "Puede editar catálogo, ventas y ajustes." },
-  { value: "viewer", label: "Solo lectura", help: "Puede ver el panel, sin editar nada." },
+  {
+    value: "viewer",
+    label: "Solo lectura",
+    help: "Ve catálogo, inventario y páginas informativas, sin editar nada. Sin acceso a ventas, clientes, proveedores, finanzas, configuración ni usuarios.",
+  },
+  {
+    value: "editor",
+    label: "Editor",
+    help: "Edita catálogo, inventario, ventas, clientes e imágenes. Puede ver proveedores, pero no crearlos/editarlos. Sin acceso a configuración general, finanzas, importar/exportar ventas ni usuarios.",
+  },
   {
     value: "vendedor",
     label: "Vendedor",
     help: "Solo ve Inventario, sin poder editar nada ni acceder al resto del panel.",
   },
+  { value: "superadmin", label: "Superadmin", help: "Acceso total, incluida la gestión de usuarios y finanzas." },
 ];
 
 export function AdminUserForm({ user }: { user?: AdminUser }) {
@@ -23,7 +31,10 @@ export function AdminUserForm({ user }: { user?: AdminUser }) {
 
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
-  const [role, setRole] = useState<AdminRole>(user?.role ?? "editor");
+  // Nuevo usuario: "viewer" por defecto -- el camino de menor privilegio,
+  // no "editor" (decisión comercial explícita; antes el default era el
+  // rol más amplio, justo lo contrario de lo que conviene por defecto).
+  const [role, setRole] = useState<AdminRole>(user?.role ?? "viewer");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

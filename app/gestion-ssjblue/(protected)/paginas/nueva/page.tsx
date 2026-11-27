@@ -1,10 +1,13 @@
 import { PageForm } from "@/components/admin/PageForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Nueva página" };
 
-export default function NewPagePage() {
+export default async function NewPagePage() {
+  await requireAdminPageAccess("pages.write");
+
   return (
     <>
       <nav className="breadcrumbs" aria-label="Migas de pan" style={{ marginBottom: 16 }}>

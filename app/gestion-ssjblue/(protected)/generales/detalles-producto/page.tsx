@@ -1,4 +1,5 @@
 import { getSetting } from "@/lib/data";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 import { DEFAULT_PRODUCT_INFO } from "@/lib/settings";
 import { ProductInfoSettingsForm } from "@/components/admin/ProductInfoSettingsForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Envíos del producto" };
 
 export default async function ProductInfoPage() {
+  await requireAdminPageAccess("settings.write");
+
   const settings = await getSetting("productInfo", DEFAULT_PRODUCT_INFO);
 
   return (

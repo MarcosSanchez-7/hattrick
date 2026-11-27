@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getAllPatches } from "@/lib/data";
 import { PatchForm } from "@/components/admin/PatchForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 
 type Params = { id: string };
 
@@ -13,6 +14,8 @@ export default async function EditPatchPage({
 }: {
   params: Promise<Params>;
 }) {
+  await requireAdminPageAccess("patches.write");
+
   const { id } = await params;
   const patches = await getAllPatches();
   const patch = patches.find((p) => p.id === id);

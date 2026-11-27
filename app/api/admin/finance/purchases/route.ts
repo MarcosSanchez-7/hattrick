@@ -1,24 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createMerchandisePurchase, DataError, getMerchandisePurchases } from "@/lib/data";
-import { getCurrentAdmin } from "@/lib/admin-session";
-
-async function requireSuperadmin() {
-  const admin = await getCurrentAdmin();
-  if (!admin) return { error: NextResponse.json({ error: "No autorizado." }, { status: 401 }) };
-  if (admin.role !== "superadmin") {
-    return {
-      error: NextResponse.json(
-        { error: "Solo un superadmin puede acceder a Finanzas." },
-        { status: 403 },
-      ),
-    };
-  }
-  return { admin };
-}
+import { requireAdminPermission } from "@/lib/admin-authorize";
 
 export async function GET(request: NextRequest) {
-  const check = await requireSuperadmin();
-  if (check.error) return check.error;
+  const check = await requireAdminPermission("finance.access");
+  if ("error" in check) return check.error;
 
   const { searchParams } = new URL(request.url);
   const from = searchParams.get("from") ?? undefined;
@@ -29,8 +15,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const check = await requireSuperadmin();
-  if (check.error) return check.error;
+  const check = await requireAdminPermission("finance.access");
+  if ("error" in check) return check.error;
 
   try {
     const body = await request.json();

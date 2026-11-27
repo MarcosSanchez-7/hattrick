@@ -1,4 +1,5 @@
 import { getSetting } from "@/lib/data";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 import { DEFAULT_NAVBAR } from "@/lib/settings";
 import { NavbarSettingsForm } from "@/components/admin/NavbarSettingsForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Menú y avisos" };
 
 export default async function NavbarSettingsPage() {
+  await requireAdminPageAccess("settings.write");
+
   const settings = await getSetting("navbar", DEFAULT_NAVBAR);
 
   return (

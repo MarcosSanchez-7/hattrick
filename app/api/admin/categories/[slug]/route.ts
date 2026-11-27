@@ -13,10 +13,14 @@ import {
   revalidateCategoryOwnPages,
   safeRevalidatePaths,
 } from "@/lib/revalidate";
+import { requireAdminPermission } from "@/lib/admin-authorize";
 
 type Params = { params: Promise<{ slug: string }> };
 
 export async function GET(_request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("categories.read");
+  if ("error" in check) return check.error;
+
   const { slug } = await params;
   const category = getCategory(
     await getAllCategories({ includeHidden: true }),
@@ -29,6 +33,9 @@ export async function GET(_request: NextRequest, { params }: Params) {
 }
 
 export async function PUT(request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("categories.write");
+  if ("error" in check) return check.error;
+
   const { slug } = await params;
   let oldCategory: Category | undefined;
   let category: Category;
@@ -66,6 +73,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
 // riesgoso (fácil de dejar algo afuera) que el ahorro que daría frente a
 // simplemente invalidar todo.
 export async function PATCH(request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("categories.write");
+  if ("error" in check) return check.error;
+
   const { slug } = await params;
   try {
     const body = await request.json();
@@ -99,6 +109,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 // de Navbar/Footer (y de la página de su padre, si tenía uno) -- pero esos
 // se renderizan vía el layout compartido en todas las rutas públicas.
 export async function DELETE(_request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("categories.write");
+  if ("error" in check) return check.error;
+
   const { slug } = await params;
   try {
     await deleteCategory(slug);

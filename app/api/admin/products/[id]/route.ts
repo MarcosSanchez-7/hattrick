@@ -13,10 +13,15 @@ import {
   revalidateProduct,
   revalidateProductListings,
 } from "@/lib/revalidate";
+import { requireAdminPermission } from "@/lib/admin-authorize";
+import { redactProductForRole } from "@/lib/admin-redact";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("products.read");
+  if ("error" in check) return check.error;
+
   const { id } = await params;
   const product = getProductById(
     await getAllProducts({ includeHidden: true }),
@@ -25,10 +30,13 @@ export async function GET(_request: NextRequest, { params }: Params) {
   if (!product) {
     return NextResponse.json({ error: "Producto no encontrado." }, { status: 404 });
   }
-  return NextResponse.json(product);
+  return NextResponse.json(redactProductForRole(product, check.admin.role));
 }
 
 export async function PUT(request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("products.write");
+  if ("error" in check) return check.error;
+
   const { id } = await params;
   let oldSlug: string | null = null;
   let oldCategory: string | null = null;
@@ -67,6 +75,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
 }
 
 export async function PATCH(request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("products.write");
+  if ("error" in check) return check.error;
+
   const { id } = await params;
   let product: { slug: string; category: string } | undefined;
   try {
@@ -100,6 +111,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(_request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("products.write");
+  if ("error" in check) return check.error;
+
   const { id } = await params;
   let product: { slug: string; category: string } | undefined;
   try {

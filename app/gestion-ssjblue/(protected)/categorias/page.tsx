@@ -3,11 +3,16 @@ import { getAllCategories, getAllProducts } from "@/lib/data";
 import { byCategoryTree } from "@/lib/catalog";
 import { CategoriesTable } from "@/components/admin/CategoriesTable";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
+import { hasPermission } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Categorías" };
 
 export default async function AdminCategoriesPage() {
+  const admin = await requireAdminPageAccess("categories.read");
+  const canWrite = hasPermission(admin.role, "categories.write");
+
   const [categories, products] = await Promise.all([
     getAllCategories({ includeHidden: true }),
     getAllProducts({ includeHidden: true }),
@@ -33,12 +38,14 @@ export default async function AdminCategoriesPage() {
             subcategorías no se pueden eliminar.
           </p>
         </div>
-        <Link href="/gestion-ssjblue/categorias/nueva" className="btn btn--sm">
-          Nueva categoría
-        </Link>
+        {canWrite ? (
+          <Link href="/gestion-ssjblue/categorias/nueva" className="btn btn--sm">
+            Nueva categoría
+          </Link>
+        ) : null}
       </div>
 
-      <CategoriesTable categories={categories} productCounts={productCounts} />
+      <CategoriesTable categories={categories} productCounts={productCounts} readOnly={!canWrite} />
     </>
   );
 }

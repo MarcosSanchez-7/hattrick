@@ -1,4 +1,5 @@
 import { getSetting } from "@/lib/data";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 import { DEFAULT_BRANDING } from "@/lib/settings";
 import { BrandingSettingsForm } from "@/components/admin/BrandingSettingsForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Branding" };
 
 export default async function BrandingSettingsPage() {
+  await requireAdminPageAccess("settings.write");
+
   const settings = await getSetting("branding", DEFAULT_BRANDING);
 
   return (

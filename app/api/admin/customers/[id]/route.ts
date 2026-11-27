@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DataError, deleteCustomer, updateCustomer } from "@/lib/data";
+import { requireAdminPermission } from "@/lib/admin-authorize";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function PUT(request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("customers.write");
+  if ("error" in check) return check.error;
+
   const { id } = await params;
 
   try {
@@ -22,6 +26,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(_request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("customers.write");
+  if ("error" in check) return check.error;
+
   const { id } = await params;
 
   try {

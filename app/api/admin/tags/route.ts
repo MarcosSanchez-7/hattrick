@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import type { Tag } from "@/lib/catalog";
 import { createTag, DataError, getAllTags } from "@/lib/data";
 import { revalidateAfterWrite, safeRevalidatePaths } from "@/lib/revalidate";
+import { requireAdminPermission } from "@/lib/admin-authorize";
 
 export async function GET() {
+  const check = await requireAdminPermission("tags.read");
+  if ("error" in check) return check.error;
+
   const tags = await getAllTags();
   return NextResponse.json(tags);
 }
@@ -20,6 +24,9 @@ export async function GET() {
 // olvidar un consumidor. No se tocó el alcance de la invalidación en esta
 // fase, solo se aisló el error de la escritura (ver revalidateAfterWrite).
 export async function POST(request: NextRequest) {
+  const check = await requireAdminPermission("tags.write");
+  if ("error" in check) return check.error;
+
   let tag: Tag;
   try {
     const body = await request.json();

@@ -1,11 +1,14 @@
 import { getCustomersWithStats } from "@/lib/data";
 import { CustomersMap } from "@/components/admin/CustomersMap";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mapa de clientes" };
 
 export default async function ClientesMapaPage() {
+  await requireAdminPageAccess("customers.read");
+
   const customers = await getCustomersWithStats();
   const located = customers.filter((c) => c.latitude != null && c.longitude != null);
 

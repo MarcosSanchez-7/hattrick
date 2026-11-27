@@ -2,13 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import type { Product } from "@/lib/catalog";
 import { createProduct, DataError, getAllProducts } from "@/lib/data";
 import { revalidateAfterWrite, revalidateProduct } from "@/lib/revalidate";
+import { requireAdminPermission } from "@/lib/admin-authorize";
+import { redactProductsForRole } from "@/lib/admin-redact";
 
 export async function GET() {
+  const check = await requireAdminPermission("products.read");
+  if ("error" in check) return check.error;
+
   const products = await getAllProducts({ includeHidden: true });
-  return NextResponse.json(products);
+  return NextResponse.json(redactProductsForRole(products, check.admin.role));
 }
 
 export async function POST(request: NextRequest) {
+  const check = await requireAdminPermission("products.write");
+  if ("error" in check) return check.error;
+
   let product: Product;
   try {
     const body = await request.json();

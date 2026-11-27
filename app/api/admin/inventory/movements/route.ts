@@ -5,10 +5,13 @@ import {
   getProductSlugAndCategoryByVariantId,
   registerStockAdjustment,
 } from "@/lib/data";
-import { getCurrentAdmin } from "@/lib/admin-session";
 import { revalidateAfterWrite, revalidateProduct } from "@/lib/revalidate";
+import { requireAdminPermission } from "@/lib/admin-authorize";
 
 export async function GET(request: NextRequest) {
+  const check = await requireAdminPermission("inventory.movements.read");
+  if ("error" in check) return check.error;
+
   const { searchParams } = new URL(request.url);
   const from = searchParams.get("from") ?? undefined;
   const to = searchParams.get("to") ?? undefined;
@@ -18,13 +21,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const check = await requireAdminPermission("inventory.write");
+  if ("error" in check) return check.error;
+  const admin = check.admin;
+
   let body;
   try {
-    const admin = await getCurrentAdmin();
-    if (!admin) {
-      return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-    }
-
     body = await request.json();
     await registerStockAdjustment({ ...body, adminName: admin.name });
   } catch (err) {

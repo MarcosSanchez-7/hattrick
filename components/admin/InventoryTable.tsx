@@ -11,7 +11,6 @@ import {
   orderCategoriesTree,
   SIZES_ADULT,
   SIZES_KIDS,
-  stockCostValue,
   type Category,
   type Product,
 } from "@/lib/catalog";
@@ -29,7 +28,39 @@ import { StockAdjustForm } from "@/components/admin/StockAdjustForm";
 
 const LOW_STOCK_THRESHOLD = 3;
 
-const totalStock = (p: Product) =>
+/**
+ * El componente recibe Product completo únicamente para roles con escritura.
+ * Las vistas restringidas le pasan una proyección explícita sin costos,
+ * proveedores ni control interno; estas propiedades son opcionales aquí para
+ * que no hagan falta casts para mezclar ambos contratos.
+ */
+type InventoryTableProduct = Pick<
+  Product,
+  | "id"
+  | "slug"
+  | "name"
+  | "category"
+  | "price"
+  | "compareAt"
+  | "wholesalePrice"
+  | "isVisible"
+  | "isNew"
+  | "reviews"
+  | "stockMode"
+  | "variants"
+  | "sizes"
+  | "tags"
+  | "createdAt"
+  | "images"
+  | "colors"
+  | "pattern"
+> & {
+  internalControl?: boolean;
+  costPrice?: number | null;
+  suppliers?: Product["suppliers"];
+};
+
+const totalStock = (p: InventoryTableProduct) =>
   p.variants?.reduce((acc, v) => acc + v.stock, 0) ?? 0;
 
 /**
@@ -38,8 +69,17 @@ const totalStock = (p: Product) =>
  * reales en `p.variants`, pero acá adentro (panel admin) sí queremos
  * filtrar/listar por esas tallas, a diferencia de la tienda pública.
  */
-const productSizes = (p: Product) =>
+const productSizes = (p: InventoryTableProduct) =>
   p.variants?.length ? p.variants.map((v) => v.size) : p.sizes;
+
+const stockCostValue = (product: InventoryTableProduct) => {
+  const supplierStock = product.suppliers?.reduce(
+    (total, supplier) => total + supplier.quantity * supplier.unitCost,
+    0,
+  );
+  if (supplierStock) return supplierStock;
+  return totalStock(product) * (product.costPrice ?? 0);
+};
 
 type Adjusting = {
   variantId: string;
@@ -51,19 +91,26 @@ type Adjusting = {
 type RowActions = {
   pendingId: string | null;
   togglingId: string | null;
-  onDelete: (product: Product) => void;
-  onToggleVisibility: (product: Product) => void;
+  onDelete: (product: InventoryTableProduct) => void;
+  onToggleVisibility: (product: InventoryTableProduct) => void;
 };
 
 export function InventoryTable({
   products,
   categories,
   readOnly = false,
+  showWholesalePrice = false,
 }: {
-  products: Product[];
+  products: InventoryTableProduct[];
   categories: Category[];
-  /** Vendedor: ve el stock, pero no puede editar/eliminar productos ni ajustar cantidades. */
+  /** Vendedor y viewer: ven el stock, pero no pueden editar/eliminar
+   * productos ni ajustar cantidades. */
   readOnly?: boolean;
+  /** Solo vendedor: la columna de precio muestra el mayorista en vez del
+   * retail (uso previsto de ese rol, sin relación con readOnly -- viewer
+   * también es readOnly pero SÍ debe ver el precio público normal, nunca
+   * el mayorista interno). */
+  showWholesalePrice?: boolean;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -153,7 +200,7 @@ export function InventoryTable({
   // como carpeta -- con el total de toda su rama -- en vez de desaparecer
   // de la lista, dejando a sus hijas sueltas y sin contexto.
   const groups = useMemo(() => {
-    const bySlug = new Map<string, Product[]>();
+    const bySlug = new Map<string, InventoryTableProduct[]>();
     for (const p of filtered) {
       const list = bySlug.get(p.category) ?? [];
       list.push(p);
@@ -163,7 +210,7 @@ export function InventoryTable({
       slug: string;
       name: string;
       depth: number;
-      ownItems: Product[];
+      ownItems: InventoryTableProduct[];
       productTotal: number;
       stockTotal: number;
       costTotal: number;
@@ -226,7 +273,7 @@ export function InventoryTable({
     });
   };
 
-  const handleDelete = async (product: Product) => {
+  const handleDelete = async (product: InventoryTableProduct) => {
     if (!window.confirm(`¿Eliminar «${product.name}»?`)) return;
     setPendingId(product.id);
     try {
@@ -245,7 +292,7 @@ export function InventoryTable({
     }
   };
 
-  const handleToggleVisibility = async (product: Product) => {
+  const handleToggleVisibility = async (product: InventoryTableProduct) => {
     setTogglingId(product.id);
     try {
       const res = await fetch(`/api/admin/products/${product.id}`, {
@@ -337,6 +384,7 @@ export function InventoryTable({
           onToggleMobile={toggleMobile}
           onAdjust={setAdjusting}
           readOnly={readOnly}
+          showWholesalePrice={showWholesalePrice}
         />
       ) : (
         groups.map((group) => {
@@ -383,6 +431,7 @@ export function InventoryTable({
                     onToggleMobile={toggleMobile}
                     onAdjust={setAdjusting}
                     readOnly={readOnly}
+                    showWholesalePrice={showWholesalePrice}
                   />
                 ) : (
                   <p className="meta" style={{ padding: "0 var(--sp-5) var(--sp-5)" }}>
@@ -420,8 +469,9 @@ function ProductRowsTable({
   onToggleMobile,
   onAdjust,
   readOnly,
+  showWholesalePrice = false,
 }: {
-  products: Product[];
+  products: InventoryTableProduct[];
   categoryName: (slug: string) => string;
   actions: RowActions;
   hideCategoryColumn?: boolean;
@@ -431,6 +481,7 @@ function ProductRowsTable({
   onToggleMobile: (id: string) => void;
   onAdjust: (a: Adjusting) => void;
   readOnly?: boolean;
+  showWholesalePrice?: boolean;
 }) {
   return (
     <div className="admin-table-wrap">
@@ -439,7 +490,7 @@ function ProductRowsTable({
           <tr>
             <th>Producto</th>
             {hideCategoryColumn ? null : <th>Categoría</th>}
-            <th>{readOnly ? "Precio mayorista" : "Precio"}</th>
+            <th>{showWholesalePrice ? "Precio mayorista" : "Precio"}</th>
             <th>Estado</th>
             <th>Stock</th>
             <th aria-label="Acciones" />
@@ -480,8 +531,8 @@ function ProductRowsTable({
                 {hideCategoryColumn ? null : (
                   <td data-label="Categoría">{categoryName(p.category)}</td>
                 )}
-                <td data-label={readOnly ? "Precio mayorista" : "Precio"}>
-                  {readOnly ? (
+                <td data-label={showWholesalePrice ? "Precio mayorista" : "Precio"}>
+                  {showWholesalePrice ? (
                     p.wholesalePrice != null ? (
                       formatPrice(p.wholesalePrice)
                     ) : (
@@ -503,7 +554,7 @@ function ProductRowsTable({
                     <span className="badge badge--out">Oculto</span>
                   ) : p.stockMode !== "propio" ? (
                     <span className="meta">
-                      Consultar talle{p.internalControl ? " · control interno" : ""}
+                      Consultar talle{!readOnly && p.internalControl ? " · control interno" : ""}
                     </span>
                   ) : isSoldOut(p) ? (
                     <span className="badge badge--out">Agotado</span>
@@ -514,7 +565,7 @@ function ProductRowsTable({
                   )}
                 </td>
                 <td data-label="Stock">
-                  {p.stockMode === "propio" || p.internalControl ? (
+                  {p.stockMode === "propio" || (p.variants?.length ?? 0) > 0 ? (
                     <div className="inventory-stock-cell">
                       <button
                         type="button"

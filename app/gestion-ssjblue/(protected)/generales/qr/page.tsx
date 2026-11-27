@@ -1,11 +1,16 @@
 import { getAllQrCampaigns } from "@/lib/data";
 import { QrCampaignsManager } from "@/components/admin/QrCampaignsManager";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
+import { hasPermission } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Códigos QR" };
 
 export default async function QrCampaignsPage() {
+  const admin = await requireAdminPageAccess("qr.read");
+  const readOnly = !hasPermission(admin.role, "qr.write");
+
   const campaigns = await getAllQrCampaigns();
 
   return (
@@ -24,7 +29,7 @@ export default async function QrCampaignsPage() {
         Vercel Analytics. Generá la imagen del QR con ese link, no con la URL
         de la tienda directa, para poder medir cuánta gente entra por ahí.
       </p>
-      <QrCampaignsManager initial={campaigns} />
+      <QrCampaignsManager initial={campaigns} readOnly={readOnly} />
     </>
   );
 }

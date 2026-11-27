@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getAllCustomers, getAllProducts, getSaleById } from "@/lib/data";
 import { SaleForm } from "@/components/admin/SaleForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 
 type Params = { id: string };
 
@@ -13,6 +14,8 @@ export default async function EditarVentaPage({
 }: {
   params: Promise<Params>;
 }) {
+  await requireAdminPageAccess("sales.write");
+
   const { id } = await params;
   const [sale, products, customers] = await Promise.all([
     getSaleById(id),

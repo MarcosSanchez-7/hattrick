@@ -3,6 +3,7 @@ import { getCategory } from "@/lib/catalog";
 import { getAllCategories } from "@/lib/data";
 import { CategoryForm } from "@/components/admin/CategoryForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 
 type Params = { slug: string };
 
@@ -14,6 +15,8 @@ export default async function EditCategoryPage({
 }: {
   params: Promise<Params>;
 }) {
+  await requireAdminPageAccess("categories.write");
+
   const { slug } = await params;
   const categories = await getAllCategories({ includeHidden: true });
   const category = getCategory(categories, slug);

@@ -5,6 +5,8 @@ import { SalesTable } from "@/components/admin/SalesTable";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter";
 import { paraguayDayRangeToUtc, todayInParaguay } from "@/lib/timezone";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
+import { hasPermission } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Ventas" };
@@ -14,6 +16,10 @@ export default async function VentasPage({
 }: {
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
+  const admin = await requireAdminPageAccess("sales.read");
+  const canExport = hasPermission(admin.role, "sales.export");
+  const canImport = hasPermission(admin.role, "sales.import");
+
   const { from, to } = await searchParams;
   const fromDate = from || todayInParaguay();
   const toDate = to || fromDate;
@@ -35,15 +41,19 @@ export default async function VentasPage({
           </p>
         </div>
         <div className="row gap-3">
-          <Link
-            href={`/api/admin/sales/export?from=${fromDate}&to=${toDate}`}
-            className="btn btn--ghost btn--sm"
-          >
-            Descargar CSV
-          </Link>
-          <Link href="/gestion-ssjblue/ventas/importar" className="btn btn--ghost btn--sm">
-            Importar CSV
-          </Link>
+          {canExport ? (
+            <Link
+              href={`/api/admin/sales/export?from=${fromDate}&to=${toDate}`}
+              className="btn btn--ghost btn--sm"
+            >
+              Descargar CSV
+            </Link>
+          ) : null}
+          {canImport ? (
+            <Link href="/gestion-ssjblue/ventas/importar" className="btn btn--ghost btn--sm">
+              Importar CSV
+            </Link>
+          ) : null}
           <Link href="/gestion-ssjblue/ventas/nueva" className="btn btn--sm">
             Registrar venta
           </Link>

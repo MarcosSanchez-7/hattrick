@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getAllAdminUsers } from "@/lib/data";
-import { getCurrentAdmin } from "@/lib/admin-session";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 import { AdminUsersTable } from "@/components/admin/AdminUsersTable";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
@@ -9,9 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Usuarios" };
 
 export default async function AdminUsersPage() {
-  const admin = await getCurrentAdmin();
-  if (!admin) redirect("/gestion-ssjblue/login");
-  if (admin.role !== "superadmin") redirect("/gestion-ssjblue");
+  const admin = await requireAdminPageAccess("users.manage");
 
   const users = await getAllAdminUsers();
 

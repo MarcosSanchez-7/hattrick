@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import type { Category } from "@/lib/catalog";
 import { createCategory, DataError, getAllCategories } from "@/lib/data";
 import { revalidateAfterWrite, safeRevalidatePaths } from "@/lib/revalidate";
+import { requireAdminPermission } from "@/lib/admin-authorize";
 
 export async function GET() {
+  const check = await requireAdminPermission("categories.read");
+  if ("error" in check) return check.error;
+
   const categories = await getAllCategories({ includeHidden: true });
   return NextResponse.json(categories);
 }
@@ -15,6 +19,9 @@ export async function GET() {
 // app/(store)/layout.tsx), así que no hay un subconjunto de páginas más
 // chico que garantice que el menú se vea actualizado en todos lados.
 export async function POST(request: NextRequest) {
+  const check = await requireAdminPermission("categories.write");
+  if ("error" in check) return check.error;
+
   let category: Category;
   try {
     const body = await request.json();

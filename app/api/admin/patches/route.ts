@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPatch, DataError, getAllPatches } from "@/lib/data";
+import { requireAdminPermission } from "@/lib/admin-authorize";
 
 export async function GET() {
+  const check = await requireAdminPermission("patches.read");
+  if ("error" in check) return check.error;
+
   const patches = await getAllPatches();
   return NextResponse.json(patches);
 }
@@ -11,6 +15,9 @@ export async function GET() {
 // components/admin/ProductForm.tsx, patchIds). No aparece en ninguna
 // página pública hasta entonces, así que crear uno no invalida nada.
 export async function POST(request: NextRequest) {
+  const check = await requireAdminPermission("patches.write");
+  if ("error" in check) return check.error;
+
   try {
     const body = await request.json();
     const patch = await createPatch(body);

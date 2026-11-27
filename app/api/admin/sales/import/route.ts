@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { DataError, importHistoricalSales, type SaleImportRow } from "@/lib/data";
 import { SALE_CHANNELS, type SaleChannel } from "@/lib/catalog";
 import { revalidateAfterWrite, safeRevalidatePaths } from "@/lib/revalidate";
+import { requireAdminPermission } from "@/lib/admin-authorize";
 
 /**
  * Parser de CSV a mano (sin librerías nuevas, simétrico con el export de
@@ -111,6 +112,9 @@ const REQUIRED_HEADERS = [
 ];
 
 export async function POST(request: NextRequest) {
+  const check = await requireAdminPermission("sales.import");
+  if ("error" in check) return check.error;
+
   try {
     const formData = await request.formData();
     const file = formData.get("file");

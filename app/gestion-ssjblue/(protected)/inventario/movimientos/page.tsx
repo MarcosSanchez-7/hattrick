@@ -3,6 +3,7 @@ import { InventoryMovementsTable } from "@/components/admin/InventoryMovementsTa
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter";
 import { daysAgoInParaguay, paraguayDayRangeToUtc, todayInParaguay } from "@/lib/timezone";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Movimientos de stock" };
@@ -12,6 +13,8 @@ export default async function InventoryMovementsPage({
 }: {
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
+  await requireAdminPageAccess("inventory.movements.read");
+
   const { from, to } = await searchParams;
   const fromDate = from || daysAgoInParaguay(30);
   const toDate = to || todayInParaguay();

@@ -6,7 +6,16 @@ import type { Tag } from "@/lib/catalog";
 import { readableTextColor } from "@/lib/color";
 import { IconTrash } from "@/components/ui/Icons";
 
-export function TagsManager({ initial }: { initial: Tag[] }) {
+export function TagsManager({
+  initial,
+  readOnly = false,
+}: {
+  initial: Tag[];
+  /** viewer tiene tags.read pero no tags.write -- la API ya lo rechaza con
+   * 403, esto solo evita mostrarle controles que fallarían (no es la
+   * defensa real, ver app/api/admin/tags/**). */
+  readOnly?: boolean;
+}) {
   const router = useRouter();
   const [tags, setTags] = useState(initial);
   const [name, setName] = useState("");
@@ -105,45 +114,47 @@ export function TagsManager({ initial }: { initial: Tag[] }) {
         </p>
       ) : null}
 
-      <div style={{ padding: 16 }}>
-        <form
-          onSubmit={handleCreate}
-          className="row"
-          style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}
-        >
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Nombre de la nueva etiqueta (ej. Versión Fan)"
-            style={{ flex: 1, minWidth: 220 }}
-          />
-          <input
-            type="color"
-            value={color}
-            onChange={(e) => setColor(e.target.value)}
-            aria-label="Color de la etiqueta"
-            style={{ width: 44, height: 38, padding: 2 }}
-          />
-          <label className="row" style={{ gap: 6, alignItems: "center", fontSize: "0.8125rem" }}>
+      {readOnly ? null : (
+        <div style={{ padding: 16 }}>
+          <form
+            onSubmit={handleCreate}
+            className="row"
+            style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}
+          >
             <input
-              type="checkbox"
-              checked={isFilter}
-              onChange={(e) => setIsFilter(e.target.checked)}
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nombre de la nueva etiqueta (ej. Versión Fan)"
+              style={{ flex: 1, minWidth: 220 }}
             />
-            Usar como filtro
-          </label>
-          <button type="submit" className="btn btn--sm" disabled={creating || !name.trim()}>
-            {creating ? "Creando…" : "Añadir etiqueta"}
-          </button>
-        </form>
-        <p className="admin-help" style={{ marginTop: 8 }}>
-          "Usar como filtro" (ej. Premier League, La Liga) agrega un chip para
-          filtrar en categoría/novedades/ofertas/búsqueda, y NO se muestra
-          como badge en la tarjeta de producto. Sin marcar, es una etiqueta
-          descriptiva normal (ej. Versión Fan) — solo badge, sin filtro.
-        </p>
-      </div>
+            <input
+              type="color"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              aria-label="Color de la etiqueta"
+              style={{ width: 44, height: 38, padding: 2 }}
+            />
+            <label className="row" style={{ gap: 6, alignItems: "center", fontSize: "0.8125rem" }}>
+              <input
+                type="checkbox"
+                checked={isFilter}
+                onChange={(e) => setIsFilter(e.target.checked)}
+              />
+              Usar como filtro
+            </label>
+            <button type="submit" className="btn btn--sm" disabled={creating || !name.trim()}>
+              {creating ? "Creando…" : "Añadir etiqueta"}
+            </button>
+          </form>
+          <p className="admin-help" style={{ marginTop: 8 }}>
+            "Usar como filtro" (ej. Premier League, La Liga) agrega un chip para
+            filtrar en categoría/novedades/ofertas/búsqueda, y NO se muestra
+            como badge en la tarjeta de producto. Sin marcar, es una etiqueta
+            descriptiva normal (ej. Versión Fan) — solo badge, sin filtro.
+          </p>
+        </div>
+      )}
 
       {tags.length === 0 ? (
         <div className="admin-empty">Todavía no has creado ninguna etiqueta.</div>
@@ -163,38 +174,57 @@ export function TagsManager({ initial }: { initial: Tag[] }) {
                 height: 40,
               }}
             >
-              <input
-                type="color"
-                value={tag.color}
-                onChange={(e) => handleColorChange(tag, e.target.value)}
-                aria-label={`Color de ${tag.name}`}
-                style={{ width: 28, height: 28, padding: 0, border: "none", borderRadius: "50%" }}
-              />
+              {readOnly ? (
+                <span
+                  aria-hidden
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    background: tag.color,
+                    display: "inline-block",
+                  }}
+                />
+              ) : (
+                <input
+                  type="color"
+                  value={tag.color}
+                  onChange={(e) => handleColorChange(tag, e.target.value)}
+                  aria-label={`Color de ${tag.name}`}
+                  style={{ width: 28, height: 28, padding: 0, border: "none", borderRadius: "50%" }}
+                />
+              )}
               <span
                 className="badge badge--tag"
                 style={{ background: tag.color, color: readableTextColor(tag.color) }}
               >
                 {tag.name}
               </span>
-              <button
-                type="button"
-                className="link-underline meta"
-                onClick={() => handleFilterToggle(tag)}
-                title="Si está marcada, genera un chip de filtro en vez de (o además de) badge"
-              >
-                {tag.isFilter ? "Filtro ✓" : "Usar como filtro"}
-              </button>
-              <button
-                type="button"
-                className="admin-icon-btn admin-icon-btn--danger"
-                aria-label={`Eliminar ${tag.name}`}
-                title="Eliminar"
-                disabled={pendingName === tag.name}
-                onClick={() => handleDelete(tag)}
-                style={{ width: 28, height: 28 }}
-              >
-                <IconTrash className="icon--sm" />
-              </button>
+              {readOnly ? (
+                tag.isFilter ? <span className="meta">Filtro ✓</span> : null
+              ) : (
+                <button
+                  type="button"
+                  className="link-underline meta"
+                  onClick={() => handleFilterToggle(tag)}
+                  title="Si está marcada, genera un chip de filtro en vez de (o además de) badge"
+                >
+                  {tag.isFilter ? "Filtro ✓" : "Usar como filtro"}
+                </button>
+              )}
+              {readOnly ? null : (
+                <button
+                  type="button"
+                  className="admin-icon-btn admin-icon-btn--danger"
+                  aria-label={`Eliminar ${tag.name}`}
+                  title="Eliminar"
+                  disabled={pendingName === tag.name}
+                  onClick={() => handleDelete(tag)}
+                  style={{ width: 28, height: 28 }}
+                >
+                  <IconTrash className="icon--sm" />
+                </button>
+              )}
             </div>
           ))}
         </div>

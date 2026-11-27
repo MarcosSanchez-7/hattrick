@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getFinanceSummary, getInventoryValuation, getLiquiditySummary } from "@/lib/data";
-import { getCurrentAdmin } from "@/lib/admin-session";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 import { formatPrice } from "@/lib/format";
 import { BarChart } from "@/components/admin/charts/BarChart";
 import { DonutChart } from "@/components/admin/charts/DonutChart";
@@ -28,9 +27,7 @@ export default async function FinancePage({
 }: {
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
-  const admin = await getCurrentAdmin();
-  if (!admin) redirect("/gestion-ssjblue/login");
-  if (admin.role !== "superadmin") redirect("/gestion-ssjblue");
+  await requireAdminPageAccess("finance.access");
 
   const { from, to } = await searchParams;
   const fromDate = from || monthsAgoInParaguay(6);

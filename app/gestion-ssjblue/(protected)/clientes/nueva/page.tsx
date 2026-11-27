@@ -1,10 +1,13 @@
 import { CustomerForm } from "@/components/admin/CustomerForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Nuevo cliente" };
 
-export default function NewCustomerPage() {
+export default async function NewCustomerPage() {
+  await requireAdminPageAccess("customers.write");
+
   return (
     <>
       <nav className="breadcrumbs" aria-label="Migas de pan" style={{ marginBottom: 16 }}>

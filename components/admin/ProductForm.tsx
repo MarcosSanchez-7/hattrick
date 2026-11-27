@@ -131,12 +131,16 @@ export function ProductForm({
   patches,
   suppliers,
   product,
+  canManageSupplierCatalog = true,
 }: {
   categories: Category[];
   tags: Tag[];
   patches: Patch[];
   suppliers: Supplier[];
   product?: Product;
+  /** editor tiene suppliers.read pero no suppliers.write -- ver mismo
+   * comentario en SupplierPicker.tsx. */
+  canManageSupplierCatalog?: boolean;
 }) {
   const router = useRouter();
   const isEdit = Boolean(product);
@@ -784,6 +788,7 @@ export function ProductForm({
             value={form.suppliers}
             onChange={(next) => update("suppliers", next)}
             onCatalogChange={setSuppliersCatalog}
+            canManageCatalog={canManageSupplierCatalog}
             sizes={Object.keys(form.variantQuantities).sort(
               (a, b) => SIZES_ADULT.indexOf(a) - SIZES_ADULT.indexOf(b),
             )}

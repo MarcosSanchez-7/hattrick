@@ -2,6 +2,7 @@ import { getCategory } from "@/lib/catalog";
 import { getAllCategories } from "@/lib/data";
 import { CategoryForm } from "@/components/admin/CategoryForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Nueva categoría" };
@@ -11,6 +12,8 @@ export default async function NewCategoryPage({
 }: {
   searchParams: Promise<{ parent?: string }>;
 }) {
+  await requireAdminPageAccess("categories.write");
+
   const [{ parent: parentSlug }, categories] = await Promise.all([
     searchParams,
     getAllCategories({ includeHidden: true }),

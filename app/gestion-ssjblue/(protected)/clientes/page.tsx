@@ -2,11 +2,14 @@ import Link from "next/link";
 import { getCustomersWithStats } from "@/lib/data";
 import { CustomersTable } from "@/components/admin/CustomersTable";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Clientes" };
 
 export default async function ClientesPage() {
+  await requireAdminPageAccess("customers.read");
+
   const customers = await getCustomersWithStats();
 
   return (

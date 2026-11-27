@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import type { Page } from "@/lib/catalog";
 import { createPage, DataError, getAllPages } from "@/lib/data";
 import { revalidateAfterWrite, safeRevalidatePaths } from "@/lib/revalidate";
+import { requireAdminPermission } from "@/lib/admin-authorize";
 
 export async function GET() {
+  const check = await requireAdminPermission("pages.read");
+  if ("error" in check) return check.error;
+
   const pages = await getAllPages();
   return NextResponse.json(pages);
 }
@@ -13,6 +17,9 @@ export async function GET() {
 // vía el layout compartido en TODAS las rutas públicas -- no hay un
 // subconjunto de páginas más chico que lo cubra.
 export async function POST(request: NextRequest) {
+  const check = await requireAdminPermission("pages.write");
+  if ("error" in check) return check.error;
+
   let page: Page;
   try {
     const body = await request.json();

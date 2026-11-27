@@ -1,4 +1,5 @@
 import { getSetting } from "@/lib/data";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 import { DEFAULT_VALUE_PROPS } from "@/lib/settings";
 import { ValuePropsSettingsForm } from "@/components/admin/ValuePropsSettingsForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Franja de información" };
 
 export default async function ValuePropsPage() {
+  await requireAdminPageAccess("settings.write");
+
   const settings = await getSetting("valueProps", DEFAULT_VALUE_PROPS);
 
   return (

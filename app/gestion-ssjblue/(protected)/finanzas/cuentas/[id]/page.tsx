@@ -1,6 +1,6 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { getFinanceAccounts } from "@/lib/data";
-import { getCurrentAdmin } from "@/lib/admin-session";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
 import { FinanceAccountForm } from "@/components/admin/FinanceAccountForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 
@@ -14,9 +14,7 @@ export default async function EditFinanceAccountPage({
 }: {
   params: Promise<Params>;
 }) {
-  const admin = await getCurrentAdmin();
-  if (!admin) redirect("/gestion-ssjblue/login");
-  if (admin.role !== "superadmin") redirect("/gestion-ssjblue");
+  await requireAdminPageAccess("finance.access");
 
   const { id } = await params;
   const accounts = await getFinanceAccounts();

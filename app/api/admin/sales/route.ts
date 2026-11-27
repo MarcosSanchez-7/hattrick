@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DataError, getProductSlugsAndCategoriesByIds, getSales, recordSale } from "@/lib/data";
 import { revalidateAfterWrite, revalidateProductListings } from "@/lib/revalidate";
+import { requireAdminPermission } from "@/lib/admin-authorize";
 
 export async function GET(request: NextRequest) {
+  const check = await requireAdminPermission("sales.read");
+  if ("error" in check) return check.error;
+
   const { searchParams } = new URL(request.url);
   const from = searchParams.get("from") ?? undefined;
   const to = searchParams.get("to") ?? undefined;
@@ -12,6 +16,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const check = await requireAdminPermission("sales.write");
+  if ("error" in check) return check.error;
+
   let body;
   let id: string;
   try {

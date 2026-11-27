@@ -9,6 +9,8 @@ import {
 } from "@/lib/data";
 import { ProductForm } from "@/components/admin/ProductForm";
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
+import { requireAdminPageAccess } from "@/lib/admin-authorize";
+import { hasPermission } from "@/lib/admin-auth";
 
 type Params = { id: string };
 
@@ -20,6 +22,9 @@ export default async function EditProductPage({
 }: {
   params: Promise<Params>;
 }) {
+  const admin = await requireAdminPageAccess("products.write");
+  const canManageSupplierCatalog = hasPermission(admin.role, "suppliers.write");
+
   const { id } = await params;
   const [products, categories, tags, patches, suppliers] = await Promise.all([
     getAllProducts({ includeHidden: true }),
@@ -47,6 +52,7 @@ export default async function EditProductPage({
         patches={patches}
         suppliers={suppliers}
         product={product}
+        canManageSupplierCatalog={canManageSupplierCatalog}
       />
     </>
   );

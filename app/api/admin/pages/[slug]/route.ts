@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import type { Page } from "@/lib/catalog";
 import { DataError, deletePage, getAllPages, updatePage } from "@/lib/data";
 import { pageAffectsFooter, revalidateAfterWrite, safeRevalidatePaths } from "@/lib/revalidate";
+import { requireAdminPermission } from "@/lib/admin-authorize";
 
 type Params = { params: Promise<{ slug: string }> };
 
 export async function GET(_request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("pages.read");
+  if ("error" in check) return check.error;
+
   const { slug } = await params;
   const pages = await getAllPages();
   const page = pages.find((p) => p.slug === slug);
@@ -16,6 +20,9 @@ export async function GET(_request: NextRequest, { params }: Params) {
 }
 
 export async function PUT(request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("pages.write");
+  if ("error" in check) return check.error;
+
   const { slug } = await params;
   let oldPage: Page | undefined;
   let page: Page;
@@ -45,6 +52,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(_request: NextRequest, { params }: Params) {
+  const check = await requireAdminPermission("pages.write");
+  if ("error" in check) return check.error;
+
   const { slug } = await params;
   try {
     await deletePage(slug);
